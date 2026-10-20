@@ -45,6 +45,8 @@ r.post('/casos/:id/derivar', async (req, res) => res.json({ caso: await svc.deri
 r.post('/casos/:id/cerrar', async (req, res) => res.json({ caso: await svc.cerrar(req.usuario, idDe(req), req.body && req.body.nota) }));
 r.post('/casos/:id/mensajes', limitador(60, 60e3, req => 'esp|' + req.usuario.id), async (req, res) =>
   res.json({ mensaje: await svc.mensajeEspecialista(req.usuario, idDe(req), req.body && req.body.texto) }));
+r.post('/casos/:id/videollamada', limitador(10, 60e3, req => 'video|' + req.usuario.id), async (req, res) =>
+  res.json({ mensaje: await svc.videollamada(req.usuario, idDe(req)) }));
 r.get('/stream', (req, res) => tr.abrirEquipo(req, res, req.usuario.id));
 r.post('/push', async (req, res) => {
   await avisos.guardar(req.body && req.body.suscripcion, { usuarioId: req.usuario.id });

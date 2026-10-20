@@ -112,12 +112,13 @@
     if (formulario === 'agendar') return formAgendar();
     if (formulario === 'cerrar') return `<div class="form-linea"><div class="campo-form"><label for="nota">Nota de cierre (opcional, solo la ve el equipo)</label><textarea id="nota" maxlength="4000"></textarea></div>
       <div class="fila-btn"><button class="btn" data-acc="cerrar-ok">Cerrar caso</button><button class="btn plain" data-acc="cancelar">Cancelar</button></div></div>`;
-    return '<button class="btn ghost" data-acc="agendar">Agendar seguimiento</button><button class="btn plain" data-acc="derivar">Derivar a guardia</button><button class="btn peligro" data-acc="cerrar">Cerrar caso</button>';
+    return '<button class="btn" data-acc="video">Videollamada</button><button class="btn ghost" data-acc="agendar">Agendar seguimiento</button><button class="btn plain" data-acc="derivar">Derivar a guardia</button><button class="btn peligro" data-acc="cerrar">Cerrar caso</button>';
   }
   function lineaRegistro(m) {
     const quien = { persona: 'Persona', bot: 'Acompaña', especialista: m.nombre || 'Especialista', sistema: '' }[m.autor];
     const texto = m.tipo === 'respiracion' ? '[Ejercicio de respiración]' : m.texto;
-    return `<li class="${m.autor}"><time>${hora(m.hora)}</time><div>${quien ? `<span class="q">${esc(quien)}</span>` : ''}${m.autor === 'persona' && m.riesgo === 'high' ? '<span class="urg">Urgente</span>' : ''}${esc(texto)}</div></li>`;
+    const cuerpo = m.tipo === 'videollamada' && /^https:\/\//.test(m.texto) ? `Invitación a videollamada · <a href="${esc(m.texto)}" target="_blank" rel="noopener noreferrer">Abrir sala</a>` : esc(texto);
+    return `<li class="${m.autor}"><time>${hora(m.hora)}</time><div>${quien ? `<span class="q">${esc(quien)}</span>` : ''}${m.autor === 'persona' && m.riesgo === 'high' ? '<span class="urg">Urgente</span>' : ''}${cuerpo}</div></li>`;
   }
   const vacioHtml = (titulo, texto) => `<div class="vacio-hoja"><b>${esc(titulo)}</b>${esc(texto)}</div>`;
   const abajoRegistro = () => { const r = $('#registro'); if (r) r.scrollTop = r.scrollHeight; };
@@ -222,8 +223,18 @@
     if (acc === 'agendar' || acc === 'cerrar') { formulario = acc; refrescarFormularios(); return; }
     if (acc === 'cancelar') { formulario = null; refrescarFormularios(); return; }
     b.disabled = true;
+    let ventana = null;
     try {
       let r;
+      if (acc === 'video') {
+        ventana = window.open('about:blank', '_blank');
+        const d = await api('POST', `/api/equipo/casos/${id}/videollamada`, {});
+        recibirMensaje({ casoId: id, mensaje: d.mensaje });
+        if (ventana) { ventana.opener = null; ventana.location.href = d.mensaje.texto; }
+        aviso('Invitación enviada. La sala se abrió en otra pestaña.');
+        b.disabled = false;
+        return;
+      }
       if (acc === 'tomar') { r = await api('POST', `/api/equipo/casos/${id}/tomar`, {}); tomadoAhora = id; }
       if (acc === 'derivar') r = await api('POST', `/api/equipo/casos/${id}/derivar`, {});
       if (acc === 'agendar-ok') {
@@ -236,6 +247,7 @@
       if (r && r.caso) actualizarCaso(r.caso, true);
       if (acc === 'derivar') aviso('Caso derivado a guardia.');
     } catch (err) {
+      if (ventana) ventana.close();
       aviso(err.message);
       b.disabled = false;
       if (err.estado === 409) recargar();
@@ -272,7 +284,7 @@
     return `<tr><td><b>${esc(nombre(u))}</b>${u.especialidad ? `<br><span class="sub">${esc(u.especialidad)}</span>` : ''}</td><td>${esc(u.correo)}</td><td>${u.rol === 'admin' ? 'Administración' : 'Especialista'}</td>
       <td><label class="casilla"><input type="checkbox" data-u="${u.id}" data-campo="guardia"${u.guardia ? ' checked' : ''}><i></i><span class="sr">De guardia</span></label></td>
       <td>${u.activo ? (u.disponible ? 'Disponible' : 'Activa') : 'Desactivada'}${u.debeCambiarClave ? '<br><span class="sub">Con clave temporal</span>' : ''}</td><td>${u.ultimoAcceso ? esc(fecha(u.ultimoAcceso)) : 'Nunca'}</td>
-      <td class="acc"><button class="btn plain" data-u="${u.id}" data-n="${esc(nombre(u))}" data-acc="clave">Nueva clave</button>${u.id === yo.id ? '' : ` <button class="btn plain" data-u="${u.id}" data-acc="${u.activo ? 'desactivar' : 'activar'}">${u.activo ? 'Desactivar' : 'Activar'}</button>`}</td></tr>`;
+      <td class="acc"><button class="btn plain" data-u="${u.id}" data-acc="editar">Editar</button> <button class="btn plain" data-u="${u.id}" data-n="${esc(nombre(u))}" data-acc="clave">Nueva clave</button>${u.id === yo.id ? '' : ` <button class="btn plain" data-u="${u.id}" data-acc="${u.activo ? 'desactivar' : 'activar'}">${u.activo ? 'Desactivar' : 'Activar'}</button>`}</td></tr>`;
   }
   function filaOrg(o) {
     const enlace = location.origin + (o.slug === 'general' ? '/' : '/o/' + o.slug);
@@ -284,10 +296,23 @@
     el.innerHTML = `Clave temporal de <b>${esc(n)}</b>: <code>${esc(clave)}</code>. Entrégala en persona o por un canal seguro; al ingresar se le pedirá cambiarla. No se vuelve a mostrar.`;
     el.hidden = false;
   }
+  let usuariosAdmin = [];
+  function editarFila(id) {
+    const u = usuariosAdmin.find(x => x.id === +id);
+    const fila = document.querySelector(`button[data-acc="editar"][data-u="${id}"]`);
+    if (!u || !fila) return;
+    fila.closest('tr').outerHTML = `<tr><td colspan="7"><form class="form-fila" data-editar="${u.id}">
+      <div class="campo-form"><label for="e-titulo">Título</label><input id="e-titulo" maxlength="12" value="${esc(u.titulo)}" placeholder="Ps., Dr., Dra."></div>
+      <div class="campo-form"><label for="e-nombre">Nombre y apellido</label><input id="e-nombre" required maxlength="80" value="${esc(u.nombre)}"></div>
+      <div class="campo-form"><label for="e-esp">Especialidad</label><input id="e-esp" maxlength="80" value="${esc(u.especialidad)}"></div>
+      <div class="fila-btn"><button class="btn" type="submit">Guardar</button><button class="btn plain" type="button" data-acc="cancelar-edicion">Cancelar</button></div></form></td></tr>`;
+    $('#e-nombre').focus();
+  }
   async function verAdmin(despues) {
     const box = $('#vista-admin');
     try {
       const [u, o, m] = await Promise.all([api('GET', '/api/admin/usuarios'), api('GET', '/api/admin/organizaciones'), api('GET', '/api/admin/metricas')]);
+      usuariosAdmin = u.usuarios;
       box.innerHTML = `<div class="hoja-blanca">
         <header class="adm-top"><div><h1>Administración</h1><p class="sub">Equipo, organizaciones y resumen de los últimos 30 días.</p></div><a class="btn plain" href="#">Volver a los casos</a></header>
         <div class="dia"><dl>
@@ -330,6 +355,8 @@
   $('#vista-admin').addEventListener('click', async e => {
     const b = e.target.closest('button[data-acc]');
     if (!b) return;
+    if (b.dataset.acc === 'editar') return editarFila(b.dataset.u);
+    if (b.dataset.acc === 'cancelar-edicion') return verAdmin();
     b.disabled = true;
     try {
       const acc = b.dataset.acc;
@@ -344,6 +371,12 @@
     const f = e.target, b = f.querySelector('button[type=submit]');
     b.disabled = true;
     try {
+      if (f.dataset.editar) {
+        const d = await api('PATCH', '/api/admin/usuarios/' + f.dataset.editar, { titulo: $('#e-titulo').value, nombre: $('#e-nombre').value, especialidad: $('#e-esp').value });
+        if (d.usuario.id === yo.id) { Object.assign(yo, d.usuario); $('#yo').textContent = nombre(yo); }
+        aviso('Datos guardados.');
+        return verAdmin();
+      }
       if (f.id === 'f-usuario') {
         const d = await api('POST', '/api/admin/usuarios', { correo: $('#u-correo').value, titulo: $('#u-titulo').value, nombre: $('#u-nombre').value, especialidad: $('#u-esp').value, rol: $('#u-rol').value, guardia: $('#u-guardia').checked });
         verAdmin(() => mostrarClave(nombre(d.usuario), d.claveTemporal));

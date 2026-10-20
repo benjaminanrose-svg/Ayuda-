@@ -138,6 +138,13 @@ test('especialista y persona conversan en vivo', async () => {
   assert.equal(p.datos.mensajes.length, 0, 'con especialista, el bot no responde');
   await se.esperar(e => e.evento === 'mensaje' && e.datos.mensaje.texto === 'gracias por venir');
   assert.equal((await pedir(perdedor, 'POST', `/api/equipo/casos/${casoId}/mensajes`, { texto: 'hola' })).estado, 409);
+  const v = await pedir(ganador, 'POST', `/api/equipo/casos/${casoId}/videollamada`, {});
+  assert.equal(v.estado, 200); assert.equal(v.datos.mensaje.tipo, 'videollamada');
+  assert.match(v.datos.mensaje.texto, /^https:\/\/meet\.jit\.si\/RedAcompana-[a-f0-9]{20}$/);
+  await sp.esperar(e => e.evento === 'mensaje' && e.datos.tipo === 'videollamada');
+  assert.equal((await pedir(perdedor, 'POST', `/api/equipo/casos/${casoId}/videollamada`, {})).estado, 409);
+  const ed = await pedir('a', 'PATCH', '/api/admin/usuarios/1', { titulo: 'Ps.', nombre: 'Benjamín Rojas' });
+  assert.equal(ed.estado, 200); assert.equal(ed.datos.usuario.nombre, 'Benjamín Rojas');
   assert.equal((await pedir(ganador, 'POST', `/api/equipo/casos/${casoId}/agendar`, { para: '2020-01-01T10:00' })).estado, 400);
   assert.equal((await pedir(ganador, 'POST', `/api/equipo/casos/${casoId}/cerrar`, { nota: 'Contenida, con red de apoyo.' })).estado, 200);
   await sp.esperar(e => e.evento === 'mensaje' && /terminó/.test(e.datos.texto));

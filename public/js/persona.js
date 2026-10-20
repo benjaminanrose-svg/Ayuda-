@@ -22,7 +22,17 @@
     } else {
       d.className = 'msg ' + ({ persona: 'user', bot: 'bot', especialista: 'pro' })[m.autor];
       if (m.autor !== 'persona') { const w = document.createElement('span'); w.className = 'who'; w.textContent = m.autor === 'especialista' ? m.nombre || 'Especialista' : 'Acompaña'; d.append(w); }
-      d.append(document.createTextNode(m.texto));
+      if (m.tipo === 'videollamada' && /^https:\/\//.test(m.texto)) {
+        d.classList.add('video');
+        d.append(document.createTextNode('Te invito a una videollamada privada. Se abre en otra pestaña y no necesitas instalar nada.'));
+        const a = document.createElement('a');
+        a.className = 'btn';
+        a.href = m.texto;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.textContent = 'Entrar a la videollamada';
+        d.append(a);
+      } else d.append(document.createTextNode(m.texto));
     }
     log.append(d);
     abajo();

@@ -16,5 +16,7 @@ module.exports = {
   escalar: { high: num(env.ESCALAR_ALTO_SEG, 30), mid: num(env.ESCALAR_MEDIO_SEG, 180), low: num(env.ESCALAR_BAJO_SEG, 0) },
   sinRespuestaSeg: num(env.SIN_RESPUESTA_SEG, 120),
   retencionDias: num(env.RETENCION_DIAS, 0),
-  orgPorDefecto: env.ORG_POR_DEFECTO || 'general'
+  orgPorDefecto: env.ORG_POR_DEFECTO || 'general',
+  // salas de videollamada (Jitsi). Se puede cambiar por un servidor Jitsi propio.
+  videoBase: (env.VIDEO_BASE_URL || 'https://meet.jit.si').replace(/\/$/, '')
 };

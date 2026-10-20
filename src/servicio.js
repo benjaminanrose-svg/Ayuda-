@@ -309,7 +309,7 @@ async function cerrar(u, id, nota) {
   return s.resumen;
 }
 
-async function mensajeEspecialista(u, id, texto) {
+async function mensajeEspecialista(u, id, texto, tipo = 'texto') {
   texto = String(texto || '').trim().slice(0, 2000);
   if (!texto) throw falla(400, 'Escribe un mensaje.');
   const s = await tx(async c => {
@@ -320,7 +320,7 @@ async function mensajeEspecialista(u, id, texto) {
       k = (await c.query("update casos set estado = 'en_atencion', tomado_en = now() where id = $1 returning *", [id])).rows[0];
       await eventoBot(c, k.conversacion_id, 'accepted', {});
     }
-    ms.push(await guardarMensaje(c, k.conversacion_id, 'especialista', texto, { usuarioId: u.id, nombre: nombreDe(u) }));
+    ms.push(await guardarMensaje(c, k.conversacion_id, 'especialista', texto, { usuarioId: u.id, nombre: nombreDe(u), tipo }));
     await c.query('update casos set actualizado_en = now() where id = $1', [id]);
     await c.query('update conversaciones set ultima_actividad = now() where id = $1', [k.conversacion_id]);
     return { k, ms, resumen: await resumenCaso(c, k.id) };
@@ -332,6 +332,9 @@ async function mensajeEspecialista(u, id, texto) {
   if (!tr.personaConectada(s.k.conversacion_id)) avisos.aConversacion(s.k.conversacion_id, { titulo: 'Acompaña', cuerpo: 'Tienes un mensaje nuevo.', url: '/', etiqueta: 'acompana' }).catch(log);
   return m;
 }
+
+/* Invitación a videollamada: sala privada con nombre aleatorio; la persona entra desde el navegador. */
+const videollamada = (u, id) => mensajeEspecialista(u, id, `${cfg.videoBase}/RedAcompana-${require('crypto').randomBytes(10).toString('hex')}`, 'videollamada');
 
 /* ── trabajos periódicos ── */
 async function escalar() {
@@ -391,6 +394,6 @@ async function limpieza() {
 
 module.exports = {
   nuevaConversacion, historiaPersona, mensajePersona,
-  listarCasos, detalleCaso, tomar, agendar, derivar, cerrar, mensajeEspecialista,
+  listarCasos, detalleCaso, tomar, agendar, derivar, cerrar, mensajeEspecialista, videollamada,
   escalar, sinRespuesta, recordatorios, limpieza, auditar, cuandoTexto
 };
