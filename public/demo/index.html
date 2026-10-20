@@ -5,8 +5,7 @@
 <style>[hidden]{display:none!important}</style>
 <meta charset="utf-8">
 <title>Red Acompaña</title>
-<meta name="claude:viewport-fit-sides" content="cover">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=Atkinson+Hyperlegible+Next:ital,wght@0,400..700;1,400&display=swap">
+<link rel="stylesheet" href="/css/fuentes.css">
 <style>
 /* Layout: banda de encabezado de formulario (título y campos de cabecera); debajo, dos copias del mismo juego autocopiativo lado a lado (persona en canario, especialista en rosa) y el original blanco del laboratorio al final. Tema claro único: se presenta proyectado en salas con luz. */
 :root{
@@ -1305,7 +1304,11 @@ function create(saved){
       out.push('Yo sigo aquí contigo mientras tanto.');
     }
     if (name === 'accepted' || (name === 'refer' && !o)) S.mode = 'humano';
-    if (name === 'refer' && o) { S.mode = 'normal'; out.push('Tu caso pasó al equipo de guardia. Te van a escribir por aquí mismo; yo sigo contigo mientras tanto.'); }
+    if (name === 'refer' && o) {
+      S.mode = 'normal';
+      if (o.guardia === 0) { out.push('Tu caso pasó al equipo de guardia. Ahora no hay nadie de guardia conectado; te van a escribir apenas alguien se conecte.'); if (!F.refusedCall) out.push(F.cantCall ? 'Si estás en peligro, pídele a alguien cerca que llame al 131 por ti.' : 'Si estás en peligro, llama al *4141 o al 131: atienden las 24 horas.'); }
+      else out.push('Tu caso pasó al equipo de guardia. Te van a escribir por aquí mismo; yo sigo contigo mientras tanto.');
+    }
     if (name === 'tomorrow') {
       S.mode = 'agendado';
       if (o) { out.push('Tu hora quedó para ' + (o.cuando || 'mañana a las 10:00') + (o.con ? ' con ' + o.con : '') + '.'); out.push(o.aviso ? 'Te vamos a avisar en este navegador cuando sea la hora.' : 'Vuelve a esta misma página a esa hora: aquí mismo te van a escribir.'); }

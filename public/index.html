@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Acompaña · Un espacio para conversar</title>
+<meta name="description" content="Un espacio confidencial para conversar. Si lo necesitas, te conectamos con un especialista.">
+<meta name="theme-color" content="#1B3768">
+<link rel="icon" href="/img/icono.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/img/icono-192.png">
+<link rel="stylesheet" href="/css/fuentes.css">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/persona.css">
+<script src="/js/comun.js" defer></script>
+<script src="/js/persona.js" defer></script>
+</head>
+<body class="persona">
+<header class="banda">
+  <div class="banda-in">
+    <div class="marca">
+      <svg class="mark" viewBox="0 0 36 36" aria-hidden="true"><circle cx="14" cy="18" r="9.5" fill="none" stroke="#fff" stroke-width="2.6"/><circle cx="22" cy="18" r="9.5" fill="none" stroke="#FAE89A" stroke-width="2.6"/></svg>
+      <div><div class="marca-nombre">Acompaña</div><div class="marca-sub" id="presencia" aria-live="polite">Te escuchamos</div></div>
+    </div>
+    <div class="banda-acc">
+      <button class="btn-banda" id="salir" type="button" title="Sale de inmediato a un buscador">Salir rápido</button>
+    </div>
+  </div>
+</header>
+
+<main class="copia" id="copia">
+  <div class="steps" aria-label="Estado de tu conversación">
+    <div class="step active" id="s1"><i></i>Te escuchamos</div>
+    <div class="step" id="s2"><i></i>Buscando especialista</div>
+    <div class="step" id="s3"><i></i>Con especialista</div>
+    <span class="folio" id="folio" hidden></span>
+  </div>
+  <div class="crisis" id="crisis" hidden role="region" aria-label="Líneas de ayuda">
+    <div id="crisis-head"></div>
+    <div class="nums" id="nums"></div>
+  </div>
+  <div class="log" id="log" aria-live="polite">
+    <section class="aviso" aria-label="Antes de empezar">
+      <p><strong>Acompaña es un asistente automático, no una persona.</strong> Te escucha y, si lo necesitas, avisa a un especialista de la red para que te escriba por aquí. Lo que escribes es confidencial.</p>
+      <p>Si estás en peligro ahora, llama al <a href="tel:*4141">*4141</a> o al <a href="tel:131">131</a>: atienden gratis las 24 horas.</p>
+    </section>
+  </div>
+  <div class="quick" id="quick"></div>
+  <div class="oferta" id="oferta" hidden>
+    <span>¿Te avisamos en este navegador cuando te escriban?</span>
+    <span class="oferta-acc"><button class="btn ghost" id="activar" type="button">Activar avisos</button><button class="enlace" id="no-avisos" type="button">Ahora no</button></span>
+  </div>
+  <form class="compose" id="compose">
+    <label class="sr" for="input">Tu mensaje</label>
+    <input class="entrada" id="input" autocomplete="off" maxlength="2000" enterkeyhint="send" placeholder="Escribe cómo te sientes…">
+    <button class="send" id="enviar" type="submit" aria-label="Enviar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+  </form>
+  <footer class="pie">
+    <a href="/privacidad">Aviso de privacidad</a>
+    <button class="enlace" id="olvidar" type="button">Olvidar esta conversación en este dispositivo</button>
+  </footer>
+</main>
+</body>
+</html>

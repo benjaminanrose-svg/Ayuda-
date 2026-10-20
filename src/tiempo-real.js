@@ -1,40 +1,37 @@
 'use strict';
-/* Eventos en vivo por Server-Sent Events. Una conexión por pestaña; latido cada 25 s para que el proxy no la corte.
-   Funciona con una réplica. Para varias réplicas, publicar los eventos por LISTEN/NOTIFY de Postgres. */
-const conv = new Map(), usr = new Map();
+/* Avisos en vivo por Server-Sent Events: personas (por conversación) y equipo (por usuario). */
+const personas = new Map();
+const equipo = new Map();
 
-function agregar(mapa, id, res) { if (!mapa.has(id)) mapa.set(id, new Set()); mapa.get(id).add(res); }
-function quitar(mapa, id, res) { const s = mapa.get(id); if (s) { s.delete(res); if (!s.size) mapa.delete(id); } }
-
-function abrir(req, res, tipo, id, alAbrir) {
+function abrir(req, res, mapa, clave) {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream; charset=utf-8',
     'Cache-Control': 'no-cache, no-transform',
-    'Connection': 'keep-alive',
+    Connection: 'keep-alive',
     'X-Accel-Buffering': 'no'
   });
-  res.write('retry: 3000\n\n');
-  const mapa = tipo === 'conv' ? conv : usr;
-  agregar(mapa, id, res);
-  const latido = setInterval(() => res.write(': latido\n\n'), 25e3);
-  req.on('close', () => { clearInterval(latido); quitar(mapa, id, res); });
-  if (alAbrir) alAbrir();
+  res.write('retry: 4000\n\n');
+  let s = mapa.get(clave);
+  if (!s) mapa.set(clave, (s = new Set()));
+  s.add(res);
+  const latido = setInterval(() => res.write(': latido\n\n'), 25000);
+  req.on('close', () => {
+    clearInterval(latido);
+    s.delete(res);
+    if (!s.size && mapa.get(clave) === s) mapa.delete(clave);
+  });
 }
 
-function escribir(set, evento, datos) {
-  if (!set) return 0;
-  const msg = `event: ${evento}\ndata: ${JSON.stringify(datos)}\n\n`;
-  for (const res of set) res.write(msg);
-  return set.size;
-}
+const enviar = (res, evento, datos) => { try { res.write(`event: ${evento}\ndata: ${JSON.stringify(datos)}\n\n`); } catch { /* cerrada */ } };
+const a = (mapa, clave, evento, datos) => (mapa.get(clave) || []).forEach(r => enviar(r, evento, datos));
 
-const aConversacion = (id, evento, datos) => escribir(conv.get(id), evento, datos);
-const aUsuario = (id, evento, datos) => escribir(usr.get(id), evento, datos);
-function aEquipo(evento, datos, filtro) { let n = 0; for (const [id, set] of usr) if (!filtro || filtro(id)) n += escribir(set, evento, datos); return n; }
-const conversacionConectada = id => conv.has(id);
-const usuarioConectado = id => usr.has(id);
-const usuariosConectados = () => [...usr.keys()];
-
-function cerrarTodo() { for (const m of [conv, usr]) for (const set of m.values()) for (const res of set) res.end(); }
-
-module.exports = { abrir, aConversacion, aUsuario, aEquipo, conversacionConectada, usuarioConectado, usuariosConectados, cerrarTodo };
+module.exports = {
+  abrirPersona: (req, res, convId) => abrir(req, res, personas, convId),
+  abrirEquipo: (req, res, usuarioId) => abrir(req, res, equipo, usuarioId),
+  aPersona: (convId, evento, datos) => a(personas, convId, evento, datos),
+  aUsuario: (usuarioId, evento, datos) => a(equipo, usuarioId, evento, datos),
+  aEquipo: (evento, datos) => equipo.forEach(s => s.forEach(r => enviar(r, evento, datos))),
+  personaConectada: convId => personas.has(convId),
+  usuarioConectado: usuarioId => equipo.has(usuarioId),
+  cerrarTodo: () => [personas, equipo].forEach(m => m.forEach(s => s.forEach(r => { try { r.end(); } catch { /* ignorar */ } })))
+};

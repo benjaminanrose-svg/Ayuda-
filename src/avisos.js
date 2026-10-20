@@ -1,60 +1,53 @@
 'use strict';
-/* Avisos al equipo: en vivo a quien tenga el panel abierto y por Web Push a quien esté disponible. */
-const db = require('./db');
-const tr = require('./tiempo-real');
-const push = require('./push');
-const fichas = require('./fichas');
+/* Notificaciones push del navegador (Web Push). Las llaves VAPID se generan una vez y quedan en la base de datos. */
+const webpush = require('web-push');
+const { q } = require('./db');
+const cfg = require('./config');
+const { falla } = require('./http');
 
-async function ids(sql) { return (await db.q(sql)).rows.map(r => r.id); }
-const disponibles = () => ids('select id from usuarios where activo and atiende and disponible');
-const guardias = () => ids('select id from usuarios where activo and atiende and disponible and guardia');
-const admins = () => ids("select id from usuarios where activo and rol = 'admin'");
+const SERVICIOS = /^(fcm\.googleapis\.com|android\.googleapis\.com|updates\.push\.services\.mozilla\.com|[a-z0-9.-]+\.push\.apple\.com|web\.push\.apple\.com|[a-z0-9.-]+\.notify\.windows\.com)$/;
+let publica = null;
 
-async function casoNuevo(id) {
-  const f = await fichas.resumen(id);
-  if (!f) return null;
-  tr.aEquipo('caso', { accion: 'nuevo', caso: f });
-  await push.aUsuarios(await disponibles(), {
-    titulo: `Nuevo caso · prioridad ${f.nivel.toLowerCase()}${f.urgente ? ' · urgente' : ''}`,
-    cuerpo: `Ficha ${fichas.folio(f.folio)} · ${f.org}`, url: '/equipo', urgente: f.riesgo === 'high', etiqueta: 'caso-' + f.id
-  });
-  return f;
-}
-
-async function casoActualizado(id) {
-  const f = await fichas.resumen(id);
-  if (!f) return null;
-  if (['esperando', 'escalado'].includes(f.estado)) tr.aEquipo('caso', { accion: 'actualizado', caso: f });
-  else {
-    const duenos = [f.tomadoPor, f.agendadoCon].filter(Boolean);
-    tr.aEquipo('caso', { accion: 'quitado', id: f.id }, uid => !duenos.includes(uid));
-    for (const uid of duenos) tr.aUsuario(uid, 'caso', { accion: 'actualizado', caso: f });
+async function iniciar() {
+  const leer = async () => (await q("select valor from ajustes where clave = 'vapid'")).rows[0];
+  let r = await leer();
+  if (!r) {
+    await q("insert into ajustes (clave, valor) values ('vapid', $1) on conflict (clave) do nothing", [webpush.generateVAPIDKeys()]);
+    r = await leer();
   }
-  return f;
+  publica = r.valor.publicKey;
+  webpush.setVapidDetails(cfg.adminCorreo ? 'mailto:' + cfg.adminCorreo : cfg.urlApp, r.valor.publicKey, r.valor.privateKey);
 }
 
-/* Caso sin tomar a tiempo, derivado o con un mensaje urgente sin respuesta: se avisa a la guardia; si no hay guardia, a todos los disponibles y a administración. */
-async function aGuardia(id, motivo) {
-  const f = await fichas.resumen(id);
-  if (!f) return 0;
-  let destino = await guardias();
-  const hayGuardia = destino.length > 0;
-  if (!hayGuardia) destino = [...new Set([...(await disponibles()), ...(await admins())])];
-  tr.aEquipo('caso', { accion: 'actualizado', caso: f });
-  for (const uid of destino) tr.aUsuario(uid, 'alerta', { casoId: f.id, folio: f.folio, motivo });
-  await push.aUsuarios(destino, { titulo: motivo, cuerpo: `Ficha ${fichas.folio(f.folio)} · prioridad ${f.nivel.toLowerCase()}`, url: '/equipo', urgente: true, etiqueta: 'guardia-' + f.id });
-  return hayGuardia ? destino.length : 0;
+async function enviar(filas, datos) {
+  await Promise.all(filas.map(async f => {
+    try {
+      await webpush.sendNotification(f.datos, JSON.stringify(datos), { TTL: 3600, urgency: datos.urgente ? 'high' : 'normal' });
+    } catch (e) {
+      if (e.statusCode === 404 || e.statusCode === 410) await q('delete from suscripciones where endpoint = $1', [f.endpoint]);
+      else console.error('[avisos] no se pudo enviar:', e.statusCode || e.message);
+    }
+  }));
 }
 
-async function mensajeAlEspecialista(id, mensaje) {
-  const f = await fichas.resumen(id);
-  if (!f || !f.tomadoPor) return;
-  tr.aUsuario(f.tomadoPor, 'mensaje', { casoId: f.id, mensaje });
-  tr.aUsuario(f.tomadoPor, 'caso', { accion: 'actualizado', caso: f });
-  const urgente = mensaje.riesgo === 'high';
-  if (urgente || !tr.usuarioConectado(f.tomadoPor)) {
-    await push.aUsuarios([f.tomadoPor], { titulo: urgente ? 'Mensaje urgente de la persona' : 'Mensaje nuevo', cuerpo: `Ficha ${fichas.folio(f.folio)}`, url: '/equipo', urgente, etiqueta: 'mensaje-' + f.id });
-  }
+async function aUsuarios(ids, datos) {
+  const lista = ids.filter(Boolean);
+  if (!lista.length) return;
+  await enviar((await q('select endpoint, datos from suscripciones where usuario_id = any($1::int[])', [lista])).rows, datos);
 }
 
-module.exports = { casoNuevo, casoActualizado, aGuardia, mensajeAlEspecialista, disponibles, guardias };
+async function aConversacion(convId, datos) {
+  await enviar((await q('select endpoint, datos from suscripciones where conversacion_id = $1', [convId])).rows, datos);
+}
+
+async function guardar(s, { usuarioId = null, conversacionId = null }) {
+  let host = '';
+  try { host = new URL(s.endpoint).host; } catch { /* inválido */ }
+  if (!s || !/^https:\/\//.test(s.endpoint || '') || !SERVICIOS.test(host) || !s.keys || !s.keys.p256dh || !s.keys.auth) throw falla(400, 'Suscripción de avisos inválida.');
+  const datos = { endpoint: s.endpoint, keys: { p256dh: String(s.keys.p256dh).slice(0, 200), auth: String(s.keys.auth).slice(0, 100) } };
+  await q(`insert into suscripciones (endpoint, usuario_id, conversacion_id, datos) values ($1, $2, $3, $4)
+           on conflict (endpoint) do update set usuario_id = excluded.usuario_id, conversacion_id = excluded.conversacion_id, datos = excluded.datos`,
+  [datos.endpoint, usuarioId, conversacionId, datos]);
+}
+
+module.exports = { iniciar, clavePublica: () => publica, aUsuarios, aConversacion, guardar };

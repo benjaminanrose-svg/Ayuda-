@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ingresar · Red Acompaña</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#1B3768">
+<link rel="icon" href="/img/icono.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/fuentes.css">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/equipo.css">
+<script src="/js/comun.js" defer></script>
+<script src="/js/ingresar.js" defer></script>
+</head>
+<body>
+<header class="banda">
+  <div class="banda-in">
+    <div class="marca">
+      <svg class="mark" viewBox="0 0 36 36" aria-hidden="true"><circle cx="14" cy="18" r="9.5" fill="none" stroke="#fff" stroke-width="2.6"/><circle cx="22" cy="18" r="9.5" fill="none" stroke="#F7CAD6" stroke-width="2.6"/></svg>
+      <div><div class="marca-nombre">Red Acompaña</div><div class="marca-sub">Panel del especialista</div></div>
+    </div>
+  </div>
+</header>
+<main>
+  <form class="hoja-form" id="f-ingreso">
+    <h1>Ingresar al panel</h1>
+    <p class="sub">Solo para especialistas y administración de la red.</p>
+    <div class="campo-form"><label for="correo">Correo</label><input id="correo" type="email" autocomplete="username" required></div>
+    <div class="campo-form"><label for="clave">Clave</label><input id="clave" type="password" autocomplete="current-password" required></div>
+    <p class="error" id="err-ingreso" role="alert" hidden></p>
+    <button class="btn" type="submit">Ingresar</button>
+  </form>
+  <form class="hoja-form" id="f-clave" hidden>
+    <h1>Crea tu clave</h1>
+    <p class="sub">Por seguridad, reemplaza la clave temporal por una tuya de al menos 10 caracteres.</p>
+    <div class="campo-form" id="campo-actual"><label for="actual">Clave actual</label><input id="actual" type="password" autocomplete="current-password"></div>
+    <div class="campo-form"><label for="nueva">Clave nueva</label><input id="nueva" type="password" autocomplete="new-password" minlength="10" required></div>
+    <div class="campo-form"><label for="repetir">Repite la clave nueva</label><input id="repetir" type="password" autocomplete="new-password" minlength="10" required></div>
+    <p class="error" id="err-clave" role="alert" hidden></p>
+    <button class="btn" type="submit">Guardar y entrar</button>
+  </form>
+</main>
+</body>
+</html>

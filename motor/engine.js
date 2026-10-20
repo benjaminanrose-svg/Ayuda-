@@ -858,7 +858,11 @@ function create(saved){
       out.push('Yo sigo aquí contigo mientras tanto.');
     }
     if (name === 'accepted' || (name === 'refer' && !o)) S.mode = 'humano';
-    if (name === 'refer' && o) { S.mode = 'normal'; out.push('Tu caso pasó al equipo de guardia. Te van a escribir por aquí mismo; yo sigo contigo mientras tanto.'); }
+    if (name === 'refer' && o) {
+      S.mode = 'normal';
+      if (o.guardia === 0) { out.push('Tu caso pasó al equipo de guardia. Ahora no hay nadie de guardia conectado; te van a escribir apenas alguien se conecte.'); if (!F.refusedCall) out.push(F.cantCall ? 'Si estás en peligro, pídele a alguien cerca que llame al 131 por ti.' : 'Si estás en peligro, llama al *4141 o al 131: atienden las 24 horas.'); }
+      else out.push('Tu caso pasó al equipo de guardia. Te van a escribir por aquí mismo; yo sigo contigo mientras tanto.');
+    }
     if (name === 'tomorrow') {
       S.mode = 'agendado';
       if (o) { out.push('Tu hora quedó para ' + (o.cuando || 'mañana a las 10:00') + (o.con ? ' con ' + o.con : '') + '.'); out.push(o.aviso ? 'Te vamos a avisar en este navegador cuando sea la hora.' : 'Vuelve a esta misma página a esa hora: aquí mismo te van a escribir.'); }

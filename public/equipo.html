@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Panel · Red Acompaña</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#1B3768">
+<link rel="icon" href="/img/icono.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/fuentes.css">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/equipo.css">
+<script src="/js/comun.js" defer></script>
+<script src="/js/equipo.js" defer></script>
+</head>
+<body class="equipo">
+<header class="banda">
+  <div class="banda-in">
+    <a class="marca" href="#">
+      <svg class="mark" viewBox="0 0 36 36" aria-hidden="true"><circle cx="14" cy="18" r="9.5" fill="none" stroke="#fff" stroke-width="2.6"/><circle cx="22" cy="18" r="9.5" fill="none" stroke="#F7CAD6" stroke-width="2.6"/></svg>
+      <div><div class="marca-nombre">Red Acompaña</div><div class="marca-sub">Panel del especialista</div></div>
+    </a>
+    <nav class="banda-acc" aria-label="Cuenta">
+      <label class="casilla casilla-clara"><input type="checkbox" id="disponible"><i aria-hidden="true"></i>Disponible</label>
+      <button class="btn-banda" id="avisos" type="button" hidden>Activar avisos</button>
+      <a class="btn-banda" id="ir-admin" href="#admin" hidden>Administración</a>
+      <span class="yo" id="yo"></span>
+      <button class="btn-banda" id="salir" type="button">Salir</button>
+    </nav>
+  </div>
+</header>
+<div class="alerta-banda" id="alerta" role="alert" hidden></div>
+<div class="desconectado" id="desconectado" hidden>Sin conexión en vivo. Reintentando…</div>
+
+<main class="panel" id="vista-casos">
+  <aside class="lista" aria-label="Casos">
+    <section><h2>En espera <span class="n" id="n-cola"></span></h2><ul id="cola"></ul></section>
+    <section><h2>Mis casos <span class="n" id="n-mios"></span></h2><ul id="mios"></ul></section>
+  </aside>
+  <section class="hoja" id="hoja" aria-live="polite"></section>
+</main>
+<main class="admin" id="vista-admin" hidden></main>
+<div class="toast" id="toast" role="status" hidden></div>
+</body>
+</html>

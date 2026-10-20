@@ -1,0 +1,22 @@
+/* Chat de la persona: la copia amarilla, a pantalla completa en el teléfono. */
+body.persona{height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+.persona .banda-in{max-width:640px}
+.copia{flex:1;min-height:0;display:flex;flex-direction:column;width:100%;max-width:640px;margin:0 auto;background:var(--amarilla);border-inline:1px solid var(--amarilla-2)}
+.copia .steps{color:var(--suave-a);align-items:center}
+.copia .steps .folio{margin-left:auto;font-size:.9rem}
+.log{flex:1;min-height:0;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.aviso{border:1px solid var(--regla-c);border-radius:2px;padding:10px 12px;margin-bottom:6px;font-size:.92rem;line-height:1.45;background:rgba(255,255,255,.45)}
+.aviso p{margin:0}
+.aviso p+p{margin-top:6px}
+.aviso strong{color:var(--tinta);font-family:var(--display)}
+.aviso a{font-weight:700;color:var(--folio)}
+.oferta{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between;margin:0 16px 8px;padding:8px 10px;border:1px dashed var(--caja);border-radius:2px;font-size:.9rem}
+.oferta-acc{display:flex;gap:12px;align-items:center}
+.oferta .btn{padding:7px 11px}
+.pie{display:flex;flex-wrap:wrap;gap:4px 14px;justify-content:space-between;padding:6px 16px max(8px,env(safe-area-inset-bottom));border-top:1px solid var(--regla-c);font:600 .78rem/1.4 var(--display);font-stretch:92%;color:var(--suave-a)}
+.pie a{color:var(--suave-a)}
+.persona .crisis{margin-top:8px}
+@media (min-width:700px){
+  body.persona{padding-bottom:20px}
+  .copia{margin-top:18px;border:1px solid var(--amarilla-2);border-radius:var(--r);box-shadow:var(--sombra);overflow:hidden}
+}
