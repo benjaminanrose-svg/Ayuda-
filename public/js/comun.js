@@ -11,7 +11,11 @@ window.RA = (() => {
     try { r = await fetch(url, op); } catch { throw Object.assign(new Error('Sin conexión. Revisa tu internet e intenta de nuevo.'), { estado: 0 }); }
     let d = {};
     try { d = await r.json(); } catch { /* sin cuerpo */ }
-    if (!r.ok) throw Object.assign(new Error(d.error || 'Ocurrió un error. Intenta de nuevo.'), { estado: r.status, datos: d });
+    if (!r.ok) {
+      const reiniciando = [502, 503, 504].includes(r.status);
+      const texto = d.error || (reiniciando ? 'El servicio se está reiniciando. Espera unos segundos y vuelve a intentar.' : `Ocurrió un error (código ${r.status}). Intenta de nuevo.`);
+      throw Object.assign(new Error(texto), { estado: r.status, datos: d, reiniciando });
+    }
     return d;
   }
 

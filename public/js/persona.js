@@ -132,7 +132,13 @@
     enviando = true;
     $('#enviar').disabled = true;
     try {
-      const d = await api('POST', '/api/persona/mensajes', { texto: t, org: slug });
+      let d;
+      try { d = await api('POST', '/api/persona/mensajes', { texto: t, org: slug }); }
+      catch (e) {
+        if (!e.reiniciando) throw e;
+        await new Promise(r => setTimeout(r, 4000)); // reintento único si el servidor se estaba reiniciando
+        d = await api('POST', '/api/persona/mensajes', { texto: t, org: slug });
+      }
       if (d.miMensaje) vistos.add(d.miMensaje);
       d.mensajes.forEach(decir);
       if (d.chips && d.chips.length) cola.push({ chips: d.chips });
