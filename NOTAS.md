@@ -46,3 +46,4 @@ Leer esto primero. Ir directo al archivo y la línea indicados, sin buscar.
 - 2026-10-20 · Pruebas: API (7/7 con Postgres real) y navegador sin errores · `test/api.test.js`, `test/e2e.js`.
 - 2026-10-20 · Guía de despliegue en Railway · `README.md`.
 - 2026-10-20 · Chat: si el servidor se reinicia (502/503/504) avisa claro y reintenta una vez · `public/js/comun.js` (api), `public/js/persona.js` (enviar).
+- 2026-10-20 · Railway: auto deploy activado (rama main); cada push a GitHub se publica solo.
