@@ -1,31 +1,32 @@
 ---
-name: Red Acompaña
-description: Una ficha de derivación que se llena en vivo, de la copia de la persona a la copia del especialista.
+name: ConténMente
+description: Una ficha de derivación que se llena en vivo, de la copia de la persona (menta) a la copia del especialista (lavanda). Bot: Nexo.
 colors:
-  tinta: "#1B3768"
-  pasta: "#2142A8"
-  timbre: "#5B3A99"
-  amarilla: "#FAE89A"
-  amarilla-2: "#D9BF55"
-  rosa: "#F7CAD6"
-  rosa-2: "#DC97AB"
+  tinta: "#30486C"
+  pasta: "#486C90"
+  timbre: "#6A54A8"
+  amarilla: "#E3F1EE"
+  amarilla-2: "#8CC8BC"
+  rosa: "#EEEAF6"
+  rosa-2: "#B8A2DA"
   folio: "#AD1F2B"
   folio-2: "#FBE9EA"
   media: "#8A5A00"
   media-2: "#FBF1DC"
-  baja: "#2E6B4F"
-  baja-2: "#E5F2EB"
-  mesa: "#E7EBF2"
+  baja: "#2F6E63"
+  baja-2: "#E3F1EE"
+  mesa: "#F2F0F8"
   papel: "#FFFFFF"
-  nube: "#EEF2F8"
-  texto: "#18202E"
-  suave: "#4D5A70"
-  suave-a: "#594813"
-  suave-r: "#66303F"
-  regla: "#B7C3D8"
-  regla-2: "#DCE2ED"
-  regla-c: "rgba(27,55,104,.3)"
-  caja: "rgba(27,55,104,.5)"
+  nube: "#F3F1F8"
+  texto: "#222B3B"
+  suave: "#556076"
+  suave-a: "#2F5F57"
+  suave-r: "#4B3C70"
+  regla: "#C9C6DA"
+  regla-2: "#E4E2EE"
+  regla-c: "rgba(48,72,108,.3)"
+  caja: "rgba(48,72,108,.5)"
+  chispa: "#F0C090"
 typography:
   display:
     fontFamily: "Archivo, Helvetica Neue, Arial, sans-serif"
@@ -145,7 +146,9 @@ components:
     rounded: "{rounded.control}"
 ---
 
-# Design System: Red Acompaña
+# Design System: ConténMente
+
+> Marca 2026-10-20: los nombres de tokens (amarilla, rosa) se mantienen por compatibilidad, pero ahora son menta (copia de la persona) y lavanda (copia del especialista). Logo: `public/img/logo-*.png` sobre fondo blanco redondeado en la banda azul pizarra; nombre en dos tonos: «Contén» blanco + «Mente» menta #9AD0C4.
 
 ## Overview
 

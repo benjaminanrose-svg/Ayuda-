@@ -1,5 +1,5 @@
-/* Panel del especialista (copia rosa), administración (original blanco), ingreso y páginas de texto. */
-.equipo .yo{font:600 .86rem/1.2 var(--display);color:#C9D4EA;white-space:nowrap}
+/* Panel del especialista (copia lavanda), administración (original blanco), ingreso y páginas de texto. */
+.equipo .yo{font:600 .86rem/1.2 var(--display);color:#D6D0EA;white-space:nowrap}
 .alerta-banda{background:var(--folio);color:#fff;padding:10px 16px;font:700 .92rem/1.35 var(--display);display:flex;gap:10px 16px;align-items:center;justify-content:center;flex-wrap:wrap}
 .alerta-banda a,.alerta-banda button{color:#fff}
 .desconectado{background:var(--media-2);color:var(--media);text-align:center;font:600 .86rem/1.3 var(--display);padding:6px 16px;border-bottom:1px solid rgba(138,90,0,.3)}
@@ -11,7 +11,7 @@
 .lista .n{font:800 .9rem/1 var(--display);color:var(--folio);font-variant-numeric:tabular-nums}
 .lista ul{list-style:none;margin:0;padding:0}
 .item{display:grid;gap:5px;padding:10px 14px;border-bottom:1px solid var(--regla-2);text-decoration:none;color:var(--texto)}
-.item:hover{background:#F6F8FB}
+.item:hover{background:#F5F3FA}
 .item.sel{background:var(--rosa)}
 .item-a{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .item .t{margin-left:auto;font:700 .82rem/1 var(--display);font-variant-numeric:tabular-nums;color:var(--tinta)}
@@ -66,7 +66,7 @@
 .tabla td.acc{white-space:nowrap;text-align:right}
 .tabla .btn{padding:6px 10px;font-size:.82rem}
 .form-fila{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;align-items:end;padding:12px;border:1px dashed var(--regla);border-radius:3px}
-.clave-temp{padding:12px 14px;border:1.5px solid var(--timbre);border-radius:3px;background:#F4F0FB;font-size:.95rem}
+.clave-temp{padding:12px 14px;border:1.5px solid var(--timbre);border-radius:3px;background:#F1EDF8;font-size:.95rem}
 .clave-temp code{font:700 1.15rem/1 var(--display);letter-spacing:.05em;color:var(--timbre)}
 
 /* ingreso y páginas de texto */

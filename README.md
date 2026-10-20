@@ -1,6 +1,6 @@
-# Red Acompaña
+# ConténMente
 
-Acompañamiento y derivación en salud mental. Un bot por reglas (sin IA generativa) conversa con la persona, detecta señales de riesgo y la conecta con especialistas de la red, que la atienden en el momento, le dan hora o derivan a guardia.
+Acompañamiento y derivación en salud mental. Nexo, un bot por reglas (sin IA generativa) conversa con la persona, detecta señales de riesgo y la conecta con especialistas de la red, que la atienden en el momento, le dan hora o derivan a guardia.
 
 - **Chat de la persona:** `/` (o `/o/nombre-organizacion` para cada colegio, empresa o municipio).
 - **Panel del especialista:** `/equipo` (ingreso en `/ingresar`).

@@ -2,7 +2,7 @@
   "name": "red-acompana",
   "version": "1.0.0",
   "private": true,
-  "description": "Red Acompaña: acompañamiento y derivación en salud mental. Bot por reglas que escucha, detecta riesgo y conecta con especialistas.",
+  "description": "ConténMente: acompañamiento y derivación en salud mental. Bot por reglas que escucha, detecta riesgo y conecta con especialistas.",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",

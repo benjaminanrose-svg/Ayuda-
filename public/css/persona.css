@@ -1,4 +1,4 @@
-/* Chat de la persona: la copia amarilla, a pantalla completa en el teléfono. */
+/* Chat de la persona: la copia menta, a pantalla completa en el teléfono. */
 body.persona{height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
 .persona .banda-in{max-width:640px}
 .copia{flex:1;min-height:0;display:flex;flex-direction:column;width:100%;max-width:640px;margin:0 auto;background:var(--amarilla);border-inline:1px solid var(--amarilla-2)}

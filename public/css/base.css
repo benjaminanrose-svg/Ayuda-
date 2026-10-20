@@ -1,22 +1,24 @@
-/* Red Acompaña · sistema visual "ficha de derivación" (ver docs/DESIGN.md). Tema claro único. */
+/* ConténMente · sistema visual "ficha de derivación" (ver docs/DESIGN.md). Tema claro único.
+   Paleta de marca: menta #8CC8BC, lavanda #B8A2DA, azul pizarra #30486C, azul mano #486C90, chispa amarilla #F0C090. */
 :root{
-  --mesa:#E7EBF2; --papel:#FFFFFF;
-  --amarilla:#FAE89A; --amarilla-2:#D9BF55;
-  --rosa:#F7CAD6; --rosa-2:#DC97AB;
-  --tinta:#1B3768; --texto:#18202E; --suave:#4D5A70; --suave-a:#594813; --suave-r:#66303F;
-  --regla:#B7C3D8; --regla-2:#DCE2ED; --regla-c:rgba(27,55,104,.3); --caja:rgba(27,55,104,.5);
-  --nube:#EEF2F8; --pasta:#2142A8; --folio:#AD1F2B; --folio-2:#FBE9EA; --timbre:#5B3A99;
-  --media:#8A5A00; --media-2:#FBF1DC; --baja:#2E6B4F; --baja-2:#E5F2EB;
+  --mesa:#F2F0F8; --papel:#FFFFFF;
+  --amarilla:#E3F1EE; --amarilla-2:#8CC8BC;
+  --rosa:#EEEAF6; --rosa-2:#B8A2DA;
+  --tinta:#30486C; --texto:#222B3B; --suave:#556076; --suave-a:#2F5F57; --suave-r:#4B3C70;
+  --regla:#C9C6DA; --regla-2:#E4E2EE; --regla-c:rgba(48,72,108,.3); --caja:rgba(48,72,108,.5);
+  --nube:#F3F1F8; --pasta:#486C90; --folio:#AD1F2B; --folio-2:#FBE9EA; --timbre:#6A54A8;
+  --media:#8A5A00; --media-2:#FBF1DC; --baja:#2F6E63; --baja-2:#E3F1EE;
+  --chispa:#F0C090; --menta-t:#3B8478;
   --display:"Archivo","Helvetica Neue",Arial,sans-serif;
   --body:"Atkinson Hyperlegible Next","Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
-  --r:4px; --sombra:0 1px 0 rgba(27,55,104,.12);
+  --r:4px; --sombra:0 1px 0 rgba(48,72,108,.12);
   color-scheme:light;
 }
 html{font-size:clamp(16px,.55vw + 10px,18px);-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--mesa);color:var(--texto);font:400 1rem/1.5 var(--body)}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-::selection{background:var(--amarilla);color:var(--texto)}
+::selection{background:#F8E2C4;color:var(--texto)}
 input,textarea{caret-color:var(--pasta)}
 *{scrollbar-width:thin;scrollbar-color:var(--regla) transparent}
 :is(button,input,select,textarea,summary,a):focus-visible{outline:2px solid var(--pasta);outline-offset:2px}
@@ -30,9 +32,10 @@ h1,h2,h3{font-family:var(--display);color:var(--tinta);margin:0;text-wrap:balanc
 .banda{background:var(--tinta);color:#fff;padding:max(10px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) 10px max(16px,env(safe-area-inset-left))}
 .banda-in{max-width:1320px;margin:0 auto;display:flex;gap:8px 16px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .marca{display:flex;gap:10px;align-items:center;min-width:0;color:#fff;text-decoration:none}
-.mark{width:32px;height:32px;flex:none}
+.mark{width:36px;height:36px;flex:none;background:#fff;border-radius:9px;padding:2px;object-fit:contain}
+.marca-nombre b{font-weight:inherit;color:#9AD0C4}
 .marca-nombre{font:800 1.08rem/1.1 var(--display);font-stretch:116%}
-.marca-sub{font:500 .8rem/1.3 var(--display);font-stretch:92%;color:#C9D4EA}
+.marca-sub{font:500 .8rem/1.3 var(--display);font-stretch:92%;color:#D6D0EA}
 .banda-acc{display:flex;gap:8px 12px;align-items:center;flex-wrap:wrap}
 .btn-banda{font:600 .82rem/1 var(--display);color:#fff;background:transparent;border:1px solid rgba(255,255,255,.5);padding:8px 11px;border-radius:3px;cursor:pointer;text-decoration:none;white-space:nowrap}
 .btn-banda:hover{background:rgba(255,255,255,.12)}

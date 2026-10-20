@@ -14,7 +14,7 @@ web
 
 ## Product Purpose
 
-Red Acompaña conversa con la persona apenas escribe, detecta señales de riesgo y alerta a los especialistas registrados, que la atienden en el momento o le dan hora para el día siguiente. Mientras llega el especialista, el bot acompaña: pregunta por la seguridad, entrega líneas de ayuda y propone ejercicios de calma. Éxito: que nadie quede sin respuesta ni sin derivación.
+ConténMente (a través de su bot, Nexo) conversa con la persona apenas escribe, detecta señales de riesgo y alerta a los especialistas registrados, que la atienden en el momento o le dan hora para el día siguiente. Mientras llega el especialista, el bot acompaña: pregunta por la seguridad, entrega líneas de ayuda y propone ejercicios de calma. Éxito: que nadie quede sin respuesta ni sin derivación.
 
 ## Positioning
 
@@ -34,7 +34,7 @@ Motor de reglas sin IA generativa: corre en el navegador, con costo de operació
 
 ## Brand Commitments
 
-- Nombre y logo provisorios: "Red Acompaña" (bot: "Acompaña") y el símbolo de dos círculos no están definidos; tratarlos como provisorios.
+- Marca definida (2026-10-20): plataforma "ConténMente", bot "Nexo". Logo: cerebro con corazón sostenido por dos manos. Colores: menta #8CC8BC, lavanda #B8A2DA, azul pizarra #30486C, azul mano #486C90, chispa amarilla #F0C090. Antes se llamaba "Red Acompaña" (bot "Acompaña").
 
 ## Evidence on Hand
 

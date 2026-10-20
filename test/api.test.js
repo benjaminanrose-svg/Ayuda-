@@ -140,7 +140,7 @@ test('especialista y persona conversan en vivo', async () => {
   assert.equal((await pedir(perdedor, 'POST', `/api/equipo/casos/${casoId}/mensajes`, { texto: 'hola' })).estado, 409);
   const v = await pedir(ganador, 'POST', `/api/equipo/casos/${casoId}/videollamada`, {});
   assert.equal(v.estado, 200); assert.equal(v.datos.mensaje.tipo, 'videollamada');
-  assert.match(v.datos.mensaje.texto, /^https:\/\/meet\.jit\.si\/RedAcompana-[a-f0-9]{20}$/);
+  assert.match(v.datos.mensaje.texto, /^https:\/\/meet\.jit\.si\/ContenMente-[a-f0-9]{20}$/);
   await sp.esperar(e => e.evento === 'mensaje' && e.datos.tipo === 'videollamada');
   assert.equal((await pedir(perdedor, 'POST', `/api/equipo/casos/${casoId}/videollamada`, {})).estado, 409);
   const ed = await pedir('a', 'PATCH', '/api/admin/usuarios/1', { titulo: 'Ps.', nombre: 'Benjamín Rojas' });

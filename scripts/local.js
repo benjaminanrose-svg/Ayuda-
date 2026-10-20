@@ -1,5 +1,5 @@
 'use strict';
-/* Corre Red Acompaña en tu computador con un Postgres incluido (sin instalar nada más).
+/* Corre ConténMente en tu computador con un Postgres incluido (sin instalar nada más).
    Uso: npm run local  →  http://localhost:3000  (panel: /equipo, admin@local / clave-local-admin) */
 const path = require('path');
 const fs = require('fs');

@@ -63,7 +63,7 @@
     $('#mios').innerHTML = mios.map(item).join('') || '<li class="vacio">No tienes casos abiertos.</li>';
     $('#n-cola').textContent = cola.length || '';
     $('#n-mios').textContent = mios.length || '';
-    document.title = (cola.length ? `(${cola.length}) ` : '') + 'Panel · Red Acompaña';
+    document.title = (cola.length ? `(${cola.length}) ` : '') + 'Panel · ConténMente';
   }
 
   /* ── ficha ── */
@@ -115,7 +115,7 @@
     return '<button class="btn" data-acc="video">Videollamada</button><button class="btn ghost" data-acc="agendar">Agendar seguimiento</button><button class="btn plain" data-acc="derivar">Derivar a guardia</button><button class="btn peligro" data-acc="cerrar">Cerrar caso</button>';
   }
   function lineaRegistro(m) {
-    const quien = { persona: 'Persona', bot: 'Acompaña', especialista: m.nombre || 'Especialista', sistema: '' }[m.autor];
+    const quien = { persona: 'Persona', bot: 'Nexo', especialista: m.nombre || 'Especialista', sistema: '' }[m.autor];
     const texto = m.tipo === 'respiracion' ? '[Ejercicio de respiración]' : m.texto;
     const cuerpo = m.tipo === 'videollamada' && /^https:\/\//.test(m.texto) ? `Invitación a videollamada · <a href="${esc(m.texto)}" target="_blank" rel="noopener noreferrer">Abrir sala</a>` : esc(texto);
     return `<li class="${m.autor}"><time>${hora(m.hora)}</time><div>${quien ? `<span class="q">${esc(quien)}</span>` : ''}${m.autor === 'persona' && m.riesgo === 'high' ? '<span class="urg">Urgente</span>' : ''}${cuerpo}</div></li>`;
@@ -137,7 +137,7 @@
         <h3>Registro de atención</h3><ol class="registro" id="registro"></ol>
         <div class="rotulo">Respuestas rápidas</div><div class="quick" id="rapidas">${RAPIDAS.map(t => `<button type="button">${esc(t)}</button>`).join('')}</div>
         <form class="compose" id="pro-compose"><label class="sr" for="pro-in">Mensaje para la persona</label><input class="entrada" id="pro-in" maxlength="2000" autocomplete="off" placeholder="Escribe a la persona…"><button class="send" type="submit" aria-label="Enviar">${ENVIAR}</button></form>
-        <div class="acciones-caso" id="acciones-caso"></div></section>` : ''}</div><div class="copia-pie">Copia rosa para el especialista</div>`;
+        <div class="acciones-caso" id="acciones-caso"></div></section>` : ''}</div><div class="copia-pie">Copia lavanda para el especialista</div>`;
     pintarFicha();
     if (mio(k)) { $('#acciones-caso').innerHTML = accionesHtml(); await cargarRegistro(id); }
   }

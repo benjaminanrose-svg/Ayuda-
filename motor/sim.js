@@ -1,6 +1,6 @@
 /* Simulador: corre conversaciones y revisa reglas de coherencia en cada turno. */
 const E = require('./engine.js');
-const SC = require('./scenarios.js');
+const SC = require(process.env.SC ? require('path').resolve(process.env.SC) : './scenarios.js');
 const CASES = require('./cases.js');
 
 const FOLLOW_CASUAL = /¿(Desde cuándo te vienes|Qué es lo que más te pesa hoy|Cómo ha sido tu día|Cómo está tu cuerpo|Y cómo te hace sentir todo eso|Si pudieras cambiar|Cómo te sientes hoy|Qué te trajo|Qué cosas te han ayudado)/;

@@ -1,4 +1,4 @@
-/* Motor de Acompaña · reglas sin IA generativa. Todo el contenido clínico debe validarlo un profesional.
+/* Motor de Nexo, el bot de ConténMente · reglas sin IA generativa. Todo el contenido clínico debe validarlo un profesional.
    En el servidor: create(estadoGuardado), setPros(n) antes de cada reply, exportState() después. */
 (function (root) {
 'use strict';
@@ -30,7 +30,9 @@ const EMOJI = [
   [/[\u{1F52A}\u{1F5E1}]/gu,' cuchillo riskemoji '],
   [/\u{1FAA2}/gu,' cuerda riskemoji '],
   [/[⚰\u{1FAA6}☠]/gu,' muerte riskemoji '],
-  [/[\u{1F642}\u{1F60A}\u{1F600}\u{1F604}\u{1F601}\u{1F44D}\u{1F64F}\u{1F49A}❤]/gu,' bien ']
+  [/[\u{1F642}\u{1F60A}\u{1F600}\u{1F604}\u{1F601}\u{1F44D}\u{1F64F}\u{1F49A}❤]/gu,' bien '],
+  [/[\u{1F602}\u{1F923}\u{1F606}\u{1F605}\u{1F639}\u{1F61D}\u{1F61C}]/gu,' jaja '],
+  [/\u{1F44B}/gu,' hola ']
 ];
 
 function stripAccents(s){ return s.normalize('NFD').replace(/[̀-ͯ]/g,''); }
@@ -71,9 +73,10 @@ function normalize(raw){
 const DICT = (typeof ACOMPANA_DICT !== 'undefined') ? ACOMPANA_DICT : (typeof require !== 'undefined' ? (()=>{ try { return require('./dict.json'); } catch(e) { return null; } })() : null);
 const DANGER_W = new Set('matar matarme morir morirme suicidarme suicidio suicidar suicida ahorcarme colgarme cortarme envenenarme dispararme tirarme lanzarme quitarme desaparecer muerto muerta muerte veneno matarse morirse suicidarse cortarse matarlo matarla matarte'.split(' '));
 let PROT = null, TBYLEN = null;
+const BRAND_W = new Set(['nexo','contenmente','conten']); // nombres de la marca: no se corrigen
 function correct(tok){
   if (!DICT || tok.length < 4 || !/^[a-z]+$/.test(tok) || LAUGH_RE.test(tok)) return tok;
-  if (DICT.t[tok] !== undefined) return tok;
+  if (DICT.t[tok] !== undefined || BRAND_W.has(tok)) return tok;
   const c = DICT.c[tok]; if (c) return c;
   if (!PROT) { PROT = new Set(DICT.p); TBYLEN = {}; for (const w in DICT.t) (TBYLEN[w.length] = TBYLEN[w.length] || []).push({ w, p: phon(w), z: DICT.t[w] }); }
   if (PROT.has(tok)) return tok;
@@ -160,10 +163,14 @@ function matchPhrase(ph, toks, keys){
   return out;
 }
 const NEG = new Set(['no','nunca','jamas','tampoco','ni']);
+const NEG_BRIDGE = new Set(['pienso','pense','pensado','pensaria','querido','he','me','quiero','quise','queria','voy','a','en','de','tengo','tenia','ganas','intencion','planes','plan','pensando','estoy','es','era','seria','para','lo','la','haria','hare','ni','siquiera','eso','nada']);
 function negated(toks, s){
-  for (let t=Math.max(0,s-2); t<s; t++) if (NEG.has(toks[t]) && toks[t+1] !== 'se') return true;
+  for (let t=Math.max(0,s-2); t<s; t++) if (NEG.has(toks[t]) && toks[t+1] !== 'se' && (t === s-1 || NEG_BRIDGE.has(toks[t+1]))) return true;
   const w = toks.slice(Math.max(0,s-3), s).join(' ');
-  return /\b(no es que|nunca he|jamas he|no creo que)$/.test(w);
+  if (/\b(no es que|nunca he|jamas he|no creo que|ni cagando|ni ahi|ni en broma|ni muert[oa]|ni loc[oa]|ni en sueños)( con)?$/.test(w)) return true;
+  // "no pienso en matarme", "no es para matarme", "no tengo intención de matarme"
+  for (let t=Math.max(0,s-5); t<s-2; t++) if (NEG.has(toks[t]) && toks[t+1] !== 'se' && toks.slice(t+1, s).every(x => NEG_BRIDGE.has(x))) return true;
+  return false;
 }
 
 /* ───────── 3. Léxico ───────── */
@@ -183,7 +190,9 @@ const L = {
     { p:'=tome|=trague|=tomo|=trage =veneno|=cloro|=raticida|=matarratas|=insecticida|=lavaloza|=diablo|=acido|=parafina|=bencina', gap:3 },
     '=me =intoxique|=envenene', '=sobredosis',
     { p:'=me =corte|=abri =las|=la|=mis =venas|=muneca|=munecas', gap:1 },
-    '=me =estoy =desangrando', '=estoy =sangrando =mucho|=harto'
+    '=me =estoy =desangrando', '=estoy =sangrando =mucho|=harto',
+    { p:`=tome|=trague|=trage|=ingeri =todas|=todos|=muchas|=muchos|=varias|=varios|=demasiadas|=demasiados|=caja|=frasco|=blister|=tira|=punado|=bolsa|=monton|=hartas|=hartos ${MED}`, gap:3, not:MEDNOT },
+    { p:`=tome|=trague|=ingeri # ${MED}`, gap:2 }, { p:`=me =pase =con|=de ${MED}`, gap:2 }, '=me =empastille'
   ],
   METODO: [
     { p:'=como|=forma|=formas|=manera|=maneras|=metodo|=metodos|=modo|=modos|=tecnica|=tecnicas =de|=para =matarme|=matarse|=suicidarme|=suicidarse|=suicidio|=morir|=morirme|=morirse|=quitarme|=quitarse|=ahorcarme|=ahorcarse|=colgarme|=colgarse|=envenenarme|=envenenarse', gap:2, not:IDIOM },
@@ -239,7 +248,8 @@ const L = {
     { p:'=ganas =de =morir|=morirme|=matarme|=suicidarme', gap:1, not:IDIOM },
     '=ganas =de =no =vivir',
     { p:'=mejor =me =mato|=muero', gap:0, not:IDIOM },
-    '=quiero|=quisiera|=queria =estar =muerto|=muerta'
+    '=quiero|=quisiera|=queria =estar =muerto|=muerta',
+    { p:'=prefiero|=preferiria =morir|=morirme', gap:1, not:IDIOM.concat(['antes','que']) }, { p:'=prefiero|=preferiria =estar =muerto|=muerta', gap:1, not:['antes','que'] }
   ],
   AUTOLESION: [
     { p:'=me =corto|=corte|=cortaba|=rajo|=raje', gap:0, not:CUTNOT },
@@ -334,7 +344,7 @@ const L = {
   ],
   SEXUAL: [
     '=nudes|=nude|=pack|=packs|=porno|=porn|=xxx|=onlyfans|=sexting',
-    { p:'=mandame|=manda|=pasame|=envia =fotos|=foto =desnuda|=desnudo|=sin|=hot', gap:2 },
+    { p:'=mandame|=manda|=pasame|=envia =fotos|=foto =desnuda|=desnudo|=sin|=hot', gap:2 }, { p:'=mandame|=pasame|=enviame =fotos|=foto|=fotito|=fotitos', gap:1 },
     '=desnuda|=desnudo|=desnudarte', '=culiar|=culeame|=follar|=chupala|=chupalo', '=tetas',
     { p:'=quiero =tener =sexo', gap:0 }, '=quiero =sexo'
   ],
@@ -375,11 +385,13 @@ const L = {
     { p:'=coca', gap:0, not:['cola','zero'] }, '=marihuana|=weed|=porro|=cogollo|=marihuano',
     '=copete|=copetiado|=copeteado|=copetear|=copeteando', '=alcohol|=alcoholico|=alcoholica|=alcoholismo',
     '=recai|=recaida', { p:'=no =puedo =dejar =de =tomar|=consumir|=fumar|=jalar|=beber', gap:0 },
-    { p:'=caja =de =vino', gap:0 }, '=adiccion|=adicto|=adicta'
+    { p:'=caja =de =vino', gap:0 }, '=adiccion|=adicto|=adicta',
+    { p:'=mal =viaje', gap:0 }, { p:'=tomo|=bebo|=tomando =todos =los =dias', gap:0, not:['pastill*','remedio*','agua','te','cafe','once','desayuno','medicament*','la','el'] },
+    { p:'=tomo|=bebo|=tomar|=beber =para =olvidar|=olvidarme|=aguantar|=pasar =la|=las =pena|=penas', gap:1 }, { p:'=tomo|=bebo =mucho|=harto|=demasiado', gap:0, not:['agua','te','cafe','jugo','leche','sol','once','tiempo','en'] }
   ],
   HUMANO: [
     { p:'=quiero|=necesito|=puedo|=prefiero =hablar =con =alguien|=persona|=humano|psicolog*|=profesional|=especialista|=real|=doctor|=doctora|=terapeuta', gap:3 },
-    '=hay =alguien =real', { p:'=llama|=llamen|=pasame =a =un|=una psicolog*|=especialista|=humano|=persona', gap:2 }, { p:'=hablar =con =persona|=humano|psicolog*|=especialista|=profesional|=alguien', gap:2 }
+    '=hay =alguien =real', { p:'=quiero|=necesito|=busco|=dame|=pasame =un|=una psicolog*|=psiquiatra|=especialista|=terapeuta|=profesional|=doctor|=doctora', gap:1 }, { p:'=llama|=llamen|=pasame =a =un|=una psicolog*|=especialista|=humano|=persona', gap:2 }, { p:'=hablar =con =persona|=humano|psicolog*|=especialista|=profesional|=alguien', gap:2 }
   ],
   ES_BOT: [
     { p:'=eres|=sos =bot|=robot|=ia|=maquina|=programa|=humano|=humana|=persona|=real|=inteligencia', gap:2 },
@@ -392,7 +404,7 @@ const L = {
     { p:'=un =poco =mejor', gap:0 }, '=me =ayudo|=sirvio', { p:'=me =hizo =bien', gap:1 }, '=mucho =mejor', '=bien', '=la =raja', '=bacan|=bakan|=filete|=chevere'
   ],
   DESPEDIDA: [ '=chao|=adios','=nos =vemos','=hasta =luego|=manana','=me =voy =a =dormir','=me =voy =a =acostar','=me =tengo =que =ir','=buenas =noches', { p:'=ya =me =voy', gap:0, not:['a','de','al','con','para','lejos'] }, { p:'=me =voy =a =ir', gap:0, not:['de','a','al','con','para','lejos','pronto','del'] } ],
-  GRACIAS: [ '=gracias|=thanks|=agradecido|=agradecida', '=se =agradece', '=te =pasaste', '=te =lo =agradezco' ],
+  GRACIAS: [ '=gracias|=thanks|=thank|=agradecido|=agradecida|=obrigado|=obrigada|=merci|=mesi', '=se =agradece', '=te =pasaste', '=te =lo =agradezco' ],
   SALUDO: [ '=hola|=hey|=alo|=buenas|=saludos|=buenos|=holis' ],
   OFFTOPIC: [
     '=tarea|=receta|=pelicula|=peliculas|=serie|=series|=netflix|=futbol|=clima|=chiste|=chistes|=python|=javascript|=codigo|=programar|=programacion',
@@ -406,26 +418,26 @@ const THEMES = {
   soledad:   { label:'Soledad', ph:[ { p:'=siento|=estoy|=ando|=quede|=vivo|=sentir|=sentirme|=sintiendo =solo|=sola|=solito|=solita|=solos|=solas', gap:2 }, '=soledad', { p:'=nadie =me =entiende|=quiere|=pesca|=habla|=escucha|=apoya|=toma', gap:1 }, '=sin =amigos', { p:'=no =tengo =amigos|=nadie', gap:1 }, 'aislad*', '=me =ignoran|=ignora', { p:'=nadie =se =preocupa', gap:1 }, { p:'=no =conozco =a =nadie', gap:0 }, { p:'=extrano =mi =casa|=familia|=gente', gap:0 } ] },
   sueno:     { label:'Sueño', ph:[ '=no =duermo', { p:'=no =he =dormido', gap:1 }, { p:'=no =puedo|=logro =dormir', gap:1 }, '=insomnio', { p:'=duermo =mal|=poco|=nada', gap:1 }, 'desvel*', 'pesadilla*', { p:'=no =pego =un|=pestana|=ojo', gap:1 } ] },
   ansiedad:  { label:'Ansiedad', ph:[ { p:'=me =da|=dan =miedo', gap:0, not:['que','de','perder','decir','contar','hablar'] }, '=ansiedad|ansios*|angusti*', '=panico', 'nervios*', { p:'=me =ahogo', gap:0 }, { p:'=me =falta =el =aire', gap:1 }, '=taquicardia', 'estres*|estresad*', 'preocupad*', { p:'=me =tiembla|=tiemblan', gap:0 }, { p:'=tengo|=siento =miedo|=susto', gap:1 }, 'asustad*' ] },
-  animo:     { label:'Ánimo bajo', ph:[ 'triste*|=tristeza', 'bajon*', '=depre|deprimid*|=depresion', '=chato|=chata|chatisim*', { p:'=para =la =caga|=cagada|=mierda', gap:0 }, { p:'=para =el =pico|=hoyo|=gato|=loly|=perro', gap:0 }, { p:'=como =el =forro|=pico|=ajo|=hoyo|=gato|=hoyo|=raja|=tuto', gap:0 }, { p:'=como =las =weas|=mierda|=pelotas', gap:0 }, { p:'=como =la =mierda|=caga|=callampa', gap:0 }, '=pesimo|=pesima|=fatal|=horrible', { p:'=terrible =de =mal', gap:0 }, '=vacio|=vacia', 'desesper*', { p:'=no =puedo =mas', gap:0 }, { p:'=no =doy =mas', gap:0 }, { p:'=no =aguanto|=soporto', gap:0, not:['a','al','la','el','que','los','las','esa','ese'] }, 'colapsad*', 'sobrepasad*', 'agobiad*', { p:'=me =supera|=superan', gap:0 }, 'llor*', { p:'=sin =ganas|=animo|=energia|=fuerzas', gap:0 }, { p:'=ganas =de =nada', gap:0 }, { p:'=no =tengo =ganas =de =nada|=vivir|=hacer|=levantarme|=salir', gap:1 }, { p:'=todo =me =da =lo =mismo', gap:0 }, { p:'=me =da =todo =lo =mismo', gap:0 }, '=nada =me =importa', { p:'=me =da =lo =mismo =todo', gap:1 }, { p:'=cansado|=cansada|=harto|=harta =de =todo', gap:1 }, { p:'=estoy|=siento|=ando|=sentir|=sentirme|=quede =mal|=pesimo|=horrible|=fatal|=terrible|=roto|=rota|=destruido|=destruida|=hundido|=hundida|=perdido|=perdida|=desmotivado|=desmotivada|=apagado|=apagada|=fome|=peor', gap:2 }, 'destruid*', 'devastad*', 'hundid*', { p:'=no =se =que =hacer', gap:0 }, '=peor', { p:'=no =estoy =bien', gap:0 }, '=mal|=pesimo|=pesima|=fatal|=horrible', { p:'=estoy|=ando|=siento|=sentir|=me =cansado|=cansada|=agotado|=agotada|=reventado|=reventada|=quemado|=quemada|=exhausto|=exhausta', gap:1, not:['de','con'] } ] },
+  animo:     { label:'Ánimo bajo', ph:[ 'triste*|=tristeza', 'bajon*', '=depre|deprimid*|=depresion', '=chato|=chata|chatisim*', { p:'=para =la =caga|=cagada|=mierda', gap:0 }, { p:'=para =el =pico|=hoyo|=gato|=loly|=perro', gap:0 }, { p:'=como =el =forro|=pico|=ajo|=hoyo|=gato|=hoyo|=raja|=tuto', gap:0 }, { p:'=como =las =weas|=mierda|=pelotas', gap:0 }, { p:'=como =la =mierda|=caga|=callampa', gap:0 }, '=pesimo|=pesima|=fatal|=horrible', { p:'=terrible =de =mal', gap:0 }, '=vacio|=vacia', 'desesper*', { p:'=no =puedo =mas', gap:0 }, { p:'=no =doy =mas', gap:0 }, { p:'=no =aguanto|=soporto', gap:0, not:['a','al','la','el','que','los','las','esa','ese'] }, 'colapsad*', 'sobrepasad*', 'agobiad*', { p:'=tengo|=siento|=ando|=da|=dan =pena|=penita', gap:2, not:['ajena','por','de','que'] }, { p:'=nada =importa', gap:0 }, { p:'=me =supera|=superan', gap:0 }, 'llor*', { p:'=sin =ganas|=animo|=energia|=fuerzas', gap:0 }, { p:'=ganas =de =nada', gap:0 }, { p:'=no =tengo =ganas =de =nada|=vivir|=hacer|=levantarme|=salir', gap:1 }, { p:'=todo =me =da =lo =mismo', gap:0 }, { p:'=me =da =todo =lo =mismo', gap:0 }, '=nada =me =importa', { p:'=me =da =lo =mismo =todo', gap:1 }, { p:'=cansado|=cansada|=harto|=harta =de =todo', gap:1 }, { p:'=estoy|=siento|=ando|=sentir|=sentirme|=quede =mal|=pesimo|=horrible|=fatal|=terrible|=roto|=rota|=destruido|=destruida|=hundido|=hundida|=perdido|=perdida|=desmotivado|=desmotivada|=apagado|=apagada|=fome|=peor', gap:2 }, 'destruid*', 'devastad*', 'hundid*', { p:'=no =se =que =hacer', gap:0 }, '=peor', { p:'=no =estoy =bien', gap:0 }, '=mal|=pesimo|=pesima|=fatal|=horrible', { p:'=estoy|=ando|=siento|=sentir|=me =cansado|=cansada|=agotado|=agotada|=reventado|=reventada|=quemado|=quemada|=exhausto|=exhausta', gap:1, not:['de','con'] } ] },
   familia:   { label:'Familia', ph:[ '=familia', '=mama|=mami|=madre|=papa|=papi|=padre|=padrastro|=madrastra', { p:'=mis =viejos|=papas|=padres', gap:0 }, { p:'=mi =vieja|=viejo', gap:0 }, 'herman*', '=hijo|=hija|=hijos|=hijas', 'abuel*', { p:'=me =echaron =de =la =casa', gap:1 }, { p:'=me =quiero =ir|=escapar|=arrancar =de =mi|=la =casa', gap:1 } ] },
-  pareja:    { label:'Pareja', ph:[ { p:'=triste|=mal|=pena|=extrano|=pelee|=peleamos|=peleo|=pelea|=peleas|=peleando|=discutimos|=problemas|=celos|=celoso|=celosa|=llorando =por|=con|=de =mi =pareja|=polola|=pololo|=novio|=novia|=esposo|=esposa|=marido|=ex|=pinche|=andante', gap:3 }, { p:'=polola|=pololo|=novio|=novia|=pareja|=esposo|=esposa|=marido =siempre|=todo|=peleamos|=discutimos|=peleando|=peleo', gap:3 }, { p:'=mi =ex', gap:0 }, { p:'=mi =pareja|=polola|=pololo|=novio|=novia|=esposo|=esposa|=marido =me =dejo|=termino|=corto|=engano|=engana|=grita|=trata|=ignora|=celo', gap:1 }, '=terminamos', { p:'=termino|=corto|=termine =conmigo|=con', gap:1 }, { p:'=me =dejo|=dejaron|=pateo|=patearon|=boto|=boteo', gap:0 }, '=ruptura|=separacion', { p:'=me =separe', gap:0 }, 'divorci*', { p:'=me =engano|=enganaron|=engana|=cagaron', gap:0 }, 'infiel*|=infidelidad', { p:'=me =puso|=pusieron =el =gorro|=cachos', gap:1 }, { p:'=me =cago', gap:0 } ] },
+  pareja:    { label:'Pareja', ph:[ { p:'=triste|=mal|=pena|=extrano|=pelee|=peleamos|=peleo|=pelea|=peleas|=peleando|=discutimos|=problemas|=celos|=celoso|=celosa|=llorando =por|=con|=de =mi =pareja|=polola|=pololo|=novio|=novia|=esposo|=esposa|=marido|=ex|=pinche|=andante', gap:3 }, { p:'=polola|=pololo|=novio|=novia|=pareja|=esposo|=esposa|=marido =peleamos|=discutimos|=peleando|=peleo|=peleas', gap:3 }, { p:'=mi =ex', gap:0 }, { p:'=mi =pareja|=polola|=pololo|=novio|=novia|=esposo|=esposa|=marido =me =dejo|=termino|=corto|=engano|=engana|=grita|=trata|=ignora|=celo', gap:1 }, '=terminamos', { p:'=termino|=corto|=termine =conmigo|=con', gap:1 }, { p:'=me =dejo|=dejaron|=pateo|=patearon|=boto|=boteo', gap:0, not:['mal','pensando','triste','asi','loco','loca','marcado','marcada','sin','de','hablar','esperando','plantado','plantada','solo','sola','un','una','el','la','los','las'] }, { p:'=engane =a =mi', gap:0 }, '=ruptura|=separacion', { p:'=me =separe', gap:0 }, 'divorci*', { p:'=me =engano|=enganaron|=engana|=cagaron', gap:0 }, 'infiel*|=infidelidad', { p:'=me =puso|=pusieron =el =gorro|=cachos', gap:1 }, { p:'=me =cago', gap:0 } ] },
   despido:   { label:'Despido / cesantía', ph:[ { p:'=me =echaron|=despidieron|=desvincularon|=cortaron =pega|=trabajo|=laburo|=pegas|=chamba', gap:3 }, { p:'=me =despidieron|=desvincularon', gap:0 }, '=despido|=despedido|=desvinculado|=desvinculada', 'finiquit*', { p:'=quede|=estoy|=ando =cesante', gap:1 }, { p:'=sin =pega|=trabajo|=laburo|=pegas', gap:0 }, 'cesant*', { p:'=no =encuentro =pega|=trabajo|=laburo', gap:1 } ] },
   trabajo:   { label:'Trabajo', ph:[ '=trabajo|=laburo|=chamba|=curro', { p:'=la|=mi|=de|=en|=sin|=una|=nueva|=harta|=mucha|=esta|=esa =pega|=pegas', gap:0 }, '=jefe|=jefa', '=burnout', { p:'=me =explotan', gap:0 }, { p:'=mucha|=demasiada =pega|=carga|=trabajo', gap:0 } ] },
-  estudios:  { label:'Estudios', ph:[ 'prueba*', '=paes|=psu', '=notas', 'examen*', '=repeti|=repetir|=repito|=repitiendo', '=universidad|=uni|=facultad|=instituto', '=ramo|=ramos', '=tesis', '=colegio|=liceo|=escuela', '=profe|=profesor|=profesora|=profes', '=curso', 'reprob*', { p:'=eche =el|=la =ramo|=prueba|=curso', gap:1 }, '=matricula' ] },
+  estudios:  { label:'Estudios', ph:[ 'prueba*', '=paes|=psu', '=notas', 'examen*', '=repeti|=repetir|=repito|=repitiendo', '=universidad|=uni|=facultad|=instituto', '=ramo|=ramos', '=tesis', { p:'=la =u', gap:0 }, '=colegio|=liceo|=escuela', '=profe|=profesor|=profesora|=profes', '=curso', 'reprob*', { p:'=eche =el|=la =ramo|=prueba|=curso', gap:1 }, '=matricula' ] },
   dinero:    { label:'Dinero', ph:[ '=plata', '=lucas', 'deuda*', '=dicom', 'endeudad*', { p:'=no =me =alcanza', gap:0 }, '=arriendo', '=cuentas', { p:'=estoy|=ando =pato|=pata', gap:0 }, { p:'=sin =plata|=dinero', gap:0 }, '=apuesta|=apuestas|=casino|=apostando|=aposte', 'ludopat*' ] },
-  duelo:     { label:'Duelo', ph:[ '=murio|=murieron|=fallecio|=fallecieron|=fallecimiento', { p:'=la =muerte =de =mi', gap:0 }, { p:'=se =murio|=suicido', gap:0 }, { p:'=perdi =a =mi', gap:0 }, '=funeral|=velorio|=duelo', { p:'=extrano =a =mi', gap:0 }, { p:'=ya =no =esta =conmigo|=con', gap:0 }, { p:'=perdi =el|=mi =bebe|=guagua|=embarazo', gap:1 }, '=aborto' ] },
+  duelo:     { label:'Duelo', ph:[ '=murio|=murieron|=fallecio|=fallecieron|=fallecimiento', { p:'=la =muerte =de =mi', gap:0 }, { p:'=se =murio|=suicido', gap:0 }, { p:'=perdi =a =mi', gap:0 }, '=funeral|=velorio|=duelo', { p:'=ya =no =esta =conmigo|=con', gap:0 }, { p:'=perdi =el|=mi =bebe|=guagua|=embarazo', gap:1 }, '=aborto' ] },
   bullying:  { label:'Bullying', ph:[ '=bullying|=ciberbullying', { p:'=me =molestan|=molesta', gap:0 }, { p:'=se =burlan|=rien =de =mi', gap:1 }, { p:'=me =funaron', gap:0 }, '=funa', { p:'=me =hacen =la =vida =imposible', gap:0 }, { p:'=me =excluyen', gap:0 }, { p:'=me =dejan =de =lado', gap:1 }, '=meme|=memes', { p:'=todos|=todas =se =rien|=burlan', gap:0 } ] },
-  identidad: { label:'Identidad / orientación', ph:[ { p:'=soy =gay|=lesbiana|=bisexual|=bi|=trans|=queer|=pansexual', gap:0 }, '=no =binario|=binaria', 'lgbt*', { p:'=no =me =aceptan|=acepta', gap:0 }, { p:'=salir|=sali =del =closet', gap:0 }, 'homofob*|transfob*', { p:'=me =discriminan', gap:0 }, '=orientacion =sexual' ] },
+  identidad: { label:'Identidad / orientación', ph:[ { p:'=soy =gay|=lesbiana|=bisexual|=bi|=trans|=queer|=pansexual', gap:0 }, '=no =binario|=binaria', 'lgbt*', { p:'=no =me =aceptan|=acepta', gap:0 }, { p:'=salir|=sali =del =closet', gap:0 }, { p:'=nombre =muerto', gap:0 }, '=deadname', { p:'=no =respetan =mis =pronombres', gap:0 }, 'homofob*|transfob*', { p:'=me =discriminan', gap:0 }, '=orientacion =sexual' ] },
   alimentacion:{ label:'Alimentación', ph:[ { p:'=no =como', gap:0, not:['tu','que','yo','asi','eso'] }, { p:'=no =he =comido', gap:1 }, { p:'=no =quiero =comer', gap:0 }, { p:'=deje|=dejo =de =comer', gap:0 }, 'vomit*', '=atracon|=atracones', { p:'=me =veo|=siento =gordo|=gorda', gap:1 }, { p:'=odio =mi =cuerpo', gap:0 }, 'bulimi*', 'anorexi*' ] },
   salud:     { label:'Salud', ph:[ '=enfermo|=enferma|=enfermedad', 'diagnostic*', '=cancer', { p:'=dolor =cronico', gap:0 }, { p:'=me =duele =todo', gap:0 }, '=hospital|=hospitalizado|=hospitalizada' ] },
   embarazo:  { label:'Embarazo', ph:[ 'embarazad*', { p:'=me =embarace', gap:0 }, { p:'=test =de =embarazo', gap:0 } ] },
-  autoestima:{ label:'Autoestima', ph:[ { p:'=me =odio', gap:0 }, { p:'=soy =un|=una =fracaso|=inutil|=estorbo|=basura|=desastre|=perdedor|=perdedora|=asco', gap:1 }, { p:'=no =sirvo =para =nada', gap:1 }, { p:'=no =valgo =nada', gap:1 }, { p:'=soy =feo|=fea|=horrible', gap:1 }, { p:'=nadie =me =quiere', gap:0 }, { p:'=soy =lo =peor', gap:0 }, { p:'=todo =lo =hago =mal', gap:0 }, { p:'=me =siento =un|=una =fracaso', gap:1 }, { p:'=no =soy =suficiente', gap:1 }, { p:'=todos|=todas =son =mas =lindos|=lindas|=bonitos|=bonitas|=inteligentes|=flacos|=flacas =que =yo', gap:1 } ] },
-  culpa:     { label:'Culpa', ph:[ { p:'=mi =culpa', gap:1 }, '=culpable' ] },
+  autoestima:{ label:'Autoestima', ph:[ { p:'=me =odio', gap:0 }, { p:'=soy =un|=una =fracaso|=inutil|=estorbo|=basura|=desastre|=perdedor|=perdedora|=asco', gap:1 }, { p:'=no =sirvo =para =nada', gap:1 }, { p:'=no =valgo =nada', gap:1 }, { p:'=soy =feo|=fea|=horrible', gap:1 }, { p:'=me =siento|=veo|=encuentro =feo|=fea|=horrible|=asqueroso|=asquerosa', gap:1 }, { p:'=soy =una|=un =mala|=mal =persona', gap:0 }, { p:'=soy =mala|=malo =persona', gap:0 }, { p:'=todos|=todas =son =mejores|=mejor =que =yo', gap:1 }, { p:'=nadie =me =quiere', gap:0 }, { p:'=soy =lo =peor', gap:0 }, { p:'=todo =lo =hago =mal', gap:0 }, { p:'=me =siento =un|=una =fracaso', gap:1 }, { p:'=no =soy =suficiente', gap:1 }, { p:'=todos|=todas =son =mas =lindos|=lindas|=bonitos|=bonitas|=inteligentes|=flacos|=flacas =que =yo', gap:1 } ] },
+  culpa:     { label:'Culpa', ph:[ { p:'=mi =culpa', gap:1 }, '=culpable', { p:'=hice =cosas =malas|=terribles|=horribles', gap:0 }, { p:'=engane =a =mi', gap:0 } ] },
   rabia:     { label:'Rabia', ph:[ '=rabia', 'enojad*', 'furios*', { p:'=estoy|=ando =caliente|=choreado|=choreada|=emputecido|=emputecida', gap:1 }, { p:'=quiero =romper =todo', gap:1 }, { p:'=odio =a =todos', gap:0 } ] },
   vivienda:  { label:'Vivienda', ph:[ { p:'=me =echaron =de =la =casa', gap:1 }, { p:'=me =dijeron =que =me =fuera', gap:1 }, { p:'=no =tengo =donde =vivir|=dormir|=quedarme', gap:1 }, { p:'=vivo|=estoy|=quede =en =la =calle', gap:1 }, '=desalojar|=desalojo|=desalojan|=desalojaron', { p:'=me =van =a =echar =de =la|=mi =casa|=pieza|=depto', gap:1 }, { p:'=no =tengo =donde =ir', gap:1 } ] },
-  posparto:  { label:'Posparto', ph:[ { p:'=tuve =una|=un =guagua|=bebe|=hijo|=hija', gap:1 }, '=posparto|=postparto', { p:'=no =soy =buena =mama|=madre', gap:1 }, { p:'=recien =naci*', gap:1 }, { p:'=desde =que =naci*', gap:1 } ] },
+  posparto:  { label:'Posparto', ph:[ { p:'=tuve =una|=un =guagua|=bebe|=hijo|=hija', gap:1 }, { p:'=tuve =a =mi =guagua|=bebe|=hijo|=hija', gap:0 }, { p:'=di =a =luz', gap:0 }, { p:'=nacio =mi =guagua|=bebe|=hijo|=hija', gap:0 }, '=posparto|=postparto', { p:'=no =soy =buena =mama|=madre', gap:1 }, { p:'=recien =naci*', gap:1 }, { p:'=desde =que =naci*', gap:1 } ] },
   verguenza: { label:'Vergüenza', ph:[ { p:'=me =da =verguenza', gap:0 }, '=verguenza', 'avergonzad*' ] },
-  migracion: { label:'Migración', ph:[ '=migrante|=inmigrante|=extranjero|=extranjera', { p:'=lejos =de =mi =pais|=familia|=gente', gap:1 }, { p:'=extrano =mi =pais', gap:0 } ] }
+  migracion: { label:'Migración', ph:[ '=migrante|=inmigrante|=extranjero|=extranjera', { p:'=soy =venezolano|=venezolana|=peruano|=peruana|=colombiano|=colombiana|=haitiano|=haitiana|=boliviano|=boliviana|=ecuatoriano|=ecuatoriana|=dominicano|=dominicana|=cubano|=cubana|=argentino|=argentina', gap:0 }, { p:'=llegue =a =chile', gap:1 }, { p:'=lejos =de =mi =pais|=familia|=gente', gap:1 }, { p:'=extrano =mi =pais', gap:0 } ] }
 };
 
 
@@ -435,14 +447,15 @@ Object.assign(L, {
   ESPERA: [ { p:'=cuando =llega|=viene|=atienden|=atiende|=contesta|=responde|=llegan|=vienen', gap:2 }, { p:'=cuanto =falta|=demora|=tarda|=demoran|=tardan', gap:2 },
             { p:'=por =que =se =demora|=tarda|=demoran|=tardan', gap:1 }, { p:'=nadie =me =responde|=contesta|=atiende', gap:0 }, '=sigo =esperando',
             { p:'=donde =esta =el|=la =especialista|=psicologo|=psicologa', gap:1 }, { p:'=va =a =venir|=llegar', gap:1 }, { p:'=se =demora|=demoran =mucho', gap:0 } ],
-  NO_LLAMAR: [ { p:'=no =puedo =llamar|=hablar|=marcar', gap:1, not:['con','de'] }, { p:'=no =tengo =saldo|=celular|=telefono|=minutos|=credito|=plan|=senal', gap:1 },
+  NO_LLAMAR: [ { p:'=no =puedo =llamar|=hablar|=marcar', gap:1, not:['con','de'] }, { p:'=no =tengo =saldo|=celular|=telefono|=minutos|=credito|=senal', gap:1 },
                { p:'=me =da =miedo|=verguenza|=paja =llamar', gap:1 }, { p:'=no =quiero =llamar', gap:0 }, { p:'=no =me =atrevo =a =llamar', gap:1 }, 'no =puedo =llamar' ],
   YA_LLAME: [ '=ya =llame', { p:'=llame =y =no =contestan|=contesta|=nadie|=ocupado', gap:2 }, { p:'=no =contestan|=responden', gap:0 }, { p:'=esta =ocupado', gap:0 }, { p:'=llame =al', gap:0 }, '=no =me =contestaron' ],
-  FAQ_CONF: [ { p:'=es =confidencial|=privado|=anonimo|=secreto', gap:1 }, { p:'=quien =lee|=ve =esto|=mensajes', gap:2 }, { p:'=alguien =mas =va =a =leer', gap:1 },
+  FAQ_CONF: [ { p:'=es =confidencial|=privado|=anonimo|=secreto', gap:1 }, { p:'=quien =lee|=ve =esto|=mensajes', gap:2 }, { p:'=alguien =mas =va =a =leer', gap:1 }, { p:'=quien|=quienes =lee|=leen|=ve|=ven|=revisa|=revisan', gap:1 },
+              { p:'=pueden|=puede|=podrian|=podria =ver|=leer =esto|=lo|=mis|=la|=esta|=que', gap:1 },
               { p:'=van|=vas =a =saber|=enterar|=avisar|=decir|=llamar|=contar =mis|=a =papas|=padres|=mama|=papa|=familia|=carabineros|=pacos|=policia|=colegio|=jefe|=apoderado', gap:3 },
               { p:'=le|=les =van|=vas =a =decir|=contar|=avisar', gap:1 }, { p:'=se =van|=va =a =enterar', gap:1 }, { p:'=me =van =a =internar|=encerrar', gap:1 } ],
   FAQ_COSTO: [ { p:'=es =gratis|=gratuito|=pagado', gap:0 }, { p:'=cuanto =cuesta|=sale|=cobran|=vale', gap:0 }, { p:'=hay|=tengo =que =pagar', gap:0 } ],
-  FAQ_QUE: [ '=que =es =esto', { p:'=que =es =esta =pagina|=app|=wea', gap:0 }, { p:'=para =que =sirve|=sirves', gap:1 }, { p:'=como =funciona', gap:1 }, { p:'=quien =eres', gap:0 }, { p:'=como =te =llamas', gap:0 }, { p:'=que =haces', gap:0 }, { p:'=que =puedes =hacer', gap:0 }, { p:'=que =sabes =hacer', gap:0 }, { p:'=que =hace =esta =app|=pagina|=wea', gap:0 } ],
+  FAQ_QUE: [ '=que =es =esto', { p:'=que =es =esta =pagina|=app|=wea', gap:0 }, { p:'=para =que =sirve|=sirves', gap:1 }, { p:'=como =funciona', gap:1 }, { p:'=quien =eres', gap:0 }, { p:'=como =te =llamas', gap:0 }, { p:'=que =haces', gap:0 }, { p:'=que =puedes =hacer', gap:0 }, { p:'=que =sabes =hacer', gap:0 }, { p:'=que =hace =esta =app|=pagina|=wea', gap:0 }, { p:'=que|=quien =es|=significa =nexo|=contenmente', gap:1 }, { p:'=que =es =conten =mente', gap:0 } ],
   QUEJA: [ { p:'=ustedes|=uds =no =sirven|=ayudan|=hacen', gap:1 }, { p:'=como =si =te =importara|=importase|=importa', gap:0 }, { p:'=esto|=wea|=cosa|=app|=bot|=pagina =no =sirve', gap:1 }, { p:'=no =te =importa', gap:0 }, { p:'=que =te =importa', gap:0 }, { p:'=a =ti =que', gap:0 }, { p:'=no =me =sirve|=sirves|=ayudas|=ayudando|=entiendes|=escuchas|=pescas|=estas', gap:2 }, { p:'=repites|=repetis|=dices =lo =mismo', gap:2 }, '=siempre =lo =mismo',
            { p:'=ya =me =lo =dijiste|=preguntaste', gap:1 }, { p:'=respuestas =automaticas|=genericas|=robot', gap:1 }, { p:'=no =estas =ayudando|=escuchando|=entendiendo', gap:0 }, { p:'=no =me =estas =pescando|=ayudando|=escuchando', gap:0 } ],
   NO_ENTIENDO: [ { p:'=no =entiendo|=entendi|=cacho|=cache', gap:1 }, { p:'=que =significa', gap:0 }, { p:'=que =quieres =decir', gap:0 }, '=como =asi', { p:'=a =que =te =refieres', gap:0 }, '=explicame' ],
@@ -465,16 +478,25 @@ L.VIOLENCIA = L.VIOLENCIA.concat([
   { p:'=me =manda|=mando|=pide|=pidio|=piden|=envia|=envio|=obliga|=obligo|=mandan =fotos|=foto|=videos|=video|=packs|=pack|=nudes|=desnuda|=desnudo', gap:2 },
   { p:'=me =chantajea|=extorsiona|=chantajean|=extorsionan|=chantajeo|=extorsiono', gap:0 }, { p:'=amenaza|=amenazo|=amenazan =con =publicar|=subir|=mostrar|=mandar', gap:2 },
   '=sextorsion|=grooming', { p:'=un =adulto|=viejo|=hombre|=caballero =me =escribe|=habla|=manda|=pide', gap:2 },
-  { p:'=abusaron|=abuso|=violaron|=violo =de =mi', gap:1 }, { p:'=me =abusaban|=pegaban|=golpeaban|=violaban', gap:0 }
+  { p:'=abusaron|=abuso|=violaron|=violo =de =mi', gap:1 }, { p:'=me =abusaban|=pegaban|=golpeaban|=violaban', gap:0 },
+  { p:'=me =quiere|=quieren =pegar|=golpear|=matar|=pegarme|=golpearme|=matarme|=ahorcar', gap:1 }, { p:'=me =va|=van =a =pegar|=golpear|=pegarme|=golpearme', gap:1, not:['si','cuando','nota','notas','prueba','ramo'] },
+  { p:'=esta =rompiendo|=tirando|=quebrando =cosas|=todo|=la =casa', gap:1 }, { p:'=me =esta =pegando|=golpeando|=amenazando|=gritando|=buscando', gap:0 },
+  { p:'=tiene =fotos|=videos =mias|=mios|=intimas|=desnuda|=desnudo', gap:1 }, { p:'=las|=los|=mis =va|=van =a =publicar|=subir|=mostrar|=pasar|=difundir', gap:1 },
+  { p:'=si =no =le =mando|=paso|=envio =mas|=fotos|=plata', gap:1 }
 ]);
 L.AUTOLESION = L.AUTOLESION.concat([ { p:'=me =quiero =cortar|=quemar|=lastimar', gap:1 }, { p:'=ganas =de =cortarme|=hacerme|=lastimarme|=quemarme', gap:1 }, { p:`=me =corto|=corte|=cortaba =con ${SHARP}`, gap:3 } ]);
 L.PLAN = L.PLAN.concat([
   { p:`=tengo =las|=el|=la|=un|=una|=mis ${MED}|${SHARP} =mano|=aqui|=aca|=lado|=listas|=listo|=lista|=preparado|=preparadas|=preparada`, gap:3 },
-  { p:'=me =voy =a =dormir =para =siempre', gap:0 }, { p:'=esta =noche =lo =hago|=termino', gap:1 }, { p:'=hoy =lo =hago|=termino|=acabo', gap:1 }
+  { p:'=me =voy =a =dormir =para =siempre', gap:0 }, { p:'=hoy|=noche|=manana|=ahora =me =mato', gap:1, not:['estudiando','trabajando','risa','haciendo','ejercicio','pega','gym','trabajo','estudi*','corriendo','entrenando','de','con','en','jaj*','xd'] }, { p:'=me =mato =hoy|=ahora|=manana', gap:0 }, { p:'=ganas =de =tirarme|=lanzarme|=saltar|=botarme', gap:1, not:['cama','piscina','sillon','sofa','suelo','pasto','agua','arena','carrete','clase','clases','encima','mar','rio','pileta','tobogan','ola','olas','pera','talla','tallas','foto','fotos'] }, { p:'=esta =noche =lo =hago|=termino', gap:1 }, { p:'=hoy =lo =hago|=termino|=acabo', gap:1 }
 ]);
 const TIRNOT = ['cama','piscina','sillon','sofa','suelo','pasto','agua','arena','pedo','pedos','flojo','floja','carrete','clase','clases','almuerzo','comida','cena','turno','encima','mar','rio','foto','fotos','pera','talla','tallas','pelota','partido','ola','olas','pileta','tobogan'];
 L.PLAN = L.PLAN.concat([ { p:'=me =quiero =tirar|=lanzar|=saltar', gap:0, not:TIRNOT }, { p:'=me =voy =a =tirar|=lanzar|=saltar', gap:0, not:['cama','piscina','sillon','sofa','suelo','pasto','agua','arena','pedo','pedos','flojo','floja','carrete','clase','clases','almuerzo','comida','cena','turno','encima','mar','rio','foto','fotos','la pera','talla','tallas','pelota','partido','ola','olas','pileta','tobogan'] } ]);
-L.PASIVA = L.PASIVA.concat([ { p:'=seria =mejor =no =estar|=existir|=haber', gap:1 }, { p:'=mejor =no =estar|=existir', gap:0 }, { p:'=preferiria =no =estar|=existir|=despertar|=vivir', gap:1 } ]);
+L.PASIVA = L.PASIVA.concat([ { p:'=seria =mejor =no =estar|=existir|=haber|=despertar|=vivir', gap:1 }, { p:'=mejor =no =estar|=existir', gap:0 }, { p:'=preferiria =no =estar|=existir|=despertar|=vivir', gap:1 } ]);
+L.PASIVA = L.PASIVA.concat([
+  { p:'=pienso|=pensando|=pense|=pensar =en =no =estar|=existir|=seguir|=despertar', gap:1 }, { p:'=no =estar =mas', gap:0, not:['aca','aqui','en','con','contigo','ahi','alla','tan','tranquil*','enojad*','triste*','sol*'] },
+  { p:'=ya =vivi =lo =que =tenia', gap:1 }, { p:'=ya =cumpli =mi =ciclo|=etapa', gap:0 }, { p:'=estoy =de =mas|=sobra', gap:0 }, { p:'=ya =no =tengo =nada =que =hacer =aqui|=aca|=en', gap:1 },
+  { p:'=ojala =dios =me =lleve|=llevara', gap:0 }, { p:'=que =dios =me =lleve', gap:1 }, { p:'=que =me =llegue =la =hora', gap:1 }, { p:'=no =merezco =vivir|=estar|=existir', gap:1 },
+  { p:'=quiero =irme =con =ella|=el', gap:0, not:['a','al','de','para','donde','pa'] } ]);
 L.PASIVA = L.PASIVA.concat([ '=ya =nada =importa', { p:'=quiero =dormir =para =siempre', gap:0 }, { p:'=nada =vale =la =pena', gap:0 }, { p:'=quisiera|=quiero =desaparecer', gap:2 } ]);
 L.MEDIOS = L.MEDIOS.concat([ { p:`=tengo|=compre|=consegui|=guardo ${SHARP}`, gap:3 } ]);
 L.SALUDO = [ '=hola|=hey|=alo|=buenas|=saludos|=buenos|=holis|=hello|=hi' ];
@@ -483,7 +505,7 @@ Object.assign(L, {
   NO_LO_HARIA: [ { p:'=no =lo =haria|=hare', gap:0 }, { p:'=no =me =atreveria|=atrevo', gap:0 }, { p:'=no =lo =voy =a =hacer', gap:0 }, { p:'=no =tengo =planes|=un =plan', gap:1 }, { p:'=nunca =lo =haria', gap:0 }, { p:'=pero =no =lo =haria', gap:0 } ],
   HERIDA: [ '=sangra|=sangrando|=sangro|=sangre', '=herida|=heridas', '=venda|=parche|=curita|=puntos|=gasa', { p:'=ir =al|=a =medico|=doctor|=hospital|=consultorio|=urgencia|=sapu|=cesfam', gap:1 }, { p:'=no =es =tan =profund*|=grave', gap:1 }, { p:'=no =es|=fue =profundo|=profunda|=grave|=tanto', gap:1 }, '=superficial', { p:'=en =el|=la =brazo|=pierna|=muneca|=muslo|=guata|=estomago|=mano', gap:0 } ],
   NADIE: [ { p:'=no =tengo =a =nadie|=quien', gap:1 }, { p:'=no =tengo =con =quien =hablar', gap:0 }, '=no =hay =nadie', { p:'=estoy|=vivo =sin =nadie', gap:0 }, { p:'=no =hay =nadie =mas', gap:0 } ],
-  YA_DIJE: [ { p:'=ya =te =lo =dije|=conte', gap:0 }, { p:'=ya =te =dije|=conte|=respondi', gap:0 }, { p:'=te =acabo =de =decir|=contar', gap:0 }, { p:'=ya =lo =dije', gap:0 }, { p:'=te =dije =que', gap:0 }, '=no =lees', { p:'=lee =bien|=lo =que =escribo', gap:1 }, { p:'=otra =vez =con =lo =mismo', gap:1 }, { p:'=cuantas =veces =te =tengo =que =decir', gap:1 }, '=ya =respondi' ],
+  YA_DIJE: [ { p:'=ya =te =lo =dije|=conte', gap:0 }, { p:'=ya =te =dije|=conte|=respondi', gap:0 }, { p:'=te =acabo =de =decir|=contar', gap:0 }, { p:'=ya =lo =dije', gap:0 }, { p:'=te =dije =que', gap:0 }, '=no =lees', '=lee =bien', { p:'=lee =lo =que =escribo|=digo', gap:0 }, { p:'=lee =lo =que =te =escribo|=digo', gap:0 }, { p:'=otra =vez =con =lo =mismo', gap:1 }, { p:'=cuantas =veces =te =tengo =que =decir', gap:1 }, '=ya =respondi' ],
   MINIMIZA: [ { p:'=ya =se =me =paso', gap:0 }, { p:'=ya =paso', gap:0 }, { p:'=no =es =para =tanto', gap:0 }, '=exagere|=exagerando|=exagero', '=olvidalo|=olvidate', { p:'=no =importa', gap:0, not:['si','que','lo','cuanto','donde','como','nada'] }, { p:'=da =igual', gap:0 }, { p:'=fue =un =momento', gap:1 }, { p:'=ya =estoy =bien|=mejor', gap:0 }, { p:'=estoy =bien =ya', gap:0 }, { p:'=no =te =preocupes', gap:0 }, '=filo', { p:'=ya =fue', gap:0, not:['el','la','que','a','cuando','hace','ayer','hoy'] } ],
   GRACIAS_TODO: [ { p:'=gracias =por =todo', gap:0 }, '=cuidense', { p:'=los|=las =quiero =a =todos|=mucho', gap:1 }, { p:'=diganle =a =mi', gap:0 }, { p:'=ya =no =importa =nada', gap:0 }, { p:'=ya =da =lo =mismo', gap:0 }, { p:'=fue =un =gusto', gap:0 }, { p:'=hasta =nunca', gap:0 } ],
   VINCULO: [ { p:'=quieres =ser =mi =polola|=novia|=pololo|=novio|=pareja', gap:1 }, { p:'=pololeemos|=pololear =conmigo', gap:0 }, { p:'=eres =mi =unico|=unica|=mejor =amigo|=amiga|=apoyo', gap:1 }, { p:'=eres =el|=la =unico|=unica =que =me', gap:1 }, { p:'=nadie =me =entiende|=escucha =como =tu', gap:1 }, { p:'=te =quiero|=amo', gap:0, not:['preguntar','decir','contar','pedir','hacer','molestar','consultar','mostrar','explicar','hablar','comentar'] }, '=me =quieres', '=te =importo',
@@ -495,7 +517,7 @@ Object.assign(L, {
   CAMBIO_TEMA: [ { p:'=cambiemos|=cambiar =de =tema', gap:0 }, { p:'=hablemos =de =otra =cosa', gap:1 }, { p:'=no =quiero =hablar =de =eso|=esto|=ese|=ese', gap:1 }, { p:'=otra =cosa', gap:0, not:['que','mas','es','me'] } ],
   PERSONAL_BOT: [ { p:'=como =estas =tu', gap:0 }, { p:'=y =tu =como =estas', gap:0 }, { p:'=tu =como =estas', gap:0 }, { p:'=tienes =sentimientos|=emociones|=amigos|=familia', gap:0 }, { p:'=cuantos =anos =tienes', gap:0 }, { p:'=eres =feliz', gap:0 }, { p:'=que =te =gusta', gap:0 } ],
   NO_SE_DECIR: [ { p:'=no =se =que =decir|=escribir|=contar|=poner', gap:1 }, { p:'=no =se =por =donde =empezar', gap:0 }, { p:'=no =se =como =explicarlo|=explicar|=decirlo|=decir', gap:0 }, { p:'=me =cuesta =hablar|=explicar|=expresarme|=decirlo', gap:1 } ],
-  TRATAMIENTO: [ { p:'=tengo|=tuve =psicologo|=psicologa|=psiquiatra|=terapeuta', gap:1 }, { p:'=voy =al|=a =psicologo|=psicologa|=psiquiatra|=terapeuta', gap:1 }, { p:'=estoy =en =tratamiento|=terapia', gap:0 }, { p:'=mi =psicologo|=psicologa|=psiquiatra|=terapeuta', gap:0 }, { p:'=tomo =antidepresivos|=medicamentos', gap:1 }, { p:'=me =dieron =de =alta', gap:0 }, { p:'=tengo =hora =con|=al|=a =psicologo|=psicologa|=psiquiatra|=terapeuta', gap:2 }, { p:'=estuve =internado|=internada|=hospitalizado|=hospitalizada', gap:0 } ],
+  TRATAMIENTO: [ { p:'=tengo|=tuve =psicologo|=psicologa|=psiquiatra|=terapeuta', gap:1 }, { p:'=voy =al|=a =psicologo|=psicologa|=psiquiatra|=terapeuta', gap:1 }, { p:'=estoy =en =tratamiento|=terapia', gap:0 }, { p:'=mi =psicologo|=psicologa|=psiquiatra|=terapeuta', gap:0 }, { p:'=tomo =antidepresivos|=medicamentos', gap:1 }, { p:'=me =dieron =de =alta', gap:0 }, { p:'=tengo =hora =con|=al|=a =psicologo|=psicologa|=psiquiatra|=terapeuta', gap:2 }, { p:'=estuve =internado|=internada|=hospitalizado|=hospitalizada', gap:0 }, { p:'=fui|=empece|=comence|=volvi =al|=a =la =psicologo|=psicologa|=psiquiatra|=terapia|=terapeuta', gap:1 } ],
   LUGAR_PELIGRO: [ { p:`=estoy|=ando|=sigo =en|=arriba ${DEST2}`, gap:3 }, { p:`=me =subi =al|=a ${DEST2}`, gap:2 }, { p:'=al =borde', gap:0 } ],
   OTRO_RIESGO: [ { p:'=kill =myself', gap:0 }, { p:'=want|=wanna =to =die', gap:1 }, '=suicide|=suicidal', { p:'=end =my =life', gap:0 }, { p:'=quero =morrer', gap:0 }, { p:'=vou =me =matar', gap:0 }, { p:'=veux =mourir', gap:0 }, { p:'=me =suicider', gap:0 }, { p:'=vle =mouri', gap:0 }, { p:'=touye =tet', gap:0 } ]
 });
@@ -503,7 +525,7 @@ Object.assign(L, {
 const C = {}; for (const k in L) C[k] = compile(L[k]);
 const CT = {}; for (const k in THEMES) CT[k] = compile(THEMES[k].ph);
 
-const ORDER = ['EMERGENCIA','METODO','PLAN','IDEACION','AUTOLESION','DANO_OTROS','VIOLENCIA','DUELO_SUICIDIO','TERCERO','INTENTO_PREVIO','RAZON','PASIVA','IDEACION_NEGADA','NO_LLAMAR','YA_LLAME','YA_DIJE','AYUDA','ESPERA','FAQ_CONF','FAQ_COSTO','FAQ_QUE','FAQ_PROTOCOLO','QUEJA','NO_ENTIENDO','CAMBIO_TEMA','NO_HABLAR','PRESENCIA','VINCULO','CONSEJO','EXISTENCIAL','PERSONAL_BOT','NO_SE_DECIR','JAILBREAK','SEXUAL','DATOS','MEDICO','SPAM','INSULTO','SUSTANCIAS','BROMA','MINIMIZA','HUMANO','ES_BOT','TRATAMIENTO','GROUNDING','HERIDA','NO_LO_HARIA','SECRETO','TEMA','NADIE','RELIGION','DISCULPA','RESPIRAR','POSITIVO','GRACIAS_TODO','DESPEDIDA','GRACIAS','SALUDO','OFFTOPIC','OTRO_IDIOMA','PREGUNTA','SILENCIO','GIBBERISH'];
+const ORDER = ['EMERGENCIA','METODO','PLAN','IDEACION','AUTOLESION','DANO_OTROS','VIOLENCIA','DUELO_SUICIDIO','TERCERO','INTENTO_PREVIO','RAZON','PASIVA','IDEACION_NEGADA','NO_LLAMAR','YA_LLAME','YA_DIJE','AYUDA','ESPERA','FAQ_CONF','FAQ_COSTO','FAQ_QUE','FAQ_PROTOCOLO','QUEJA','NO_ENTIENDO','CAMBIO_TEMA','NO_HABLAR','PRESENCIA','VINCULO','CONSEJO','EXISTENCIAL','PERSONAL_BOT','NO_SE_DECIR','JAILBREAK','SEXUAL','DATOS','MEDICO','SPAM','INSULTO','SUSTANCIAS','EN_SERIO','BROMA','MINIMIZA','HUMANO','ES_BOT','TRATAMIENTO','GROUNDING','HERIDA','NO_LO_HARIA','SECRETO','TEMA','NADIE','RELIGION','DISCULPA','RESPIRAR','POSITIVO','GRACIAS_TODO','DESPEDIDA','GRACIAS','SALUDO','OFFTOPIC','OTRO_IDIOMA','PREGUNTA','SILENCIO','GIBBERISH'];
 const RISKY = new Set(['EMERGENCIA','METODO','PLAN','IDEACION','AUTOLESION','DANO_OTROS','VIOLENCIA']);
 const NEGATABLE = new Set(['IDEACION','PLAN','PASIVA','AUTOLESION','POSITIVO','SUSTANCIAS']);
 const RISK_OF = { EMERGENCIA:'high',METODO:'high',PLAN:'high',IDEACION:'high',AUTOLESION:'high',DANO_OTROS:'high',VIOLENCIA:'high',TERCERO:'mid',INTENTO_PREVIO:'mid',DUELO_SUICIDIO:'mid',PASIVA:'mid',IDEACION_NEGADA:'mid',SUSTANCIAS:'mid' };
@@ -527,15 +549,19 @@ const FLAG_LABEL = {
   PIDE_BORRAR:'Pide borrar sus datos', POSIBLE_INTENTO:'Posible intento en curso', PROFESIONAL:'Profesional probando', QUEJA_ESP:'Queja sobre un especialista',
   RAZON:'Pide razones para vivir', RAZONES:'Nombró razones para vivir', RETRACTA_EMERGENCIA:'Dijo que la emergencia era broma', SIN_VIVIENDA:'Sin lugar para dormir',
   TERCERO_PREOCUPA:'Preocupación por otra persona', TERCERO_REDES:'Vio riesgo en redes sociales', TRAUMA:'Síntomas tras un trauma', VIOLENCIA_PSICOLOGICA:'Violencia psicológica',
-  VOCES:'Escucha voces', IDEACION_HUMOR:'Ideación dicha en broma'
+  VOCES:'Escucha voces', IDEACION_HUMOR:'Ideación dicha en broma',
+  IDEACION_PASADA:'Ideación en el pasado', AUTOLESION_SIN_IDEACION:'Autolesión sin intención de morir', NO_QUIERE_PSICOLOGO:'No quiere hablar con un psicólogo', PLAN_PASTILLAS:'Plan con pastillas',
+  VIOLENCIA_EN_CURSO:'Violencia en curso', VIOLENCIA_SEXUAL_RECIENTE:'Violencia sexual reciente (menos de 72 h)', TERCERO_URGENTE:'Otra persona se despidió (urgente)', URGENCIA_MEDICA:'Posible urgencia médica',
+  MALTRATO_LABORAL:'Maltrato en el trabajo', CRIANZA:'Sobrecarga en la crianza', ACADEMICO:'Consulta académica', SIN_PLAN:'Dice no tener un plan'
 };
-const URGENT = new Set(['EMERGENCIA','PLAN','INMINENTE','NO_SEGURO','DESPEDIDA_EN_CRISIS','LUGAR_PELIGRO','POSIBLE_INTENTO','EMERG_OTRO','MEDIOS_CERCA','AGRESOR','VOCES']);
+const URGENT = new Set(['EMERGENCIA','PLAN','INMINENTE','NO_SEGURO','DESPEDIDA_EN_CRISIS','LUGAR_PELIGRO','POSIBLE_INTENTO','EMERG_OTRO','MEDIOS_CERCA','AGRESOR','VOCES','VIOLENCIA_EN_CURSO','TERCERO_URGENTE','URGENCIA_MEDICA']);
 const YES = new Set(['si','sip','sep','simon','obvio','claro','afirmativo','exacto','correcto','seguro','yes','sii','sipi','efectivamente','totalmente','cierto','verdad']);
 const ACK = new Set(['ok','okey','oka','okay','ya','dale','bueno','listo','vale','aja','yap','sale','ahi','va','oki','okis','mm','mmm','ah']);
 const NO_NEXT = new Set(['no','estoy','hay','ay','tengo','se','lo','nada','nunca','gracias','po','creo','para','solo','sola','mucho','tanto','ahora','todavia','aun','nadie','la','el','me','tan','realmente','exactamente','sabria','puedo']);
 const NO_ = new Set(['no','nop','nope','nel','na','nah','nunca','negativo','tampoco','nones','jamas']);
-const FOREIGN = new Set(['i','you','the','and','to','want','die','help','my','is','am','are','not','can','feel','sad','please','life','kill','myself','need','someone','talk','what','how','why','this','it','so','very','really','im','dont','cant','know','hello','hi','eu','voce','nao','quero','morrer','ajuda','estou','muito','sozinho','sozinha','minha','preciso','falar','alguem','je','veux','mourir','aide','moi','suis','seul','seule','mwen','vle','mouri','ede','konnen','tris','poukisa','bonjou']);
+const FOREIGN = new Set(['i','you','the','and','to','want','die','help','my','is','am','are','not','can','feel','sad','please','life','kill','myself','need','someone','talk','what','how','why','this','it','so','very','really','im','dont','cant','know','hello','hi','eu','voce','nao','quero','morrer','ajuda','estou','muito','sozinho','sozinha','minha','preciso','falar','alguem','je','veux','mourir','aide','moi','suis','seul','seule','mwen','vle','mouri','ede','konnen','tris','poukisa','bonjou','anpil','pa','do','speak','english','spanish','understand','language','sorry','falo','espanhol','obrigado','obrigada','oi','tudo','fala','portugues','entendo','nao']);
 const LAUGH = /^(?:a?(?:j+[aeisou]+)+j*|(?:js)+j?|x+d+|lol|lmao|(?:ha)+h?|(?:je)+|k+a+k+a*)$/;
+const ANSW = new Set('si no lo la el los las le me te se he ha a y o que eso esas esos cosas pienso pensado pense pensar en pasa pasado por cabeza mente momentos ratos rato dias noches ultimamente antes ahora tanto mucho poco nada ya bien muy harto siempre nunca todos cada vez veces cuando aparece aparecen idea ideas pensamiento pensamientos morir matarme vivir quitarme vida desaparecer hacerlo haria hare quiero quisiera ganas de del al con sin solo sola estoy siento sentido creo verdad pero tambien asi mas menos segura seguro tengo hay alguien nadie casa aqui aca eh em mm mmm uf ay bueno pucha oh ah osea sea como igual tal nose po sabria decir'.split(' '));
 
 /* ───────── 4. Análisis ───────── */
 function analyze(raw){
@@ -543,7 +569,7 @@ function analyze(raw){
   const toks = n.toks, keys = toks.map(phon);
   const hits = {}, spans = [];
   const run = name => { const r=[]; for (const ph of C[name]) for (const m of matchPhrase(ph,toks,keys)) r.push(Object.assign(m,{src:ph.src})); return r; };
-  for (const name of ['TERCERO','DANO_OTROS','INTENTO_PREVIO']) { const m = run(name); if (m.length) { hits[name]=m; spans.push(...m); } }
+  for (const name of ['TERCERO','DANO_OTROS','INTENTO_PREVIO']) { let m = run(name); if (name === 'INTENTO_PREVIO') m = m.filter(x => !negated(toks, x.s)); if (m.length) { hits[name]=m; spans.push(...m); } }
   const overlaps = x => spans.some(s => x.s <= s.e && x.e >= s.s);
   let negRisk = false;
   for (const name of Object.keys(C)) {
@@ -574,11 +600,23 @@ function analyze(raw){
   if (negRisk && !['IDEACION','PLAN','PASIVA','AUTOLESION','EMERGENCIA','METODO'].some(k=>hits[k])) hits.IDEACION_NEGADA = [{s:0,e:0}];
   if (n.riskEmoji && !RISKY_PRESENT(hits)) hits.PASIVA = hits.PASIVA || [{s:0,e:0}];
   if (hits.TRATAMIENTO && hits.QUEJA && /psicolog|psiquiatr|terapeut|terapia/.test(n.text)) delete hits.QUEJA;
+  if (hits.YA_DIJE && /\bquien(es)?\b/.test(n.text)) delete hits.YA_DIJE;
+  // la enfermedad de otra persona no es "tu salud"
+  if (themes.includes('salud') && /\b(mi|mis|su|sus) (mama|papa|abuel\w*|herman\w*|hij\w*|tia|tio|pareja|esposo|esposa|marido|amig\w*|polol\w*|perr\w*|gat\w*|suegr\w*)\b/.test(n.text) && !/\b(tengo|me diagnosticaron|me detectaron|estoy enferm|me duele)\b/.test(n.text)) themes.splice(themes.indexOf('salud'), 1);
+  if (themes.includes('salud') && themes.includes('duelo') && !/\b(tengo|me diagnosticaron|estoy enferm)\b/.test(n.text)) themes.splice(themes.indexOf('salud'), 1);
   if (hits.INSULTO && /\b(estoy|ando|toy|me siento|mi vida|esta vida|de vida|la vida|todo es|me tiene|estoy chat|que lata|que mierda de)\b/.test(n.text) && !/\b(bot|eres|eri|erai|sos|tu|contigo|te odio|callate)\b/.test(n.text)) delete hits.INSULTO;
   if (hits.VIOLENCIA && /\bme pego (cabezazos|cabesazos|en la cabeza|contra la pared|a mi mism\w*|combos|punetes|puñetes|cachetadas)\b/.test(n.text)) { delete hits.VIOLENCIA; hits.AUTOLESION = [{s:0,e:0}]; }
   if (hits.DUELO_SUICIDIO) { delete hits.PASIVA; delete hits.TERCERO; if (!themes.includes('duelo')) themes.push('duelo'); }
   if ((hits.IDEACION || hits.PASIVA) && /\b(y )?si (me |alguien |uno |una persona |yo )?(quisiera|quiere|quiero|quisieras|dijera|digo|dice|pensara)\b.*\b(que (haces|harias|pasa|pasaria|hacen|hace)|como (ayudas|funciona|reaccionas))\b/.test(n.text)) { delete hits.IDEACION; delete hits.PASIVA; delete hits.FAQ_QUE; hits.FAQ_PROTOCOLO = [{s:0,e:0}]; }
   if (hits.AYUDA && /\b(nada|no|nadie) (me|te|le|nos) (ayuda|sirve)/.test(n.text)) { delete hits.AYUDA; if (!themes.includes('animo')) themes.push('animo'); }
+  // "me ayuda a sentir algo" no es pedir ayuda
+  if (hits.AYUDA && /\b(me|te|le|nos|les|eso|esto|que|si) ayuda(ba|ria)? (a|con|para|mucho|harto|un poco|bastante|bien)\b/.test(n.text) && !/\b(necesito|pido|quiero|busco) ayuda\b|^ayuda\b/.test(n.text)) delete hits.AYUDA;
+  // "no es broma" confirma lo dicho
+  if (hits.BROMA && /\bno (es|era|fue|estoy|estaba|te estoy|lo estoy|lo digo|lo dije) (una |de )?(broma|bromeando|jugando|webeando|weando|hueveando|mentira|chiste|jodiendo|en broma|molestando)\b|\bno bromeo\b/.test(n.text)) { delete hits.BROMA; hits.EN_SERIO = [{s:0,e:0}]; }
+  // "no les importo" no es "no lees"
+  if (hits.YA_DIJE && /\bno les\b/.test(n.text) && !/\bno lees\b/.test(n.text)) delete hits.YA_DIJE;
+  // el profe jefe no es la pega
+  if (themes.includes('trabajo') && /\b(profe|profesor|profesora) jef[ea]\b/.test(n.text) && !/\b(trabajo|pega|laburo|oficina|chamba)\b/.test(n.text)) themes.splice(themes.indexOf('trabajo'), 1);
   if (toks.length===1 && toks[0]==='mejor') hits.POSITIVO = [{s:0,e:0}];
   if (!toks.length) hits.SILENCIO = [{s:0,e:0}];
   if (hits.OTRO_RIESGO) { hits.IDEACION = hits.IDEACION || hits.OTRO_RIESGO; hits.OTRO_IDIOMA = [{s:0,e:0}]; }
@@ -586,6 +624,7 @@ function analyze(raw){
   if (/^(por favor ?)+$/.test(toks.join(' ')+' ') || /^por favor$/.test(toks.join(' '))) hits.AYUDA = hits.AYUDA || [{s:0,e:0}];
   if (n.math) hits.OFFTOPIC = hits.OFFTOPIC || [{s:0,e:0}];
   const isQ = /\?\s*$/.test(String(raw)) || /^\s*¿/.test(String(raw));
+  if (!isQ && !hits.BROMA && /\b(lo digo|hablo|te lo digo|lo dije|te hablo|lo estoy diciendo|es|era|va|iba) (muy |bien |totalmente |completamente )?en serio\b|^(en serio|hablo en serio)$/.test(n.text)) hits.EN_SERIO = hits.EN_SERIO || [{s:0,e:0}];
   if (hits.ES_BOT && !isQ && /^(si|sip|no|nop|ya|claro|obvio)\b/.test(n.text) && /\bhay alguien\b/.test(n.text)) delete hits.ES_BOT;
   if (toks.length <= 2 && toks.every(w => /^(que|como|q)$/.test(w)) && (isQ || toks.length===1 && toks[0]!=='como')) hits.NO_ENTIENDO = hits.NO_ENTIENDO || [{s:0,e:0}];
   const realHits = Object.keys(hits).filter(k => !k.startsWith('_') && k !== 'INMINENTE' && k !== 'MEDIOS');
@@ -614,7 +653,11 @@ function analyze(raw){
     else if (/\b(pa konnen|dont know|not sure|nao sei|je sais pas|je ne sais pas)\b/.test(t2)) answer = 'unsure';
     else if (/^(wi|oui|sim|yes|yeah|yep)$/.test(t2)) answer = 'yes';
     else if (/^(non|nao|nope|pa)$/.test(t2)) answer = 'no';
-    else if (/\b(no se|no lo se|ni idea|mas o menos|a veces|tal vez|quizas|quiza|puede ser|depende|no estoy seguro|no estoy segura|algo asi|un poco(?! (mejor|peor|mas|menos|bien|mal))|capaz|si y no|no estoy tan seguro|no estoy tan segura|no sabria)\b/.test(t2) || /^(creo|igual|no se po)$/.test(t2)) answer = 'unsure';
+    else if (/\b(no se|no lo se|ni idea|mas o menos|a veces|tal vez|quizas|quiza|puede ser|depende|no estoy seguro|no estoy segura|algo asi|un poco(?! (mejor|peor|mas|menos|bien|mal))|capaz|si y no|no estoy tan seguro|no estoy tan segura|no sabria)\b/.test(t2) || /^(creo|igual|no se po)$/.test(t2)) {
+      answer = 'unsure';
+      const rest = t2.replace(/\b(no se|no lo se|ni idea|mas o menos|a veces|tal vez|quizas|quiza|puede ser|depende|no estoy (tan )?segur[oa]|algo asi|un poco|capaz|si y no|no sabria( decir)?|la verdad)\b/g, ' ').split(/\s+/).filter(Boolean);
+      if (rest.some(w => !ANSW.has(w))) answer = null;
+    }
     else if (/^(no )?(en verdad|la verdad|realmente|de verdad|en realidad) no$|^no (en verdad|la verdad|realmente|de verdad|en realidad)$/.test(t2)) answer = 'no';
     else if (/\b(creo que no|obvio que no|claro que no|para nada|ni ahi|ni cagando|nada que ver|en absoluto|no h?ay nadie|no tengo a nadie|no tengo a quien)\b/.test(t2) || /^(todavia no|aun no|ahora no|no gracias|no po|no nada)$/.test(t2) || t2 === 'cero' || /^no,? (no )?tanto$/.test(t2) || (NO_.has(at[0]) && (at.length === 1 || NO_NEXT.has(at[1])))) answer = 'no';
     else if (YES.has(at[0]) || /\b(estoy a salvo|estoy seguro|estoy segura|hay alguien|esta conmigo|estan conmigo|ya llame|puedo llamar|ya lo hice|me aleje)\b/.test(t2)) answer = 'yes';
@@ -634,7 +677,7 @@ function RISKY_PRESENT(h){ return ['EMERGENCIA','METODO','PLAN','IDEACION','AUTO
 
 /* ───────── 5. Diálogo ───────── */
 const R = {
-  start: ['Hola, soy Acompaña. Este es un espacio seguro y confidencial: puedes escribir lo que sientas, como te salga y a tu ritmo.', '¿Cómo te sientes ahora?'],
+  start: ['Hola, soy Nexo, el chatbot de ConténMente. Este es un espacio seguro y confidencial: puedes escribir lo que sientas, como te salga y a tu ritmo.', '¿Cómo te sientes ahora?'],
   search: ['Ya estoy buscando un especialista para que te atienda hoy o mañana. Mientras tanto, sigo aquí contigo.','Ya avisé a un especialista para que te atienda. Mientras llega, aquí estoy.'],
   follow: ['¿Desde cuándo te vienes sintiendo así?','¿Qué es lo que más te pesa hoy?','¿Hay alguien de confianza con quien hayas podido hablarlo?','¿Qué cosas te han ayudado otras veces, aunque sea un poco?','¿Cómo ha sido tu día hoy?','¿Cómo está tu cuerpo ahora: cansado, tenso, inquieto?','¿Y cómo te hace sentir todo eso?','Si pudieras cambiar una sola cosa de lo que estás viviendo, ¿cuál sería?'],
   openers: ['¿Cómo te sientes hoy?','¿Qué te trajo por aquí hoy?','Cuéntame, ¿cómo has estado?'],
@@ -739,7 +782,7 @@ const REASK = {
   with: ['Te preguntaba si hay alguien contigo en este momento. ¿Estás con alguien?','¿Hay alguien más en tu casa o cerca de ti ahora, aunque sea en otra pieza?']
 };
 const MAXASK = { safe:3, safev:2, ideacion:3, means:2, llamo131:2, alejarse:3, third:2, autoles:2, with:2, contact:1, ejercicio:2, busco:1, especialista:1 };
-const LIMIT = { safe:2, safev:1, ideacion:2, means:1, llamo131:1, alejarse:2, third:1, autoles:1, with:1, contact:0, ejercicio:0 };
+const LIMIT = { safe:2, safev:1, ideacion:1, means:1, llamo131:1, alejarse:2, third:1, autoles:1, with:1, contact:0, ejercicio:0 };
 const SPECIFIC = new Set(['FAQ_LINEA','NO_AGUANTO','ALIM_FRECUENTE','AYUDA_URGENTE','CORRIGE','REVELA_PROPIO','NOTICIA_SUICIDIO','PREG_SUICIDIO','PLAN_AMBIGUO','BROMA_BOT','MED_NORMAL','MASCOTA','DOLOR_GOLPE','ENTUMECIDO','PET_NAME','GOLPE_PARED','NOTICIA2','DIAGNOSTICO','DIAG_MIEDO','GESTA_TIEMPO','RECAIDA_MIEDO','MASCOTA_EDAD','FAQ_GRABA','FAQ_CREADOR','FAQ_VOLVER','FAQ_SIN_PLATA','FAQ_PROMESA','DISTRAER','ALGO_BONITO','MALTRATO_MENOR','ARMA','DONDE_CASA','ANIVERSARIO','NECESIDAD_BASICA','CESANTE','AGRESION_CALLE','MATAR_IDIOMA','LUGAR_CHECK','DUELO_SIN_DESPEDIDA','CULPA_VIOLENCIA','UNICO_MOTIVO','SUST_MALVIAJE','IDEACION_HIPERBOLE','AMENAZA_SUICIDA','TERCERO_REDES','MEDIOS_RECHAZO','NO_QUIERO_IR','AGRESOR_AYUDA','VOCES','VOCES_AHORA','DESPEDIDA_OCULTA','DECISION','DECISION_RIESGO','HOSPITAL','EMERGENCIA_OTRO','AGRESOR','AGRESOR_ARREP','DISOCIACION','CUIDADOR','CUIDADOR_SOLO','CUIDADOR_CULPA','ACOSO_LABORAL','ACOSO_MIEDO','ACOSO_DETALLE','DISCRIMINACION','DISCRIM_LUGAR','MED_EFECTO','MED_PEOR','MED_DEJAR','TRAUMA','TRAUMA_EVITA','CONTROL_PAREJA','CONTROL_AMOR','CONTROL_NORMAL','DUELO_GESTA','MINIMIZAN','REPETIR','QUEJA_ESP','QUEJA_ESP2','ELOGIO','SIN_RAZON','CONVERSAR','TERCERO_NINO','DUDA_DECISION','MIEDO_RECAER','SUST_FREC','SUST_RECAIDA','LO_HICE','FAQ_PAIS2','ALIM_FREC','AGUANTE','DATOS_PROPIOS','BOT_LLAMA','FAQ_NUMEROS','FAQ_WHATSAPP','FAQ_PAIS','FAQ_ESPECIALISTA','FAQ_RIESGO','FAQ_BORRAR','FAQ_SISTEMA','PROFESIONAL','HORA','LUGAR_ATENCION','SARCASMO','PANICO','AMENAZA_DUDA','AMENAZA_CULPA','TERCERO_REDES2','CICATRICES','ESPERA_HORA','MIEDO_CONTAR','POSPARTO_CULPA','POSPARTO_SOLA','FAQ_PROTOCOLO','DUELO_SUICIDIO','MEDIOS_CRISIS','RETRACTA','CULPA_DUELO','METODO_EXCUSA','TERCERO_MAL','HELPER_IFYES','HELPER_NOQUIERE','HELPER_CALMA','HELPER_CERRADO','HELPER_SUST','NO_CREEN','NO_DENUNCIA','VIOL_MIEDO','GRACIAS','DESPEDIDA','SALUDO','HERIDA','SECRETO','NO_LO_HARIA','NO_LLAMAR','YA_LLAME','YA_DIJE','AYUDA','ESPERA','FAQ_CONF','FAQ_COSTO','FAQ_QUE','FAQ_PROTOCOLO','QUEJA','NO_ENTIENDO','NO_HABLAR','PRESENCIA','DISCULPA','GROUNDING','RESPIRAR','HUMANO','ES_BOT','SUSTANCIAS','INSULTO','JAILBREAK','SEXUAL','DATOS','MEDICO','VINCULO','CONSEJO','RAZON','EXISTENCIAL','RELIGION','CAMBIO_TEMA','PERSONAL_BOT','NO_SE_DECIR','TRATAMIENTO','MINIMIZA','GRACIAS_TODO','NADIE','OTRO_IDIOMA','SILENCIO']);
 const LOC = /\b(casa|pieza|cama|bano|trabajo|pega|colegio|liceo|universidad|calle|auto|micro|metro|plaza|parque|departamento|depto|hospital|living|cocina|patio)\b/;
 const TIME_RE = /\b(hace|desde)\b.*\b(dia|dias|semana|semanas|mes|meses|ano|anos|tiempo|rato|siempre)\b|\b(\d+|un|una|dos|tres|como|unos|unas) (dias|semanas|meses|anos)\b|\b(toda la vida|siempre|desde chico|desde chica|desde nino|desde nina)\b/;
@@ -748,12 +791,13 @@ const NAMES = new Set('matias martina mateo martin tomas sofia isidora florencia
 const EXTRA = [
   ['BOT_LLAMA', /\b(puedes|podrias|pueden|podi|puedi|podis) (llamar|avisarle|avisar|escribirle|contactar|hablarle|llamarla|llamarlo)\b|\bllama tu\b|\bllamame\b|\bllama por mi\b|\bllamalos tu\b|\bme (pueden|puedes) llamar\b/],
   ['FAQ_NUMEROS', /\b(a que numero|que numero|cual es el numero|numero de (ayuda|emergencia|salud mental)|telefono de (ayuda|emergencia)|a quien llamo|donde llamo|algun numero|que fono|algun fono)\b/],
-  ['FAQ_WHATSAPP', /\b(whatsapp|wsp|wasap|guasap|wasapp)\b/],
+  ['FAQ_WHATSAPP', /\b(whatsapp|wsp|wasap|guasap|wasapp)\b|\b(tienen|tienes|hay|puedo (hablar|escribir|contactarlos)( con ustedes)? por) (un |una )?(instagram|insta|facebook|face|tiktok|telegram|twitter|redes sociales|messenger|correo|mail)\b/],
   ['FAQ_PAIS', /\b(estoy|vivo|escribo|estoy viviendo) (en|desde) (argentina|peru|bolivia|venezuela|colombia|mexico|espana|ecuador|uruguay|paraguay|brasil|estados unidos|eeuu|usa|canada|europa|el extranjero|otro pais)\b|\bno (soy|estoy|vivo) (de|en) chile\b|\bsirve (fuera de chile|en otro pais)\b/],
-  ['FAQ_ESPECIALISTA', /\b(es|son) (hombre|mujer|hombres|mujeres)\b|\b(especialista|psicolog\w*) (es|son) (hombre|mujer|de verdad|real|reales)\b|\bpuedo elegir\b|\bcuanto cobra\b|\bpresencial\b|\bque (estudios|titulo) tiene\b|\bson psicolog\w* de verdad\b/],
+  ['FAQ_ESPECIALISTA', /\b(es|son) (hombre|mujer|hombres|mujeres)\b|\b(especialista|psicolog\w*) (es|son) (hombre|mujer|de verdad|real|reales)\b|\bpuedo elegir\b|\bcuanto cobra\b|\bpresencial\b|\bque (estudios|titulo) tiene\b|\bson psicolog\w* de verdad\b|\b(me )?(atiende|atienden|es|son) (un |una )?(psicolog|especialista|persona|profesional)\w* (de verdad|real|reales|de carne y hueso)\b|\bes (una )?persona real\b/],
   ['FAQ_RIESGO', /\bcomo (detectas|detecta|evaluas|mides|sabes|identificas) (el |si hay |si hay un )?riesgo\b|\bcomo funciona (el bot|la deteccion|por dentro)\b/],
-  ['FAQ_BORRAR', /\b(borra|borrar|elimina|eliminar|borren|borre) (mi|la|esta|mis|los) (conversacion|chat|mensajes|datos|cuenta|historial)\b|\bno quiero que quede (registro|guardado|nada)\b|\bse guarda (esto|lo que escribo|la conversacion)\b/],
-  ['FAQ_SISTEMA', /\b(y )?si (no (contesta|responde|llega|me atiende|me escribe) nadie|nadie (contesta|responde|me atiende|llega|me escribe)|no me (contesta|responde) nadie)\b|\b(y )?si no (contesta|responde)\b|\b(y )?si (el|la) (especialista|psicolog\w*) no me (entiende|cae bien|gusta|ayuda|sirve)\b/],
+  ['FAQ_BORRAR', /\b(borra|borrar|borro|elimina|eliminar|elimino|borren|borre|borrarla|borrarlo) (mi|la|esta|mis|los|el|este)? ?(conversacion|chat|mensajes|datos|cuenta|historial|esto)\b|\bcomo (se )?(borra|elimina|borro|elimino)\b|\bno quiero que quede (registro|guardado|nada)\b|\bse guarda (esto|lo que escribo|la conversacion)\b|\bno quiero que nadie (lo |la )?(vea|lea|vean|lean)\b/],
+  ['FAQ_RASTREO', /\b(me|nos) (pueden|puedes|van a|podrian) (rastrear|ubicar|encontrar|identificar)\b|\b(saben|pueden saber|sabes|van a saber) (donde estoy|quien soy|mi nombre|mi ubicacion|mi direccion)\b|\b(ven|guardan|ves|guardas) (mi )?(ip|ubicacion|numero|direccion)\b|\bme rastrean\b/],
+  ['FAQ_SISTEMA', /\b(y )?si (no (contesta|responde|llega|me atiende|me escribe) nadie|nadie (contesta|responde|me atiende|llega|me escribe)|no me (contesta|responde|contestan|responden|atienden) nadie)\b|\b(y )?si no (me )?(contesta|responde|contestan|responden|atienden)\b|\b(y )?si (el|la) (especialista|psicolog\w*) no me (entiende|cae bien|gusta|ayuda|sirve)\b/],
   ['PROFESIONAL', /\b(soy|somos) (psicolog|psiquiatr|terapeut|profesional|especialista|medic|enfermer|trabajador|trabajadora|orientador|orientadora|profe|profesor|profesora)\w*\b.*\b(probando|prueba|testeando|revisando|viendo|conocer)\b|\bestoy (probando|testeando) (la|esta|el) (plataforma|app|pagina|bot|sistema)\b/],
   ['HORA', /\bque hora es\b/],
   ['FAQ_LINEA', /\bque es (el |la )?(\*?4141|131|1515|133|1455|149|147|1412|linea libre|salud responde)\b|\b(el |la )?(\*?4141|1515|1412|linea libre) (es gratis|atiende|que es|sirve|de que es|es de)\b|\bcomo (se )?marc\w* (el )?\*?4141\b/],
@@ -798,7 +842,95 @@ const REFLECT = [
   [/\bera mi (companero|companera|todo|mejor amigo|mejor amiga|familia|vida|compania)\b/, ['Se nota cuánto lo querías. Ese vacío pesa mucho.']],
   [/\b(nadie me entiende|nadie me escucha|nadie me pesca|nadie me toma en cuenta)\b/, ['Sentir que nadie te entiende es muy solitario. Aquí te estoy leyendo.']]
 ];
+/* reflejos específicos: tienen prioridad sobre el reflejo genérico del tema */
+const REFLECT_P = [
+  { re:/^(es que )?(son )?(muchas cosas|demasiadas cosas|de todo un poco|un monton de cosas)$/, s:['Cuando son muchas cosas a la vez, cuesta saber por dónde partir. Podemos ir de a una.'], q:'¿Cuál es la que más te pesa hoy?' },
+  { re:/\bentrevista\b/, s:['Las entrevistas ponen nervioso a cualquiera, sobre todo cuando importan mucho.'], q:'¿Qué es lo que más te preocupa de la entrevista?' },
+  { re:/\bson las (\d+|una|dos|tres|cuatro|cinco|seis)\b.*\b(despiert|dormir|duermo)|\bsigo despiert[oa]\b|\bno he dormido nada\b/, s:['Tan tarde y sin poder dormir… qué cansancio. A esta hora todo se siente más pesado.'], q:'¿Qué te está dando vueltas en la cabeza?' },
+  { re:/\bno tengo tiempo (para mi|para nada|para descansar)\b/, s:['Cuando todo el tiempo se va en otros, uno queda al final de la lista. Tú también importas.'] },
+  { re:/\b(me cambie|me vine|me mude|llegue) (de|a) (ciudad|santiago|region|pais|otra ciudad|vivir aca|vivir a)\b|\bme cambie de (ciudad|region|pais|casa)\b/, s:['Cambiarse de ciudad es un cambio enorme, y llegar sin conocer a nadie puede ser muy solitario.'], q:'¿Cómo han sido estos meses?' },
+  { re:/\bno conozco a nadie\b/, s:['Estar en un lugar sin conocer a nadie es muy solitario.'] },
+  { re:/\bme gustaria (hacer|tener|conocer) (amigos|amigas|amistades|gente)\b/, s:['Qué bueno que tengas ganas. A veces ayuda partir por algo que te guste: un taller, un deporte, un voluntariado o un grupo con intereses parecidos.'], q:'¿Qué cosas te gusta hacer?' },
+  { re:/\bengane a\b/, s:['Gracias por contármelo con honestidad. Cargar con eso pesa mucho, y que te duela habla de que te importa.'], q:'¿Qué es lo que más te pesa de eso?' },
+  { re:/\bsoy (una )?(mala persona|mal[oa])\b(?! (para|en|con|jugando|haciendo))|\bsoy (un|una) monstruo\b/, s:['Lo que sientes ahora es muy duro contigo. Equivocarse, aunque sea en algo grande, no te convierte en mala persona.'] },
+  { re:/\bhice cosas (malas|terribles|horribles)\b/, s:['Todos cargamos con cosas de las que nos arrepentimos. Que te pesen habla de que te importa hacerlo distinto.'], q:'¿Quieres contarme un poco, a tu ritmo?' },
+  { re:/\b(se (estan )?separando|se separaron|se van a separar|se divorci\w*)\b/, when:(S, t) => /\b(papas|padres|papa|mama|viejos)\b/.test(t), s:['Que tus papás se separen remueve mucho, y no es tu culpa.'], q:'¿Cómo lo estás viviendo tú?' },
+  { re:/\bse fue de la casa\b|\bnos (abandono|dejo solos)\b/, s:['Que se haya ido de la casa es un cambio muy grande, y duele.'], q:'¿Cómo ha sido para ti?' },
+  { re:/\b(es el|es la|son los|son las) (favorit[oa]s?|preferid[oa]s?|regalon[a]?)\b|\bprefieren a\b|\bme comparan con\b/, s:['Sentir que en tu casa prefieren a otra persona duele mucho.'], q:'¿Cómo te hace sentir eso?' },
+  { re:/\b(mi familia|mis papas|mi papa|mi mama|en mi casa) no me (pesca|pescan|toma en cuenta|toman en cuenta|escucha|escuchan|entiende|entienden|ve|ven)\b/, s:['Sentir que no te ven en tu propia casa duele mucho.'] },
+  { re:/\b(viven lejos|estan lejos|no me visitan|no me vienen a ver|no me llaman nunca|nunca me llaman)\b/, s:['Tener a los tuyos lejos hace que los días pesen más.'], q:'¿Cuándo fue la última vez que hablaste con alguno?' },
+  { re:/\b(tiene|le (dio|diagnosticaron|detectaron)) (cancer|un tumor|alzheimer|demencia|leucemia)\b|\besta (muy )?(enferm[oa]|grave|hospitalizad[oa])\b/, when:(S, t) => !/\b(tengo|estoy enferm|me diagnosticaron)\b/.test(t), s:['Ver a alguien que quieres tan enfermo duele muchísimo.'], q:'¿Cómo lo estás llevando tú?' },
+  { re:/\b(mis hijos|mi hijo|mi hija|mis hijas) (son|es) (chic[oa]s?|pequen[oa]s?|guaguas?)\b/, s:['Pensar en tus hijos en un momento así debe pesar muchísimo. Se nota cuánto te importan.'] },
+  { re:/\bera como (mi|un|una) (papa|mama|hermano|hermana|abuelo|abuela|hijo|hija)\b/, s:['Se nota lo importante que fue para ti. Perder a alguien así deja un vacío enorme.'] },
+  { re:/\b(lo|la) descubri\b|\bme entere (hoy|ayer|recien)\b/, s:['Enterarse así es un golpe fuerte. Es normal sentir susto, pena o rabia, todo junto.'] },
+  { re:/\b(todos los dias|todo el dia|siempre) lo pienso\b|\blo pienso (todos los dias|todo el tiempo|siempre|a cada rato)\b/, s:['Pensarlo todos los días tiene que ser agotador. Gracias por decírmelo.'] },
+  { re:/\b(para (sentir algo|sentir alivio|aliviar|aliviarme|calmarme|sacar lo que siento)|es para aliviar|me alivia|es la unica forma|me ayuda a (sentir|calmarme|aliviarme|desahogarme|sentirme)|me hace sentir (algo|mejor|vivo|viva)|me calma|me relaja|siento alivio|me libera|es mi forma de)\b/, when:(S) => S.flags.has('AUTOLESION'), s:['A veces hacerse daño aparece como una forma de aliviar o de sentir algo cuando por dentro duele demasiado. Tiene sentido, y también hay otras formas de aliviarlo que no te dañan.'] },
+  { re:/\b(se dio cuenta|se entero|me pillo|me vio|lo descubrio|lo supo)\b/, when:(S) => S.flags.has('AUTOLESION'), s:['A veces que alguien cercano lo sepa, aunque asuste, puede ser un apoyo.'] },
+  { re:/\bno te (voy a|lo voy a|quiero) (decir|contar)\b/, s:['Está bien, no tienes que contarme todo. Igual me importa que estés a salvo.'] },
+  { re:/\b(nunca|no) lo he intentado\b/, s:['Gracias por contármelo.'] },
+  { re:/\bno (he hablado|le he dicho|le he contado) (con |a )?(la|el|mi) (doctora|doctor|psiquiatra|medic[oa])\b/, s:['Te recomiendo contárselo pronto: a veces los remedios necesitan ajustes, y es importante que lo sepa.'] },
+  { re:/\b(nombre muerto|deadname|no respetan mis pronombres|me dicen por mi nombre (de antes|anterior))\b/, s:['Que no usen tu nombre duele mucho: es como si no te vieran. Tu nombre y tu identidad merecen respeto.'] },
+  { re:/\b(mi pololo|mi polola|mi pareja|el papa|el) no quiere\b|\bno se quiere hacer cargo\b/, when:(S) => S.themes.has('embarazo'), s:['Que no quiera hacerse cargo te deja con mucho encima, y no es justo.'] },
+  { re:/\b(me van a|me va a) (echar|botar) de la casa\b/, when:(S) => S.themes.has('embarazo'), s:['Ese miedo es muy fuerte, y tiene sentido.'], q:'¿Ya saben, o todavía no les has contado?' },
+  { re:/\b(se van a reir|se van a burlar|me van a pelar|me van a molestar)\b/, s:['Da mucho miedo que se rían de uno. Igual, lo que piensen ellos no define cuánto vales.'] },
+  { re:/\b(no para de llorar|llora (todo el dia|mucho|siempre|todas las noches))\b/, when:(S, t) => S.themes.has('posparto') || /\b(guagua|bebe)\b/.test(t + ' ' + (S.lastUser || '')), s:['Que llore tanto cansa muchísimo, sobre todo cuando no tienes con quién turnarte.'] },
+  { re:/^delante de todos$|^frente a todos$|\b(delante|frente) de (todos|mis companeros|la gente)\b/, s:['Que pase delante de otras personas lo hace todavía más humillante.'] },
+  { re:/\b(subieron|publicaron|pasaron|compartieron) (fotos|videos|memes|una foto|un video) mi(as|os|a|o)?\b|\bfotos mias editadas\b/, s:['Que suban fotos tuyas para burlarse es una forma de acoso, y no es tu culpa. Se puede denunciar en la misma red social, y un adulto del colegio tiene que saberlo.'] },
+  { re:/^(es verdad|es cierto|asi es|tal cual|si es verdad|en serio|de verdad|es la verdad)$/, when:(S) => ['PASIVA','IDEACION','TEMA'].includes(S.lastPrimary) && RANK[S.risk] >= 1, s:['Se nota que lo sientes así de verdad, y eso duele mucho.'] },
+  { re:/\b(\d+|una|dos|tres|cuatro|cinco) horas\b/, when:(S) => S.themes.has('sueno'), s:['Dormir tan poco agota a cualquiera, y hace que todo pese más.'] },
+  { re:/\bdespues de (tanto|tanto tiempo|\d+|un|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)( meses| anos| semanas| tiempo| intentos)?\b/, when:(S) => S.goodNews && S.turn - S.goodNews <= 3, s:['Después de tanto esfuerzo, vale el doble.'] },
+  { re:/\b(como que )?nada (me )?importa\b/, s:['Sentir que nada importa es muy pesado, y suele aparecer cuando uno lleva mucho tiempo agotado.'] },
+  { re:/\bno se si (quiero|voy a) dejar(lo|la)?\b/, when:(S) => S.track === 'sustancias' || S.flags.has('SUSTANCIAS'), s:['Es muy normal tener sentimientos encontrados con eso. No tienes que decidirlo hoy, y el 1412 orienta sin presionarte.'] },
+  { re:/^(estoy )?en (la micro|el metro|la calle|el trabajo|la pega|el colegio|la u|clases)$/, when:(S) => S.flags.has('PANICO') && !S.ground, s:['Ok. Si puedes, apoya bien los pies en el suelo, agárrate de algo firme y fija la vista en un punto quieto. Esto va a bajar.'] },
+  { re:/^(no es urgente|no es tan urgente|no es urgencia|no es para ahora)$/, s:[(t, S) => S.searching ? 'Entendido, sin urgencia. Quedó anotado para que alguien del equipo te escriba por aquí.' : 'Entendido, sin urgencia. Aquí estoy para conversar con calma.'] },
+  { re:/\b(me dijo|dijo) que ya no me (queria|quiere|amaba|ama)\b/, s:['Escuchar eso duele muchísimo.'] },
+  { re:/\bme dejo de hablar\b/, s:['Que deje de hablarte sin explicación duele mucho y deja muchas preguntas.'] },
+  { re:/\bme saque un ([1-3]|uno|dos|tres)\b|\bme fue (pesimo|horrible|mal) en (la|el) (prueba|examen|control|certamen)\b/, s:['Una mala nota duele, sobre todo cuando te esforzaste. Una prueba no dice todo lo que vales.'] },
+  { re:/\bmi (pololo|polola|pareja|esposo|esposa|marido|novio|novia) me (engano|engana|puso el gorro|cago)\b/, s:['Que te engañen duele mucho, y remueve la confianza en todo.'], q:'¿Cómo lo estás llevando?' },
+  { re:/\b(no tengo amigos|no tengo amigas)\b/, s:['No tener con quién compartir pesa mucho, sobre todo en los días difíciles.'] },
+  { re:/\bya intente (eso|todo|de todo)\b/, s:['Se nota que lo has intentado, y que cansa cuando no resulta.'], q:'¿Qué pasó cuando lo intentaste?' },
+  { re:/\b(mi hermana|mi hermano|mi mama|mi papa|mi pareja|mi polola|mi pololo) (se dio cuenta|lo sabe|sabe)\b/, when:(S) => !S.flags.has('AUTOLESION'), s:['Qué bueno que alguien cercano lo sepa; no tienes que cargarlo sin compañía.'] },
+  /* tercera revisión */
+  { re:/\b(mi papa|mi mama|mis papas|mi padrastro|mi madrastra|mi abuela|mi abuelo) me (grita|gritan|reta|retan|insulta|insultan|trata mal|tratan mal)\b/, s:['Que en tu casa te griten así desgasta muchísimo, y no es tu culpa.'], q:'¿Esto pasa seguido?' },
+  { re:/\bme (dejo|cambio|engano) por otr[oa]\b/, s:['Que te deje por otra persona duele muchísimo, y remueve mucho la autoestima. No dice nada de lo que vales.'] },
+  { re:/\b(rompio|me rompio|rompieron|me quito|me robo|me boto|me perdio|me escondio) (mi|el|la|mis|los|las) \w+/, when:(S) => S.themes.has('rabia'), s:['Da mucha rabia que pase algo así con tus cosas, y tiene sentido sentirla.'] },
+  { re:/\b(ganas de (pegarle|golpearlo|golpearla|pegarles|ahorcarlo|ahorcarla)|le quiero pegar|lo quiero matar|la quiero matar)\b/, when:(S) => S.themes.has('rabia') && !S.flags.has('DANO_OTROS'), s:['Es normal sentir ganas así cuando la rabia está tan fuerte. Lo importante es no hacerlo: alejarte un rato, respirar o salir a caminar ayuda a que baje.'] },
+  { re:/\b(me dicen|dicen|me dijeron) que (soy|era) (floj[oa]|tont[oa]|inutil|un fracaso|una fracasada|un fracasado|mal[oa]|un desastre)\b|^que soy (floj[oa]|tont[oa]|inutil|mal[oa]|un desastre)\b|\bno (les|le) importo\b/, s:['Escuchar eso de quienes quieres duele mucho. Lo que te dicen en un mal momento no define lo que vales.'] },
+  { re:/\b(mi mama|mi papa|mi tia|mi abuela|mi abuelo) (llega|vuelve|viene) (en la noche|mas tarde|despues|tarde|en la tarde|a las \d+)\b/, when:(S) => S.track === 'violence' || S.flags.has('VIOLENCIA'), s:['Ok. Mientras tanto, trata de no quedarte a solas con esa persona: si puedes, anda donde un vecino, un familiar o alguien de confianza hasta que llegue.'] },
+  { re:/\bmiedo (de |a )?que no me (crea|crean|vaya a creer|vayan a creer)\b|\bno me va(n)? a creer\b/, when:(S) => S.track === 'violence' || S.track === 'grooming' || S.flags.has('VIOLENCIA'), s:['Es un miedo muy común. Si alguien no te cree, no significa que estés mintiendo: busca a otro adulto que sí te escuche. El 147 y el 1515 también te pueden ayudar a pensar cómo contarlo.'] },
+  { re:/^(a |con )?(mi|mis) (tia|tio|abuela|abuelo|profe|profesora|profesor|prima|primo|madrina|padrino|hermana|hermano|orientador|orientadora)( (tal vez|quizas|puede ser|creo|capaz))?$/, when:(S) => ['violence','grooming','past'].includes(S.track), s:[t => 'Contarle a ' + (personIn(t) || 'esa persona') + ' puede ser un muy buen paso. No tienes que contarle todo: basta con decirle que te está pasando algo y que necesitas ayuda.'], q:'¿Crees que podrías hablarle pronto?' },
+  { re:/\b(me voy|ya me voy|voy|me estoy yendo|me fui) (para|a) (la|mi) casa\b|\bvoy camino a (la|mi) casa\b/, when:(S) => S.facts && S.facts.ideation === true, s:['Qué bueno que vayas a tu casa. Si puedes, vuelve con alguien de confianza y escríbeme cuando llegues.'] },
+  { re:/\blo dice cuando (se enoja|esta enojad[oa]|pelea|lo retan|la retan|se frustra|se pone triste)\b/, when:(S) => S.track === 'helper', s:['Aunque lo diga cuando se enoja, vale la pena tomarlo en serio y conversarlo con calma cuando esté tranquilo. A veces es la forma de decir que algo le pesa mucho.'] },
+  { re:/\b(mi familia|mis papas|mi mama|mi papa|mi pareja|mi esposo|mi esposa) (esta|estan) (enojad[oa]s?|molest[oa]s?|decepcionad[oa]s?|furios[oa]s?)\b/, s:[(t, S) => S.flags.has('INTENTO_PREVIO') || S.flags.has('HOSPITAL') ? 'Que estén así contigo debe pesar mucho. Muchas veces ese enojo es la forma en que sale el susto que pasaron.' : 'Que estén así contigo pesa mucho, sobre todo cuando ya lo estás pasando mal.'] },
+  { re:/^(cuando|si|porque) (toma|se cura|esta curado|bebe|esta borracho|toma mucho|se emborracha|consume|se droga|anda curado|llega curado)\b/, when:(S) => S.track === 'violence' || S.flags.has('VIOLENCIA'), s:['Que tome no justifica lo que hace, y no es tu culpa.'] },
+  { re:/\b(renunciar|renuncio|renunciare|voy a renunciar|dejar la pega|dejar el trabajo|irme de la pega)\b/, s:['Renunciar es una decisión grande, y es válido pensarla. No tienes que decidirlo hoy.'] },
+  { re:/\b(mi (polola|pololo|pareja|novia|novio|esposa|esposo|marido)) me (dejo|termino|corto)\b|\bme (termino|corto|dejo) (mi )?(polola|pololo|pareja|novia|novio)\b|^terminamos$/, s:['Que termine una relación así duele muchísimo, sobre todo al principio.'] },
+  { re:/\b(lo hago|me corto|me hago dano|me lastimo) (hace|desde hace|desde) (un|una|dos|tres|\d+|mucho|harto|varios|varias|anos|meses|tiempo|chic[oa])\b|\bhace (un ano|anos|meses|mucho tiempo|harto tiempo) que (lo hago|me corto|me hago dano)\b/, when:(S) => S.flags.has('AUTOLESION'), s:['Llevar tanto tiempo con esto, muchas veces a escondidas, es muy pesado. Gracias por contármelo.'] },
+  { re:/^(es|son|fue) (mucho|harto|demasiado|demasiadas cosas|hartas cosas|largo)( que contar)?$|^es (una )?(larga historia|historia larga)$|^es largo de contar$/, s:['Podemos ir de a poco; no tienes que contarlo todo de una vez.'], q:'¿Por dónde te gustaría empezar?' },
+  { re:/\btengo (\d+|un|una|dos|tres|cuatro|cinco|seis) (hijos|hijas|hijo|hija|ninos|guaguas)\b/, s:['Con hijos a cargo, todo pesa el doble: no solo te preocupas por ti.'], q:'¿Cómo están ellos con todo esto?' },
+  { re:/\b(mi mama|mi papa|mi familia|nadie en mi casa|nadie) no hace nada\b|\bno me (defiende|defienden|protege|protegen)\b/, when:(S) => S.track === 'violence' || S.flags.has('VIOLENCIA') || S.flags.has('MALTRATO_MENOR'), s:['Que no te protejan también duele mucho. No es tu culpa, y mereces que un adulto te cuide.'] },
+  { re:/\bme (dicen|gritan|tratan de|pusieron|ponen) (?!que\b)\w+/, when:(S) => S.themes.has('bullying'), s:['Que te digan cosas así duele, aunque lo hagan pasar por broma. No dice nada malo de ti; habla de ellos.'] },
+  { re:/^(todos los dias|todo el dia|siempre|cada dia|a cada rato|todo el tiempo)$/, when:(S) => S.themes.has('bullying') || S.track === 'violence', s:['Todos los días es muchísimo para aguantar.'] },
+  { re:/\b(profe jefe|profesor jefe|profesora jefe|inspector|inspectora|orientador|orientadora|encargad[oa] de convivencia|convivencia escolar|director|directora)\b/, when:(S) => S.themes.has('bullying'), s:['Contarle a tu profe jefe, al orientador o al encargado de convivencia escolar puede ayudar mucho: el colegio tiene la obligación de intervenir cuando hay acoso, y no te van a culpar a ti.'], q:'¿Hay algún adulto del colegio en quien confíes, aunque sea un poco?' },
+  { re:/\bmiedo (de |a )?que (sea|se ponga|se vuelva|me vaya) peor\b|\bmiedo (de |a )?que (empeore|me hagan algo|se desquiten|me molesten mas)\b|\bse va a poner peor\b/, when:(S) => S.themes.has('bullying') || S.track === 'violence', s:['Es muy entendible ese miedo; mucha gente teme que contarlo empeore las cosas. Por eso ayuda contárselo a un adulto que pueda intervenir con cuidado, sin exponerte.'] },
+  { re:/\b(estoy|me veo|me siento|soy) (muy |tan )?(gord[oa]|guaton[a]?|enorme|asqueros[oa])\b/, when:(S) => S.themes.has('alimentacion'), s:['Cuando la mirada sobre el propio cuerpo se pone tan dura, comer se vuelve muy difícil. Tu valor no depende de tu cuerpo.'] },
+  { re:/\b(asco|odio) (de |a )?mi cuerpo\b|\bme da asco mi cuerpo\b/, s:['Sentir eso por tu propio cuerpo duele mucho. Mereces tratarte con más cuidado del que te estás dando.'] },
+  { re:/\bvomit\w*|\bme provoco (el )?vomito\b|\bme meto los dedos\b/, when:(S, t) => S.themes.has('alimentacion') || /\b(como|comer|comida|despues de comer)\b/.test(t), s:['Gracias por contármelo; sé que no es fácil. Vomitar después de comer puede dañar mucho tu cuerpo, y lo que estás viviendo merece apoyo profesional, sin juicio.'] },
+  { re:/\bno he comido (en|hace) (\d+|dos|tres|cuatro|varios) dias\b|\bno como hace (\d+|dos|tres|varios) dias\b|\bllevo (\d+|dos|tres|varios) dias sin comer\b/, s:['Pasar días sin comer es muy duro para el cuerpo y para la cabeza.'] },
+  { re:/\b(no puedo (parar|dejar) de llorar|no paro de llorar|lloro todo el dia|lloro todos los dias)\b/, when:(S) => S.themes.has('duelo'), s:['Llorar así es parte del duelo: es la forma en que sale tanto cariño y tanta pena.'] },
+  { re:/\bno se como (seguir|vivir|voy a seguir|voy a vivir) sin (el|ella)\b|\bno me imagino (la vida |mi vida )?sin (el|ella)\b/, s:[t => 'Cuando alguien tan importante se va, es muy común sentir que no sabes cómo seguir. Ese dolor habla de cuánto ' + (/\bsin ella\b/.test(t) ? 'la' : 'lo') + ' quieres.'] },
+  { re:/\bmiedo (de |a )?que se (muera|vaya a morir|muera pronto|nos deje)\b|\bmiedo (de |a )?perder(lo|la)\b/, s:['Es muy entendible ese miedo. Cuando alguien que queremos está enfermo, uno vive con el corazón apretado.'], q:'¿Has podido hablar de esto con alguien de tu familia?' },
+  { re:/\b(converso|hablo|converse|hable) con (la radio|la tele|la television|mi perro|mi perrita|mi gato|mi gata|las plantas|las paredes)\b/, s:[t => (/radio|tele/.test(t) ? 'La radio puede ser buena compañía, pero también mereces conversar con personas que te escuchen.' : /perr|gat/.test(t) ? 'Los animales son muy buena compañía. Igual mereces también conversar con personas que te escuchen.' : 'Mereces tener con quién conversar.') + ' Me alegra que hoy hayas escrito aquí.'] },
+  { re:/\b(mi jefe|mi jefa|la pega|el trabajo|mi trabajo) me tiene (muy )?(chat[oa]|hart[oa]|mal|cansad[oa]|agotad[oa]|reventad[oa]|aburrid[oa]|loc[oa]|colapsad[oa])\b/, s:['Que la pega te tenga así desgasta mucho; son demasiadas horas al día con eso encima.'] },
+  { re:/\bme gusta (un|una|mi) (companer[oa]|amig[oa]|chic[oa]|nin[oa]|profe|mina|loco|vecin[oa])\b|\bme gusta alguien\b|\bestoy enamorad[oa]\b/, s:['Gracias por contármelo. Que te guste alguien puede dar mucho susto, sobre todo cuando no sabes cómo lo va a tomar esa persona o tu entorno. Lo que sientes es válido.'], q:'¿Qué es lo que más miedo te da?' },
+  { re:/\bsi se enteran (me echan|me van a echar|me botan|me pegan)\b|\bsi (mis papas|mi familia|mi mama|mi papa) se entera\w* (me echan|me van a echar|me botan)\b/, s:['Vivir con ese miedo es muy pesado. No tienes que contarle a nadie hasta que te sientas con apoyo y a salvo.'], q:'¿Hay alguien, aunque sea fuera de tu casa, que sepa y te apoye?' },
+  { re:/\b(la casa|los ninos|mis hijos|los cabros|la guagua)\b.*\b(la casa|los ninos|mis hijos|los cabros|la guagua|el trabajo|la pega)\b|\btodo (lo hago )?yo sol[oa]\b/, s:[t => /ninos|hijos|cabros|guagua/.test(t) ? 'Llevar la casa, los niños y todo lo demás sin respiro agota a cualquiera.' : 'Cargar con todo sin respiro agota a cualquiera.'] },
+  { re:/\bno le haria nada\b|\bnunca le haria dano\b|\bno le haria dano\b/, when:(S) => S.themes.has('posparto'), s:['Gracias por decírmelo; es importante. Que aparezcan pensamientos así no te hace mala madre, y merecen apoyo.'] },
+  { re:/\b(porque )?no sirve( de nada| llamar)?$|\bno sirve llamar\b|\bllamar no sirve\b/, when:(S) => S.facts && (S.facts.refusedCall || S.facts.cantCall), s:['Entiendo que sientas que no sirve. No te voy a insistir; sigo aquí contigo.'] },
+  { re:/\bmis amig[oa]s (ya )?no me (hablan|pescan|invitan|escriben|responden)\b|\bme dejaron de hablar\b/, s:['Que tus amistades se alejen duele mucho, más cuando no sabes bien por qué.'], q:'¿Pasó algo entre ustedes, o se fue dando de a poco?' }
+];
 const GROUND_PENDING = { 5:'5 cosas que puedas ver', 4:'4 cosas que puedas tocar o sentir', 3:'3 sonidos que escuches', 2:'2 olores, o 2 cosas que te gusten', 1:'1 cosa buena de ti o de alguien que te quiere' };
+const GROUND_EX = { 5:'«la pared, una ventana, mis manos, el celular, una puerta»', 4:'«la ropa, el suelo bajo los pies, la silla, mi pelo»', 3:'«autos, el refrigerador, mi respiración»', 2:'«el café, el jabón», o algo que te guste, como una canción', 1:'«soy buena persona» o «mi hermana me quiere»' };
 const GROUND = {
   5:'Bien. Ahora dime 4 cosas que puedas tocar o sentir con el cuerpo: la ropa, el suelo, la silla…',
   4:'Muy bien. Ahora 3 sonidos que escuches, aunque sean muy suaves.',
@@ -833,8 +965,10 @@ function create(saved){
   }
   function exportState(){ return JSON.stringify(S, (k, v) => v instanceof Set ? { __set: [...v] } : v); }
   function setPros(n){ S.pros = n == null ? null : Math.max(0, n | 0); }
-  const pick = (arr, id) => { for (let i=0;i<arr.length;i++){ const k=id+':'+i; if (!S.used.has(k)) { S.used.add(k); return arr[i]; } } return arr[(S.turn+arr.length) % arr.length]; };
+  const isRecent = x => typeof x === 'string' && (S.recent || []).some(r => r === x || (r.length >= 20 && x.length >= 20 && (x.startsWith(r) || r.startsWith(x))));
+  const pick = (arr, id) => { for (let i=0;i<arr.length;i++){ const k=id+':'+i; if (!S.used.has(k) && !isRecent(arr[i])) { S.used.add(k); return arr[i]; } } const fresh = arr.filter(x => !isRecent(x)); const pool = fresh.length ? fresh : arr; return pool[(S.turn+pool.length) % pool.length]; };
   function bump(r){ if (RANK[r] > RANK[S.risk]) S.risk = r; }
+  const ACK_WARM = ['Te leo.','Gracias por contármelo.','Aquí sigo contigo.','Te sigo leyendo.'];
   function crisisRes(extra){ S.resources.add('4141'); S.resources.add('131'); (extra||[]).forEach(x=>S.resources.add(x)); if (S.minor) S.resources.add('1515'); }
 
   function start(){ S.lastQ = 'estado'; S.prevQ = '¿Cómo te sientes ahora?'; return { replies:R.start.slice(), chips:['Me siento muy sola/o últimamente','Tengo mucha angustia y no puedo dormir','Ya no quiero vivir'] }; }
@@ -842,7 +976,7 @@ function create(saved){
   function event(name, o){
     const out = [];
     if (name === 'planB') {
-      S.flags.add('PLAN_B');
+      S.flags.add('PLAN_B'); S.planBGuardia = o ? o.guardia > 0 : true;
       if (S.mode !== 'normal') return { replies:[], chips:[] };
       if (o) {
         if (o.guardia > 0) {
@@ -864,7 +998,7 @@ function create(saved){
       else out.push('Tu caso pasó al equipo de guardia. Te van a escribir por aquí mismo; yo sigo contigo mientras tanto.');
     }
     if (name === 'tomorrow') {
-      S.mode = 'agendado';
+      S.mode = 'agendado'; S.flags.add('HORA_AGENDADA');
       if (o) { out.push('Tu hora quedó para ' + (o.cuando || 'mañana a las 10:00') + (o.con ? ' con ' + o.con : '') + '.'); out.push(o.aviso ? 'Te vamos a avisar en este navegador cuando sea la hora.' : 'Vuelve a esta misma página a esa hora: aquí mismo te van a escribir.'); }
       else out.push('Tu hora quedó para mañana a las 10:00. Te va a llegar un recordatorio.');
       out.push(F.refusedCall || F.cantCall ? 'Mientras tanto, aquí sigo si quieres conversar.' : 'Si antes de eso sientes que estás en peligro, el *4141 atiende las 24 horas. Y aquí sigo si quieres conversar.');
@@ -888,18 +1022,20 @@ function create(saved){
 
   function extractFacts(a){
     const t = a.norm, ch = {};
-    if (/\b(estoy|ando|me quede|vivo|quede|sigo)\s+(muy\s+|re\s+)?(solo|sola|solito|solita)\b|\bno hay nadie\b|\bestoy sin nadie\b|\bnadie (esta )?conmigo\b/.test(t)) ch.alone = true;
-    else if (!/\bno (esta|estan)\b/.test(t) && /\bestoy con (mi|mis|alguien|un|una)\b|\b(mi|mis) (mama|papa|madre|padre|hermano|hermana|hermanos|pareja|pololo|polola|esposo|esposa|marido|familia|abuela|abuelo|tia|tio|hijo|hija|hijos|amigo|amiga|companero|companera|vieja|viejo)\b.*\b(esta|estan|aqui|aca|conmigo|duerme|duermen|durmiendo)\b/.test(t)) ch.alone = false;
+    if (/\bno (estoy|ando|me quede|quede|sigo) (tan |muy |re )?(solo|sola|solito|solita)\b/.test(t)) ch.alone = false;
+    else if (/\b(estoy|ando|me quede|vivo|quede|sigo)\s+(muy\s+|re\s+)?(solo|sola|solito|solita)\b|\bno hay nadie\b|\bestoy sin nadie\b|\bnadie (esta )?conmigo\b/.test(t)) ch.alone = true;
+    else if (!/\bno (esta|estan)\b/.test(t) && /\bestoy con (mi|mis|alguien|un|una)\b|^(ando |sigo )?(con|junto a|junto con) (mi|mis) (mama|papa|madre|padre|hermano|hermana|hermanos|pareja|pololo|polola|esposo|esposa|marido|familia|abuela|abuelo|tia|tio|hijo|hija|hijos|amigo|amiga|amigos|amigas|vieja|viejo|papas|viejos)\b|\b(mi|mis) (mama|papa|madre|padre|hermano|hermana|hermanos|pareja|pololo|polola|esposo|esposa|marido|familia|abuela|abuelo|tia|tio|hijo|hija|hijos|amigo|amiga|companero|companera|vieja|viejo)\b.*\b(esta|estan|aqui|aca|conmigo|duerme|duermen|durmiendo)\b/.test(t)) ch.alone = false;
     if (a.intents.includes('NO_LLAMAR')) { if (/\b(no quiero|no voy|no pienso|no llamare|no me interesa|no quiero hablar con nadie)\b/.test(t)) ch.refusedCall = true; else ch.cantCall = true; }
+    if (ch.alone === undefined && /\b(hay gente|hay harta gente|estoy con gente|con amigos|con amigas|con mis amigos|con mis amigas)\b/.test(t) && !/\bno hay gente\b/.test(t)) ch.alone = false;
     if (/\b(a nadie|no tengo a quien|no tengo con quien|no hay a quien|no tengo a nadie)\b/.test(t)) ch.someone = false;
     if (a.intents.includes('YA_LLAME')) ch.called = true;
     if (/\b(estoy a salvo|estoy segur[oa])\b/.test(t) && !/\bno estoy\b/.test(t)) ch.safe = true;
     if (/\bno estoy (a salvo|segur[oa])\b/.test(t)) ch.safe = false;
-    if (/\b(ya lo (guarde|deje|bote|tire|saque|aleje)|lo deje en otra pieza|ya no lo tengo)\b/.test(t)) ch.meansAway = true;
+    if (/\b(ya (lo|la|los|las) (guarde|deje|bote|tire|saque|aleje|escondi|entregue|pase|di)|(lo|la|los|las) (deje|guarde|puse|escondi|bote|tire) (en|lejos|afuera|arriba|abajo|con)|se (lo|la|los|las) (pase|di|entregue) a|ya no (lo|la|los|las) tengo)\b/.test(t)) ch.meansAway = true;
     if (/\b(ya le (escribi|hable|conte|dije|mande|avise)|le escribo|le voy a escribir|le voy a hablar|le voy a avisar)\b/.test(t)) ch.someone = true;
-    if (/\b(a nadie le he (contado|dicho)|nadie sabe|no le he contado a nadie|no tengo con quien hablar)\b/.test(t)) ch.personKnown = true;
+    if (/\b(a nadie le he (contado|dicho)|nadie sabe|no le he contado a nadie|no tengo con quien hablar|no he hablado con nadie|no le he dicho a nadie|no lo he hablado)\b/.test(t)) ch.personKnown = true;
     if (/\b(ella|el|ellos|mi \w+) (ya )?(sabe|saben)\b|\bya (le|les) (conte|dije)\b/.test(t)) { ch.personKnown = true; ch.knowsTold = true; }
-    if (TIME_RE.test(t.replace(/\b(tengo|cumpli|cumplo) \d+ anos?\b/,''))) ch.timeKnown = true;
+    if (TIME_RE.test(t.replace(/\b(tengo|cumpli|cumplo) \d+ anos?\b/,'')) || (/\b(ayer|anoche|antenoche|hoy|recien|la semana pasada|el mes pasado|el ano pasado|hace poco|este ano|esta semana|el otro dia)\b/.test(t) && a.themes.some(x => ['duelo','despido','pareja','vivienda','embarazo','posparto','salud','bullying'].includes(x)))) ch.timeKnown = true;
     return ch;
   }
 
@@ -913,12 +1049,17 @@ function create(saved){
     const prevRisk = S.risk;
     bump(a.risk);
     let P = a.primary;
+    const P0 = a.primary;
     const t = a.norm;
     const lastQ = S.lastQ; S.lastQ = null; const lastQTheme = S.lastQTheme; S.lastQTheme = null;
+    const crisisMode0 = () => F.ideation === true || S.track === 'suicide';
+    if (/^((ok|bueno|ya|entonces|mejor|chao|weno|listo|nada)\s+)*me voy(\s+(ya|entonces|chao|nomas|po|mejor|nos vemos|adios|igual))*$/.test(t)) P = 'DESPEDIDA';
     // reinterpretaciones según el contexto
     const riskCtx = RANK[S.risk] >= 1 || F.ideation;
     if (!RISKY.has(P) && riskCtx && (/\b(me tome|me trague|tome|trague)\b.*\b(pastill|remedio|clona|pildora|medicament|veneno|cloro|algo|todas|todo|unas|varias)/.test(t) || /\b(estoy sangrando|sangra mucho|no para de sangrar)\b/.test(t))) { P = 'EMERGENCIA'; a.flags.push('EMERGENCIA'); bump('high'); }
     if (a.intents.includes('LUGAR_PELIGRO') && (riskCtx || RISKY.has(P))) P = 'LUGAR_PELIGRO';
+    if (a.intents.includes('LUGAR_PELIGRO') && /\b(quiero|voy a|ganas de|me dan ganas de|pienso|estoy pensando en|me quiero) (saltar|tirarme|lanzarme|botarme|tirar)\b/.test(t)) P = 'LUGAR_PELIGRO';
+    if (lastQ === 'lugarcheck' && !RISKY.has(P) && /\b(piso|pisos|alto|altura|abajo|saltar|tirarme|caer|nadie me ve|el vacio)\b/.test(t)) P = 'LUGAR_PELIGRO';
     if (P === 'IDEACION' && a.laugh && !F.ideation && !a.imminent && RANK[prevRisk] < 2 && !a.intents.some(k=>['PLAN','METODO','EMERGENCIA','AUTOLESION'].includes(k))) { P = 'IDEACION_HUMOR'; }
     if (P === 'OTRO_IDIOMA' && a.intents.includes('OTRO_RIESGO')) P = 'IDEACION';
     if ((P === 'POSITIVO' || P === 'MINIMIZA') && (F.ideation === true || RANK[S.risk] >= 2)) P = 'MINIMIZA_CRISIS';
@@ -943,11 +1084,12 @@ function create(saved){
     if (a.flags.includes('MEDIOS') && crisisCtx && !RISKY.has(P) && !['EMERGENCIA','LUGAR_PELIGRO'].includes(P)) P = 'MEDIOS_CRISIS';
     if (F.emergency && F.called !== true && !RISKY.has(P) && (P === 'BROMA' || P === 'IDEACION_HUMOR' || /\b(mentira|era broma|es broma|no es verdad|no lo hice|no me tome nada|no tome nada|te estaba webeando|te webie|te estoy webeando|no es cierto)\b/.test(t))) P = 'RETRACTA';
     if (S.flags.has('DUELO_SUICIDIO') && !RISKY.has(P) && !['DUELO_SUICIDIO','TERCERO'].includes(P) && /\b(culpa|pude (haberlo|haberla|hacer|evitar)|debi|si hubiera|no le conteste|no le respondi|no me di cuenta|no lo vi venir|no la vi venir|no hice nada|podria haber)\b/.test(t)) P = 'CULPA_DUELO';
-    if (S.flags.has('METODO') && !RISKY.has(P) && /\b(novela|cuento|historia|libro|tarea|investigacion|curiosidad|pregunta nomas|era pregunta|es pregunta|un trabajo|para un trabajo)\b/.test(t)) P = 'METODO_EXCUSA';
-    const THIRD = /\b(mi|mis) (hijo|hija|hijos|hijas|amigo|amiga|hermano|hermana|pareja|pololo|polola|esposo|esposa|marido|nieto|nieta|alumno|alumna|sobrino|sobrina|companero|companera)\b/;
-    const BEH = /\b(no sale|se encierra|encerrad[oa]|no come|no habla|no duerme|toma mucho|bebe mucho|se droga|consume|fuma mucho|esta deprimid[oa]|anda mal|esta muy mal|esta mal|no quiere (ayuda|ir|hablar|salir|nada)|se aisla|llora mucho|no se levanta|dejo de (ir|comer|hablar|salir))\b/;
+    if (S.flags.has('METODO') && !RISKY.has(P) && /\b(novela|cuento|historia|libro|tarea|investigacion|curiosidad|pregunta nomas|era pregunta|es pregunta|un trabajo|para un trabajo|para saber|no es para mi|es para (otra persona|alguien mas|un amigo|una amiga)|solo preguntaba|pregunto nomas|era una pregunta)\b/.test(t)) P = 'METODO_EXCUSA';
+    const THIRD = /\b(mi|mis) (hijo|hija|hijos|hijas|amigo|amiga|hermano|hermana|pareja|pololo|polola|esposo|esposa|marido|nieto|nieta|alumno|alumna|sobrino|sobrina|companero|companera|mama|papa|madre|padre|abuela|abuelo|tia|tio|prima|primo|vecino|vecina)\b|\b(una|un) (amiga|amigo|companera|companero|colega|alumna|alumno|vecina|vecino)\b/;
+    const BEH = /\b(no sale|se encierra|encerrad[oa]|no come|no habla|no duerme|toma mucho|bebe mucho|se droga|consume|fuma mucho|esta deprimid[oa]|anda (muy )?mal|esta muy mal|esta mal|no quiere (ayuda|ir|hablar|salir|nada)|se aisla|llora (mucho|todo el dia|siempre)|no para de llorar|no se levanta|dejo de (ir|comer|salir))\b/;
     const FORX = /\b(es para|escribo por|te escribo por|vengo por|consulto por|pregunto por|me preocupa|estoy preocupad[oa] por|preocupad[oa] por)\b/;
-    if (['TEMA','NADA','AYUDA','SUSTANCIAS','PREGUNTA','CONSEJO'].includes(P) && S.track !== 'suicide' && THIRD.test(t) && (FORX.test(t) || BEH.test(t))) P = 'TERCERO_MAL';
+    if (['TEMA','NADA','AYUDA','SUSTANCIAS','PREGUNTA','CONSEJO'].includes(P) && S.track !== 'suicide' && THIRD.test(t) && (FORX.test(t) || BEH.test(t.replace(/\bme dejo de hablar\b|\bno me habla\b/g, ''))) && !/\bme dejo de hablar\b/.test(t)) P = 'TERCERO_MAL';
+    if (!RISKY.has(P) && /\bno (me )?(estoy|siento) segur[oa] en (mi casa|la casa|mi pieza|el colegio|mi trabajo|la pega|el liceo)\b/.test(t)) P = 'NO_SEGURO_LUGAR';
     if (S.track === 'helper' && !RISKY.has(P) && P !== 'TERCERO') {
       if (/\b(y )?si (me )?(dice|responde|contesta|confiesa) que si\b/.test(t)) P = 'HELPER_IFYES';
       else if (/\b(no quiere|no se deja|no acepta) (ayuda|ayudar|ir|que (lo|la) ayude|tratamiento|hablar)\b/.test(t)) P = 'HELPER_NOQUIERE';
@@ -961,7 +1103,7 @@ function create(saved){
     }
     if (!RISKY.has(P) && /\b(escucho|oigo|siento) (voces|una voz)\b|\blas voces\b|\buna voz (me dice|que me dice)\b/.test(t) && !S.flags.has('VOCES')) P = 'VOCES';
     else if (S.flags.has('VOCES') && !RISKY.has(P) && /\b(las escucho|escucho voces|las oigo|me estan hablando|me hablan|me siguen diciendo|siguen hablando|las sigo escuchando)\b/.test(t)) P = 'VOCES_AHORA';
-    if ((!RISKY.has(P) || P === 'DANO_OTROS') && /\b(cuando (ya )?no este|cuando me haya ido|deje todo (listo|ordenado|arreglado|preparado)|ya deje todo|escribi (una|mis) cartas? de despedida|deje (una|unas) cartas?|regale mis cosas|para que no tengan que hacer nada)\b/.test(t)) P = 'DESPEDIDA_OCULTA';
+    if ((!RISKY.has(P) || P === 'DANO_OTROS') && /\b(cuando (ya )?no este|cuando me haya ido|deje todo (listo|ordenado|arreglado|preparado)|ya deje todo|escribi (una|mis|unas)? ?cartas? (de despedida|a todos|para todos|a mi familia|para mi familia)|les escribi (una|unas)? ?cartas?|deje (una|unas) cartas?|les deje (una|unas)? ?cartas?|cartas? para cuando|regale (mis|todas mis|todo|mis cosas)|estoy regalando (mis|todas mis|todo)|ya me despedi de (todos|mi familia|mis)|me estoy despidiendo de|para que no tengan que hacer nada)\b/.test(t) && !S.used.has('despEnc')) P = 'DESPEDIDA_OCULTA';
     if (!RISKY.has(P) && /^(ya )?(tome la decision|lo decidi|esta decidido|ya lo tengo decidido|ya lo decidi)$/.test(t)) P = 'DECISION';
     if (S.flags.has('DECISION') && !RISKY.has(P) && /\b(lo mejor para todos|no me vas a convencer|no me vas a hacer cambiar|nadie me va a detener|nadie me va a parar|ya no hay vuelta|no hay vuelta atras|es lo mejor)\b/.test(t)) P = 'DECISION_RIESGO';
     if (/\b(estoy en el hospital|estoy internad[oa]|estoy hospitalizad[oa]|me internaron|me hospitalizaron|estoy en la clinica|estoy en urgencias)\b/.test(t)) { S.flags.add('HOSPITAL'); if (F.safe === null) F.safe = true; }
@@ -978,9 +1120,10 @@ function create(saved){
     if (S.flags.has('ACOSO_LABORAL') && !RISKY.has(P) && P !== 'ACOSO_LABORAL') { if (/\bmiedo (de|a) perder (la pega|el trabajo)\b|\bme van a echar\b|\bme pueden despedir\b/.test(t)) P = 'ACOSO_MIEDO'; else if (/\b(me dice cosas|mi cuerpo|me toca|me manda|fotos|insinua|comentarios)\b/.test(t)) P = 'ACOSO_DETALLE'; }
     if (!RISKY.has(P) && /\b(me discriminan|me discrimina|discriminacion|discriminad[oa]|racismo|racista|xenofobia|homofobia)\b|\bpor ser (mapuche|negr[oa]|gay|lesbiana|trans|migrante|venezolan[oa]|peruan[oa]|haitian[oa]|colombian[oa]|gord[oa]|indigena|pobre)\b.*\b(me (tratan|molestan|discriminan|insultan|dicen))\b/.test(t)) P = 'DISCRIMINACION';
     if (S.flags.has('DISCRIMINACION') && !RISKY.has(P) && P !== 'DISCRIMINACION' && a.toks.length <= 4 && /\b(en la pega|en el trabajo|en el colegio|en la u|en la universidad|en la calle|en la micro|en el liceo|en mi casa)\b/.test(t)) P = 'DISCRIM_LUGAR';
-    if (!RISKY.has(P) && /\b(antidepresivos?|pastillas|remedios|medicamentos?|fluoxetina|sertralina|escitalopram|quetiapina|litio|tratamiento)\b/.test(t) && /\b(me tienen mal|me hacen mal|me sientan mal|me siento peor|efectos|me caen mal|me tienen (raro|rara|zombie)|no me hacen nada)\b/.test(t)) P = 'MED_EFECTO';
+    if (!RISKY.has(P) && /\b(antidepresivos?|pastillas|remedios|medicamentos?|fluoxetina|sertralina|escitalopram|quetiapina|litio|tratamiento)\b/.test(t) && /\b(me tienen mal|me hacen mal|me sientan mal|me siento peor|efectos|me caen mal|me tienen (como )?(raro|rara|zombie|zombi|dopad[oa]|ido|ida|volad[oa]|plano|plana)|no me hacen nada)\b/.test(t)) P = 'MED_EFECTO';
+    else if (!RISKY.has(P) && /\b(me tienen|me dejan|me tiene|me deja) (como )?(raro|rara|zombie|zombi|dopad[oa]|plano|plana)\b/.test(t) && (S.flags.has('MED_DEJAR') || /\b(antidepresiv|remedio|pastilla|medicament)/.test(S.lastUser || ''))) P = 'MED_EFECTO';
     else if (S.flags.has('MED_EFECTO') && !RISKY.has(P) && /\bme siento peor\b/.test(t)) P = 'MED_PEOR';
-    if (!RISKY.has(P) && (S.flags.has('MED_EFECTO') || /\b(antidepresivos?|pastillas|remedios|medicamentos?)\b/.test(t)) && /\b(los|las) voy a dejar\b|\bvoy a dejar (los|las|de tomar(los|las)?)\b|\bdeje (los|las|de tomar(los|las)?)\b|\bno me los voy a tomar\b/.test(t)) P = 'MED_DEJAR';
+    if (!RISKY.has(P) && (S.flags.has('MED_EFECTO') || /\b(antidepresivos?|pastillas|remedios|medicamentos?)\b/.test(t)) && /\b(los|las) voy a dejar\b|\bvoy a dejar (los|las|de tomar(los|las)?)\b|\bdeje (los|las|de tomar(los|las)?)\b|\bno me los voy a tomar\b|\bquiero dejar (los|las|el|mis|de tomar)\b|\bdejar de tomar(los|las)?\b/.test(t)) P = 'MED_DEJAR';
     if (!RISKY.has(P) && /\b(pesadillas|flashbacks?|lo revivo|recuerdos que vuelven)\b/.test(t) && /\b(accidente|choque|asalto|asaltaron|terremoto|incendio|violacion|abuso|balacera|desde que)\b/.test(t)) P = 'TRAUMA';
     if (S.flags.has('TRAUMA') && !RISKY.has(P) && /\b(no puedo (manejar|salir|subirme|dormir|pasar por)|me da miedo (manejar|salir|subirme))\b/.test(t)) P = 'TRAUMA_EVITA';
     if (!RISKY.has(P) && P !== 'VIOLENCIA' && /\b(revisa|revisaba) (mi|el) (celular|telefono|whatsapp|wsp)\b|\bno me deja (ver|juntarme|salir|hablar) (a|con)\b/.test(t) && /\b(pololo|polola|pareja|esposo|esposa|marido|novio|novia)\b/.test(t)) P = 'CONTROL_PAREJA';
@@ -994,9 +1137,9 @@ function create(saved){
     if (S.flags.has('QUEJA_ESP') && !RISKY.has(P) && P !== 'QUEJA_ESP' && /\bno quiero (hablar|que me atienda)( con)? (el|ella|ese|esa)\b/.test(t)) P = 'QUEJA_ESP2';
     if (!RISKY.has(P) && /\b(eres (lo mejor|el mejor|la mejor|un amor|bacan|seco|lo maximo|genial|muy bueno|muy buena)|te voy a recomendar|buen bot|me gusto (hablar|conversar) contigo|que buena (app|pagina)|me caes bien)\b/.test(t)) P = 'ELOGIO';
     if (!RISKY.has(P) && /\bno se (por que|para que) (estoy|te estoy) (escribiendo|hablando)\b|\bno se por que (escribo|te escribo)\b/.test(t)) P = 'SIN_RAZON';
-    if (P === 'HUMANO' && /\b(solo queria|solo quiero|necesitaba|necesito) (hablar|conversar) con alguien\b/.test(t)) P = 'CONVERSAR';
+    if (P === 'HUMANO' && /\b(solo queria|solo quiero|necesitaba|necesito) (hablar|conversar) con alguien\b/.test(t) && !/\b(real|de verdad|humano|humana|profesional|psicolog\w*|especialista|persona)\b/.test(t)) P = 'CONVERSAR';
     if (S.flags.has('TERCERO') && S.minor && !RISKY.has(P) && /\bestoy sol[oa] con (ella|el|mi mama|mi papa|mi mami|mi papi)\b/.test(t)) P = 'TERCERO_NINO';
-    if (!RISKY.has(P) && /\bno se si (perdonarlo|perdonarla|volver|terminar|dejarlo|dejarla|seguir con (el|ella)|separarme|irme)\b/.test(t)) P = 'DUDA_DECISION';
+    if (!RISKY.has(P) && /\bno se si (perdonarlo|perdonarla|volver|terminar|dejarlo|dejarla|seguir con (el|ella)|separarme|irme|decirle|contarle|decirles|contarles|confesarle)\b/.test(t)) P = 'DUDA_DECISION';
     if (!RISKY.has(P) && /\bmiedo (de|a) (volver a (estar|sentirme|caer)|recaer)\b/.test(t)) P = 'MIEDO_RECAER';
     if (S.track === 'sustancias' && !RISKY.has(P)) { if (/\b(todos los dias|todo el dia|siempre|cada dia|diario)\b/.test(t) && a.toks.length <= 6) P = 'SUST_FREC'; else if (/\b(ya intente dejarlo|no puedo dejarlo|recai|volvi a tomar|volvi a consumir|lo intente)\b/.test(t)) P = 'SUST_RECAIDA'; }
     if ((F.ideation === true || S.track === 'suicide') && !RISKY.has(P) && /^(ya )?(lo hice|lo hice todo|esta hecho|es tarde|ya es tarde|ya no hay nada que hacer)$/.test(t) && !(S.pending && S.pending.type === 'means')) P = 'LO_HICE';
@@ -1025,7 +1168,8 @@ function create(saved){
     if (P === 'DUELO_SUICIDIO' && /\b(noticias|noticia|tele|television|diario|redes|tiktok|instagram|famoso|famosa|cantante|actor|actriz|youtuber|influencer|futbolista|artista|streamer|serie|pelicula)\b/.test(t)) P = 'NOTICIA_SUICIDIO';
     if (['PASIVA','TERCERO','PREGUNTA','NADA'].includes(P) && /\b(por que|porque|que lleva a|que hace que) (la gente|las personas|alguien|uno|una persona|tantas personas|se)\b.*\b(suicid\w*|se mata|se matan|se quita la vida|se quitan la vida)\b/.test(t) && !/\b(yo|me|mi)\b/.test(t)) P = 'PREG_SUICIDIO';
     // 'el viernes lo voy a hacer'
-    if (P === 'NADA' && a.imminent && /\b(viernes|lunes|martes|miercoles|jueves|sabado|domingo|manana|hoy|esta noche|fin de semana|pronto|luego|ya)\b/.test(t) && a.toks.length <= 8) P = 'PLAN_AMBIGUO';
+    if (P === 'NADA' && a.imminent && S.track !== 'helper' && !S.flags.has('TERCERO') && /\b(lo (voy a hacer|hago|hare)|va a ser|sera el|lo termino|termino con|me voy|ya tengo todo|ya lo decidi|tome la decision|todo (listo|planeado|preparado))\b/.test(t) && /\b(viernes|lunes|martes|miercoles|jueves|sabado|domingo|manana|hoy|esta noche|fin de semana|pronto|luego|ya)\b/.test(t) && a.toks.length <= 8) P = 'PLAN_AMBIGUO';
+    if (!RISKY.has(P) && S.turn <= 4 && /^(ya )?(tengo todo|lo tengo todo) (planeado|listo|preparado|pensado)$/.test(t)) P = 'PLAN_AMBIGUO';
     if (lastQ === 'planamb' && ['IDEACION','PASIVA','METODO','IDEACION_HUMOR','NADA'].includes(P) && /\b(matar|morir|suicid|quitar|colgar|ahorcar|tirar|lanzar|cortar|desaparecer|terminar con todo|acabar con todo)/.test(t)) { P = 'PLAN'; a.imminent = true; S.flags.add('PLAN'); S.flags.add('PLAN_CON_FECHA'); }
     // amenaza al bot en broma
     if (P === 'DANO_OTROS' && /\b(te voy a matar|te mato|te matare|te voy a pegar)\b/.test(t) && (a.laugh || /\bsi no me (respondes|contestas|hablas|pescas)\b/.test(t))) P = 'BROMA_BOT';
@@ -1051,7 +1195,8 @@ function create(saved){
     if (!RISKY.has(P) && /\b(no tengo (para comer|que comer|plata para comer|comida|nada que comer)|paso hambre|no he comido porque no tengo)\b/.test(t)) P = 'NECESIDAD_BASICA';
     if (!RISKY.has(P) && ['NADA','TEMA'].includes(P) && /\b(no tengo (trabajo|pega|empleo)|estoy (cesante|sin trabajo|sin pega|desempleado|desempleada))\b/.test(t)) P = 'CESANTE';
     if (P === 'VIOLENCIA' && /\b(me pegaron|me atacaron|me asaltaron|me golpearon|me agredieron)\b/.test(t) && !/\b(mi|mis) (pareja|pololo|polola|papa|mama|esposo|esposa|marido|ex|hermano|hermana|padrastro|tio|familia)\b/.test(t)) P = 'AGRESION_CALLE';
-    if (/\b(me (van a|va a) matar|me matan|me mata)\b/.test(t) && /\b(mis papas|mi papa|mi mama|mis viejos|mi vieja|mi viejo|mi familia|mi jefe|mi profe)\b/.test(t) && (/\b(nota|notas|ramo|prueba|examen|u|universidad|colegio|liceo|pega|trabajo|plata|celular|auto|se enteran|si se entera|si se enteran|cuando sepan)\b/.test(t) || ['estudios','dinero','trabajo','despido','bullying'].some(x => S.themes.has(x))) && !RISKY.has(P)) P = 'MATAR_IDIOMA';
+    if (/\b(me (van a|va a) matar|me matan|me mata)\b/.test(t) && /\b(mis papas|mi papa|mi mama|mis viejos|mi vieja|mi viejo|mi familia|mi jefe|mi profe)\b/.test(t) && (/\b(nota|notas|ramo|prueba|examen|u|universidad|colegio|liceo|pega|trabajo|plata|celular|auto|se enteran|si se entera|si se enteran|cuando sepan)\b/.test(t) || ['estudios','dinero','trabajo','despido','bullying'].some(x => S.themes.has(x))) && (!RISKY.has(P) || (P === 'VIOLENCIA' && !/\b(pega|pego|golpe\w*|viol\w*|abus\w*|toca|manose\w*|ahorc\w*|cuchillo|arma)\b/.test(t)))) P = 'MATAR_IDIOMA';
+    if (/^(y )?(me|mis papas|mi papa|mi mama) (van a|va a) matar$/.test(t) && ['estudios','dinero','trabajo','despido'].some(x => S.themes.has(x)) && !RISKY_OWN(S)) P = 'MATAR_IDIOMA';
     if (lastQ === 'matarIdiom' && /\b(dano|pegar|pega|golpe|lastimar|me pegan|de verdad|en serio)\b/.test(t)) P = 'VIOLENCIA';
     if (lastQ === 'lugarcheck' && !RISKY.has(P) && (a.answer === 'yes' || a.answer === 'unsure')) P = 'LUGAR_PELIGRO';
     if (a.intents.includes('LUGAR_PELIGRO') && !(RANK[S.risk] >= 1 || F.ideation) && P !== 'LUGAR_PELIGRO' && !RISKY.has(P)) P = 'LUGAR_CHECK';
@@ -1064,7 +1209,7 @@ function create(saved){
     if (S.flags.has('GOLPE_PARED') && !RISKY.has(P) && /\b(me duele|duele|hinchad\w*|no la puedo mover|no puedo mover|me sangra|sangra|morado)\b/.test(t)) P = 'DOLOR_GOLPE';
     // anestesia emocional
     if (!RISKY.has(P) && ['NADA','TEMA'].includes(P) && /\b(ya no siento nada|no siento nada|no siento ni pena|estoy anestesiad[oa]|me siento vaci[oa] por dentro|como si no sintiera)\b/.test(t) && !S.ground) P = 'ENTUMECIDO';
-    if (!RISKY.has(P) && !['EMERGENCIA','LUGAR_PELIGRO','MEDIOS_CRISIS','PANICO'].includes(P) && /\b(no se si (voy a )?aguantar|no voy a aguantar|no creo que aguante|no aguanto (mas|ma|esto|ni un dia)|no doy mas|ya no puedo mas|no puedo mas|no resisto mas|ya no doy mas)\b/.test(t)) P = 'NO_AGUANTO';
+    if (!RISKY.has(P) && !['EMERGENCIA','LUGAR_PELIGRO','MEDIOS_CRISIS','PANICO','CUIDADOR'].includes(P) && /\b(no se si (voy a )?aguantar|no voy a aguantar|no creo que aguante|no aguanto (mas|ma|esto|ni un dia)|no doy mas|ya no puedo mas|no puedo mas|no resisto mas|ya no doy mas)\b/.test(t)) P = 'NO_AGUANTO';
     if (P === 'AYUDA' && !crisisCtx && /\b(urgente|urjente|urgencia|emergencia|rapido|ahora ya|ya mismo)\b/.test(t)) P = 'AYUDA_URGENTE';
     if (!RISKY.has(P) && /\b(cicatriz|cicatrices|marcas de (los )?cortes|mis cortes|las marcas)\b/.test(t)) P = 'CICATRICES';
     if (S.flags.has('CICATRICES') && !RISKY.has(P) && /\b(se van a dar cuenta|se den cuenta|me van a ver|las van a ver|las vean|me van a preguntar)\b/.test(t)) P = 'MIEDO_CONTAR';
@@ -1072,7 +1217,7 @@ function create(saved){
     if (P === 'TEMA' && /\bno se que hacer\b/.test(t) && a.toks.length <= 6 && [...S.themes].some(x => ADVICE[x]) && !S.used.has('adviceNSQH')) { S.used.add('adviceNSQH'); P = 'AYUDA'; }
     if (!RISKY.has(P) && /\bmiedo (de|a) (decirle|contarle|que (se entere|sepa|sepan|se enteren)|contarlo|decirlo)\b/.test(t)) P = 'MIEDO_CONTAR';
     if (S.themes.has('posparto') && !RISKY.has(P)) {
-      if (/\b(buena|mala) (mama|madre)\b|\bno sirvo (como|para) (mama|madre)\b/.test(t)) P = 'POSPARTO_CULPA';
+      if (/\b(buena|mala|peor) (mama|madre)\b|\bno sirvo (como|para) (mama|madre)\b/.test(t)) P = 'POSPARTO_CULPA';
       else if (/\b(trabaja todo el dia|no me ayuda|estoy sola con|sola todo el dia|nadie me ayuda|todo lo hago yo)\b/.test(t)) P = 'POSPARTO_SOLA';
     }
     if (S.track === 'violence' && !RISKY.has(P)) {
@@ -1080,7 +1225,137 @@ function create(saved){
       else if (/\b(no quiero|no voy a|no puedo) (denunciar|hacer la denuncia|poner la denuncia|ir a carabineros|ir a los pacos)\b|\bno quiero que (lo|la) (metan|lleven) (preso|presa|detenid)/.test(t)) P = 'NO_DENUNCIA';
       else if (/\b(tengo miedo|me da miedo|estoy asustad[oa]|tengo terror)\b/.test(t) && !a.answer) P = 'VIOL_MIEDO';
     }
-    if (['BROMA_BOT','FAQ_PROTOCOLO','PREG_SUICIDIO','NOTICIA_SUICIDIO','CORRIGE','PANICO','MED_NORMAL','IDEACION_HIPERBOLE','MASCOTA','DOLOR_GOLPE','GOLPE_PARED'].includes(P)) { S.risk = prevRisk; a.flags = a.flags.filter(f => !['IDEACION','DANO_OTROS','PASIVA','INMINENTE','METODO','PLAN','AUTOLESION','MEDIOS'].includes(f)); if (P === 'IDEACION_HIPERBOLE') S.flags.add('HIPERBOLE'); }
+    /* ── reinterpretaciones nuevas (segunda revisión) ── */
+    const WHEN_RE = /\b(hoy|esta noche|en la noche|manana|pasado manana|el (lunes|martes|miercoles|jueves|viernes|sabado|domingo)|este fin de semana|el fin de semana|ahora|ahora mismo|ya|pronto|en un rato|la proxima semana)\b/;
+    const METH_RE = /\b(pastillas|pastilla|remedios|remedio|medicamentos|clonazepam|ravotril|rivotril|cuerda|soga|colgarme|ahorcarme|saltar|tirarme|lanzarme|puente|metro|edificio|balcon|ventana|cortarme|venas|veneno|cloro|raticida|gas|arma|pistola|cuchillo|disparo|tren)\b/;
+    // después de "ya tengo todo planeado": método o fecha
+    if (S.planAmbTurn && S.turn - S.planAmbTurn <= 4 && F.ideation !== false && !RISKY.has(P) && !['LUGAR_PELIGRO','EMERGENCIA'].includes(P)) {
+      if (METH_RE.test(t)) { P = 'PLAN'; S.flags.add('PLAN'); if (WHEN_RE.test(t)) { a.imminent = true; S.flags.add('PLAN_CON_FECHA'); } if (/\b(las|los|la|lo) tengo\b|\btengo (las|los|unas|unos|la|el)\b|\bguardad|\bescondid|\blistas?\b/.test(t) || /pastill|remedio|medicament/.test(t)) S.flags.add('MEDIOS_CERCA'); if (/pastill|remedio|medicament|clonazepam|ravotril|rivotril/.test(t)) S.flags.add('PLAN_PASTILLAS'); }
+      else if (WHEN_RE.test(t) && a.toks.length <= 6) P = 'PLAN_CUANDO';
+    }
+    if (!RISKY.has(P) && S.flags.has('PLAN_PASTILLAS') && /\b(las|los) tengo\b|\btengo (guardadas|escondidas|listas)\b/.test(t)) { P = 'MEDIOS_CRISIS'; a.flags.push('MEDIOS'); }
+    // "esta noche" después de una despedida o con ideación confirmada
+    if (!RISKY.has(P) && lastQ !== 'cuando' && (S.flags.has('DESPEDIDA_EN_CRISIS') || F.ideation === true) && a.toks.length <= 6 && /^(es |sera |va a ser |lo hago |lo voy a hacer |pienso hacerlo )?(esta noche|hoy|hoy dia|ahora|ahora mismo|manana|pasado manana|el (lunes|martes|miercoles|jueves|viernes|sabado|domingo)|este fin de semana|el fin de semana|en un rato|pronto)( en la noche)?$/.test(t)) { P = 'PLAN'; a.imminent = true; S.flags.add('PLAN_CON_FECHA'); S.planWhen = t.replace(/^(es|sera|va a ser|lo hago|lo voy a hacer|pienso hacerlo) /, ''); }
+    // confirmación de despedida ("ya no las voy a necesitar")
+    if (!RISKY.has(P) && S.used.has('despEnc') && /\bya no (lo|la|los|las|las voy|los voy) (voy a )?necesitar\b|\bno (lo|la|los|las) voy a necesitar\b|\bya no voy a necesitar\b|\bno voy a estar\b|\bya no voy a estar\b|\bcuando (ya )?no este\b|\bcuando me haya ido\b/.test(t)) P = 'DESPEDIDA_CONFIRMA';
+    // ideación en el pasado ("antes pensaba en matarme pero ya no")
+    if (P === 'IDEACION' && !a.imminent && F.ideation !== true && RANK[prevRisk] < 2 && /\b(antes|hace (tiempo|anos|mucho|un tiempo|un par de anos)|cuando (era|tenia|estaba)|de (chic[oa]|nin[oa])|el ano pasado|en el colegio|en la adolescencia)\b/.test(t) && /\b(pero )?ya no\b|\bahora (ya )?no\b|\bya (lo )?supere\b|\bya paso\b|\bahora estoy (bien|mejor)\b/.test(t) && !a.intents.some(k => ['PLAN','METODO','EMERGENCIA','AUTOLESION'].includes(k))) P = 'IDEACION_PASADA';
+    // autolesión que aclara que no es para morir
+    if (P === 'AUTOLESION' && /\bno (es|era|lo hago|lo hacia) (para|por) (matarme|morir|morirme|suicidarme|quitarme la vida)\b|\bno (quiero|busco) (morir|matarme|morirme)\b/.test(t)) { S.flags.add('AUTOLESION_SIN_IDEACION'); if (F.ideation === null) F.ideation = false; }
+    // saludo inicial que el léxico toma por despedida o por nada
+    if (S.turn <= 2 && !S.themes.size && RANK[S.risk] < 1 && /^(hola )?(buenas noches|buenas tardes|buenos dias|buen dia)( (como estas|que tal))?$/.test(t)) P = 'SALUDO';
+    if (S.turn <= 3 && !S.themes.size && RANK[S.risk] < 1 && /^(hola )?(que onda|que tal|como estai|como estay|como estas|como te va|como andai|como andas|como va|que hay|que cuentas|que contai|como va todo)( weon)?$/.test(t)) P = 'SALUDO';
+    // agradecer al llegar no es despedirse
+    if (P === 'DESPEDIDA' && S.turn <= 1 && a.intents.includes('GRACIAS_TODO')) P = 'GRACIAS_INICIO';
+    // presencia
+    if (/^(responde|contesta|respondeme|contestame|responda|conteste|hola hola|alo alo|hay alguien|hay alguien ahi|hay alguien aca|hay alguien aqui)$/.test(t)) P = 'PRESENCIA';
+    // otros idiomas y español limitado
+    if (!RISKY.has(P) && /\b(no hablo (bien |mucho )?(el )?espanol|hablo poco espanol|mi espanol es (malo|poco|malito)|no se (hablar |escribir )?(bien )?(el )?espanol)\b/.test(t)) P = 'IDIOMA_LIMITADO';
+    // preguntas sobre el bot
+    if (!RISKY.has(P) && /\b(eres|eri|erai|sos) (muy |demasiado |re )?(robot|robotico|robotica|frio|fria|automatico)\b|\b(hablas|respondes|pareces|escribes) (como )?(un )?(robot|maquina|bot)\b/.test(t)) P = 'QUEJA_ROBOT';
+    if (!RISKY.has(P) && /\bcomo sabes (lo que|que|eso|como)\b/.test(t)) P = 'COMO_SABES';
+    if (/^(no )?(con )?(un |una )?(bot|robot|maquina|programa)$/.test(t) && S.turn > 1) P = 'HUMANO';
+    // no quiere psicólogo; solo quiere desahogarse
+    if (!RISKY.has(P) && !['HERIDA','EMERGENCIA','LUGAR_PELIGRO'].includes(P) && /\bno (quiero|voy a|pienso|necesito|me interesa) (hablar con|ir al|ir a|ir donde|que me atienda|ver a|ver al|ir a ver a) (un |una |el |la |ningun |ninguna |los |las )?(psicolog|psiquiatr|especialista|terapeuta|profesional)\w*/.test(t)) P = 'NO_PSICOLOGO';
+    if (!RISKY.has(P) && /\b(quiero|queria|necesito|necesitaba) (desahogarme|desahogar|botar todo|sacar esto|sacarlo|soltar todo)\b/.test(t)) P = 'DESAHOGO';
+    // preguntas generales, académicas y de privacidad
+    if (['PASIVA','NADA','TEMA','PREGUNTA','TERCERO','DUELO_SUICIDIO','IDEACION_NEGADA'].includes(P) && /\b(trabajo|tarea|tesis|investigacion|disertacion|ensayo|informe|proyecto|presentacion|exposicion|charla) (sobre|de|acerca del?) (el |la )?(suicidio|prevencion|salud mental|depresion|autolesion|autolesiones)\b/.test(t) && !/\b(me quiero|quiero morir|pienso en (matarme|suicidarme)|me quiero matar)\b/.test(t)) P = 'ACADEMICO';
+    if (!RISKY.has(P) && /\b(senales|signos|sintomas) de (alerta|riesgo|suicidio)\b|\bcomo (saber|se si|darse cuenta|me doy cuenta) si alguien (se quiere|quiere|esta pensando en|piensa en) (matar|suicid|morir|quitar)/.test(t)) P = 'FAQ_SENALES';
+    if (['TERCERO','PREGUNTA','NADA','PASIVA'].includes(P) && /\b(que pasa|que hago|que hacer|que se hace|como ayudar|como ayudo|que se puede hacer) (si|cuando) (alguien|una persona|un amigo|una amiga|alguien cercano)\b/.test(t) && /\b(matar|suicid|morir|quitar|hacer dano)/.test(t) && !/\b(mi|yo)\b/.test(t)) P = 'PREG_AYUDA';
+    if (!RISKY.has(P) && /\bcomo (puedo )?ayudar a (alguien|una persona|un amigo|una amiga)\b/.test(t) && !S.flags.has('TERCERO')) P = 'PREG_AYUDA';
+    if (!RISKY.has(P) && S.turn <= 6 && !S.themes.size && RANK[S.risk] < 1 && /^(ok |ya |y |bueno )*(que|q) (tengo|tendria|debo|hay) que hacer( aqui| aca| ahora)?$|\bcomo (funciona|se usa) (esto|la pagina|el chat|esta pagina)\b|^que hago aqui$/.test(t)) P = 'FAQ_COMO';
+    // buenas noticias
+    if (!RISKY.has(P) && !/\bno\b/.test(t) && /\b(encontre (pega|trabajo|pololo|polola|depa|departamento|casa)|me contrataron|quede (en la|en el|seleccionad\w*)|aprobe|pase (el ramo|de curso|la prueba|el examen)|me titule|me gradue|lo logre|me dieron el alta|nacio mi|me aceptaron)\b/.test(t)) P = 'BUENA_NOTICIA';
+    // distracción
+    if (S.lastPrimary === 'ALGO_BONITO' && /^(otro|otra|otro mas|otra mas|cuentame otro|cuentame otra|dame otro|dame otra|mas|uno mas|otra cosa bonita|otro dato|otro mas porfa)( por favor)?$/.test(t)) P = 'ALGO_BONITO';
+    if ((lastQ === 'tema' || lastQ === 'libre') && !RISKY.has(P) && /^(de )?(lo que sea|cualquier cosa|lo que quieras|tu elige|elige tu|no se tu|da igual|de todo)$/.test(t)) P = 'ALGO_BONITO';
+    if (lastQ === 'libre' && !RISKY.has(P) && !a.themes.length && ['OFFTOPIC','NADA','PREGUNTA','POSITIVO'].includes(P) && /\b(futbol|partido|equipo|colo|catolica|musica|cancion|canciones|banda|serie|series|pelicula|peliculas|netflix|anime|juego|juegos|jugar|play|perro|perros|gato|gatos|animales|libro|libros|leer|dibujar|cocinar|bailar)\b/.test(t)) P = 'TEMA_LIBRE';
+    // violencia en curso, maltrato laboral, control
+    const violOther = /\b(pega|pego|pegaba|golpe\w*|viol\w*|abus\w*|toca|toco|tocaba|manose\w*|empuj\w*|ahorc\w*|amenaz\w*|cuchillo|arma|chantaj\w*|extorsion\w*|fotos)\b/.test(t.replace(/\b(la|mi|de|en la|sin) pega\b/g, ''));
+    if (P === 'VIOLENCIA' && /\b(jefe|jefa|supervisor\w*|gerente|companer\w* de (trabajo|pega)|colega)\b/.test(t) && !/\bme (pega|pego|golpea|golpeo|toca|toco|manosea|viola|violo|abusa|abuso)\b|\bacos\w*/.test(t)) P = 'MALTRATO_LABORAL';
+    if (!RISKY.has(P) && (/\b(jefe|jefa|supervisor\w*|gerente)\b/.test(t) || (S.themes.has('trabajo') && /\b(jefe|jefa)\b/.test(S.lastUser || ''))) && /\bme (humillo|humilla|grito|grita|insulto|insulta|trata mal|trato mal|ridiculizo|ridiculiza|denigra|denigro|basurea|basureo)\b/.test(t)) P = 'MALTRATO_LABORAL';
+    if (P === 'VIOLENCIA' && /\b(pololo|polola|pareja|esposo|esposa|marido|novio|novia|ex)\b/.test(t) && /\b(revisa|revisaba|controla|no me deja|celos|celoso|celosa)\b/.test(t) && !violOther) P = 'CONTROL_PAREJA';
+    if (['VIOLENCIA','NADA','TEMA','NO_LLAMAR'].includes(P) && !PAST_RE.test(t) && (P === 'VIOLENCIA' || S.track === 'violence' || /\b(esposo|marido|pareja|pololo|polola|ex|papa|mama|padrastro|madrastra|hermano|tio|novio|novia|conviviente)\b/.test(t)) && /\bme (quiere|quieren|va a|van a) (pegar|golpear|matar|ahorcar)\b|\bme (quiere|quieren) (pegarme|golpearme|matarme)\b|\besta (rompiendo|tirando|quebrando) (cosas|todo|la casa)\b|\bme esta (pegando|golpeando|amenazando|buscando)\b|\besta (golpeando|pateando) la puerta\b|\bquiere entrar\b|\bestoy encerrad[oa]\b|\bme encerre\b|\bme escondi\b/.test(t) && !/\b(nota|notas|prueba|ramo|examen|colegio|u|universidad|si se entera|cuando se entere|si sabe)\b/.test(t)) P = 'VIOLENCIA_AHORA';
+    // otra persona se despide
+    if (!RISKY.has(P) && P !== 'TERCERO_REDES' && /\b(me|nos) (mando|escribio|dejo|envio|dijo) (un |una )?(mensaje|carta|audio|nota|whatsapp|texto)( raro| como)?( de)? despedida\b|\bse (despidio|esta despidiendo) de (mi|todos|nosotros)\b|\bmensaje de despedida\b/.test(t) && /\b(mi|mis|un|una|el|la) (\w+)\b/.test(t) && !/\b(les|le) (mande|escribi|deje)\b/.test(t)) P = 'TERCERO_DESPEDIDA';
+    // emergencia médica propia
+    if (!RISKY.has(P) && P !== 'PANICO' && /\b(me duele|dolor (en|de)|presion en|apreton en|me aprieta|puntada en) (el |la )?pecho\b/.test(t) && !/\b(de (pena|tristeza|angustia)|el alma)\b/.test(t)) P = 'MEDICA_URG';
+    if (!RISKY.has(P) && !F.emergency && /\b(vomito sangre|vomitando sangre|me estoy desmayando|me voy a desmayar|no siento (el brazo|la cara|las piernas)|se me (duerme|durmio) (el brazo|la cara)|no puedo hablar bien)\b/.test(t)) P = 'MEDICA_URG';
+    // preguntas por altura o dosis disfrazadas
+    if (!RISKY.has(P) && P !== 'EMERGENCIA' && (/\b(desde que|de que|cuantos?|que|a que) (piso|pisos|altura|metros)\b.*\b(muere|muero|morir|matarse|mata|matarte|matarme|sobrevive|sobrevivir|letal|mortal)\b/.test(t) || /\bsi (alguien |uno |una persona |me )?(salta|salto|se tira|me tiro|se lanza|me lanzo) (de|desde) .*\b(muere|muero|sobrevive)\b/.test(t))) P = 'METODO';
+    // crianza: gritar a un hijo no es agredir
+    if (P === 'AGRESOR' && !/\b(le pego|le pegue|lo golpeo|la golpeo|lo golpee|la golpee|lo zamarreo|la zamarreo|le doy correazos|le pego con|le pego a)\b/.test(t)) P = 'CRIANZA';
+    if (!RISKY.has(P) && P !== 'AGRESOR' && /\b(le grito|les grito|le grite|les grite|lo reto|la reto|los reto)\b/.test(t) && /\b(hijo|hija|hijos|hijas|guagua|bebe|nino|nina|ninos)\b/.test(t + ' ' + (S.lastUser || ''))) P = 'CRIANZA';
+    // romper cosas por rabia
+    if (!RISKY.has(P) && /\b(rompi|quebre|tire|lance|reventé|revente) (un|una|el|la|mi|los|las|unos|unas|todo|todas|todos) ?(vaso|vasos|plato|platos|celular|telefono|puerta|vidrio|espejo|cosas|silla|mesa|tele|control|computador)?\b/.test(t) && /\b(vaso|vasos|plato|platos|celular|telefono|puerta|vidrio|espejo|cosas|silla|mesa|tele|control|computador|todo)\b/.test(t) && !/\b(tire (la|el|los|las) (pastillas|remedios|gillette|cuchillo|cuerda|soga))\b/.test(t)) P = 'ROMPER';
+    // ayudante: no sabe qué hacer, secreto, menor de edad
+    if ((S.track === 'helper' || S.flags.has('TERCERO_PREOCUPA')) && !RISKY.has(P) && /\bno se (que hacer|como (ayudarla|ayudarlo|ayudar|hablarle|decirle|acercarme|preguntarle))\b|\bque deberia hacer\b/.test(t)) P = 'HELPER_HOW';
+    if ((S.track === 'helper' || S.flags.has('TERCERO')) && !RISKY.has(P) && /\b(no quiere que (le )?(cuente|diga|contara|dijera|sepa)|me pidio que no (le )?(contara|dijera|cuente|diga)|me hizo prometer|es un secreto|le prometi|que no le diga a nadie)\b/.test(t)) P = 'HELPER_SECRETO';
+    if ((S.track === 'helper' || S.flags.has('TERCERO')) && !RISKY.has(P) && !['HELPER_SECRETO','HELPER_HOW'].includes(P)) { const mA = t.match(/\b(tiene|cumple|cumplio) (\d{1,2})( anos)?\b/); if (mA && +mA[2] < 18 && +mA[2] >= 5) P = 'TERCERO_MENOR'; }
+    // en violencia: "lo quiero", "no quiero denunciarlo"
+    if (S.track === 'violence' && !RISKY.has(P) && /^(pero )?(lo|la) (quiero|amo)( mucho)?$|\b(lo|la) (quiero|amo) (igual|mucho)\b|\bpero (lo|la) (quiero|amo)\b/.test(t)) P = 'VIOL_AMOR';
+    if (S.track === 'violence' && !RISKY.has(P) && /\bno (quiero|voy a|puedo) (denunciarlo|denunciarla|denunciarlos|denunciar|hacerle la denuncia|poner la denuncia)\b|\bno (lo|la) (quiero|voy a) denunciar\b/.test(t)) P = 'NO_DENUNCIA';
+    // broma que deja de serlo
+    if (S.flags.has('BROMA') && !RISKY.has(P) && /^(bueno |pero |la verdad |igual |en verdad )?(no tanto|no del todo|igual no|no era tanto|no es tan broma|no era tan broma|un poco en serio|medio en serio|en serio|es en serio|era en serio)$/.test(t)) P = 'RETRACTA_BROMA';
+    // calle, ubicación y batería
+    if ((crisisMode0() || S.flags.has('SUSTANCIAS')) && !RISKY.has(P) && /\b(no se donde (estoy|ando)|^no se donde$|estoy perdid[oa]|no se como llegue|no reconozco donde)\b/.test(t)) P = 'PERDIDO';
+    if (!RISKY.has(P) && /\b(no tengo|me queda poca|poca|sin|se me acaba la|se me va a acabar la|me estoy quedando sin) (bateria|carga)\b|\bse me (va a apagar|apaga|esta apagando) el (celu|celular|telefono)\b/.test(t)) P = 'BATERIA';
+    // número suelto: posible edad
+    if (P === 'GIBBERISH' && /^\d{1,2}$/.test(t) && +t >= 8 && !F.emergency && !/cuant/.test(S.lastBot || '')) { S.pendingAge = +t; P = 'EDAD_NUM'; }
+    // la persona responde con su nombre de mascota más tarde
+    if (S.flags.has('MASCOTA') && !RISKY.has(P) && /\bse llama(ba)? [a-z]+/.test(t) && !S.used.has('petNameDone')) P = 'PET_NAME';
+    // dolor de cabeza tras golpes
+    if (!RISKY.has(P) && S.flags.has('AUTOLESION') && /cabeza|cabezazo/.test((S.lastUser || '') + ' ' + t + ' ' + (S.flagsText || '')) && /\bme duele (la cabeza|mucho la cabeza|harto)\b|\bestoy mareado|estoy mareada|me mareo\b/.test(t)) P = 'DOLOR_CABEZA';
+    if (a.intents.includes('AUTOLESION') && /cabezazo|cabesazo|contra la pared|en la cabeza/.test(t)) S.flagsText = 'cabezazo';
+    // seguimiento de emergencias de otra persona
+    if (S.flags.has('EMERG_OTRO') && S.turn - (S.emergOtroTurn || 0) <= 6 && S.turn > (S.emergOtroTurn || 0) && !RISKY.has(P) && !['EMERGENCIA_OTRO','DESPEDIDA','GRACIAS','DESPEDIDA_RIESGO','REVELA_PROPIO'].includes(P)) P = 'EMERG_OTRO_SEG';
+    if (S.flags.has('TERCERO_URGENTE') && S.turn - (S.tercUrgTurn || 0) <= 6 && S.turn > (S.tercUrgTurn || 0) && !RISKY.has(P) && !['TERCERO','TERCERO_DESPEDIDA','DESPEDIDA','GRACIAS','HELPER_CALMA','REVELA_PROPIO','HELPER_SECRETO','HELPER_HOW'].includes(P)) P = 'TERCERO_URG_SEG';
+    /* ── reinterpretaciones (tercera revisión: conversaciones reales) ── */
+    { const pm = personIn(t); if (pm) { S.lastPerson = pm; S.lastPersonTurn = S.turn; } }
+    if (a.flags.includes('MEDIOS') || /\b(pastill|remedio|pildora|medicament|clonazepam|ravotril|rivotril|cuchill|gillette|gilette|navaja|cuchilla|cutter|cuerda|soga|pistola|arma|revolver|veneno|cloro|raticida)/.test(t)) S.meansText = ((S.meansText || '') + ' ' + t).slice(-200);
+    const pendT = S.pending && S.pending.type;
+    if (F.emergency && F.called !== true && !RISKY.has(P) && (P === 'MEDICO' || /^(como |unas? |unos |mas de |casi |por lo menos |fueron |eran )?(\d+|cinco|seis|siete|ocho|nueve|diez|quince|veinte|treinta|cuarenta|cincuenta|muchas|hartas|todas|toda la caja|todo el frasco|la caja entera|el frasco entero)( pastillas| pastis| remedios| pildoras)?( de \w+)?$/.test(t) || /^(de |eran |fueron |son )?(clonazepam|ravotril|rivotril|alprazolam|sertralina|fluoxetina|quetiapina|zopiclona|zolpidem|paracetamol|ibuprofeno|aspirina|litio|diazepam|lorazepam|escitalopram|trazodona)\w*$/.test(t))) P = 'EMERG_DETALLE';
+    if (F.emergency && F.called !== true && !RISKY.has(P) && !a.intents.includes('NO_LLAMAR') && /\b(no se si (llamar|llamo)|debo llamar|tengo que llamar|sera necesario|hay que llamar|vale la pena llamar|llamo o no|es necesario llamar)\b/.test(t)) P = 'EMERG_LLAMAR';
+    if (!RISKY.has(P) && (S.themes.has('duelo') || S.flags.has('DUELO_SUICIDIO')) && /\b(irme|ir) con (el|ella|ellos|mi \w+)\b|\b(irme|ir) (a )?donde (esta|estan) (el|ella|ellos)\b|\b(estar|reunirme|encontrarme|juntarme) con (el|ella) (de nuevo|otra vez|pronto|alla|arriba)\b|\breunirme con (el|ella)\b|\b(quiero|quisiera|ganas de|pienso en|deseo) seguir(lo|la)\b/.test(t)) P = 'DUELO_IRSE';
+    if (a.intents.includes('EN_SERIO') && !RISKY.has(P)) {
+      if (pendT === 'ideacion') { P = 'NADA'; a.answer = 'yes'; }
+      else if (S.flags.has('IDEACION_HUMOR') || S.flags.has('HIPERBOLE') || ['IDEACION_HUMOR','BROMA','IDEACION_HIPERBOLE','BROMA_BOT'].includes(S.lastPrimary)) { P = 'IDEACION'; a.flags.push('IDEACION'); bump('high'); }
+      else if (['NADA','BROMA','EN_SERIO'].includes(P)) P = 'EN_SERIO';
+    }
+    if (P === 'BROMA' && /\bmentira\b/.test(t) && a.themes.length && !/\b(es|era|fue) (broma|mentira|chiste)\b/.test(t)) { P = 'TEMA'; S.verdad = S.turn; }
+    if (S.lastPrimary === 'OFFTOPIC' && !RISKY.has(P) && /^(por favor|please|plis|dale|ya po|hazlo|hazla|ayudame|si por favor)( por favor| po)?$/.test(t)) P = 'OFFTOPIC_INSISTE';
+    if (!RISKY.has(P) && S.searching && S.mode === 'normal' && /^(y|y entonces|y ahora|y que|entonces|y que paso|que paso|y que pasa|y el especialista|y la especialista|y el psicologo|y la psicologa)$/.test(t)) P = 'ESPERA';
+    if (!RISKY.has(P) && /^(quiero |necesito |busco |dame |pasame |prefiero )?(con |hablar con )?(un |una |a un |a una )?(psicolog[oa]|psiquiatra|especialista|terapeuta|profesional|doctor|doctora|persona real|alguien real|humano|persona de verdad|alguien de verdad)( por favor| po)?$/.test(t)) P = 'HUMANO';
+    if (!RISKY.has(P) && S.turn > 3 && /^(y )?(tu |usted )?(como estas|como estai|como estay|como te va|como andas|como andai)( tu| usted)?$/.test(t)) P = 'PERSONAL_BOT';
+    if (!RISKY.has(P) && ['PREGUNTA','AYUDA','NADA'].includes(P) && /^(hola )?(me )?(puedes|podrias|podi|puedi|pueden|podrian|puede|podria) ayudar(me)?( con algo| por favor| po)?$/.test(t)) P = 'AYUDA_PREGUNTA';
+    if (!RISKY.has(P) && /\b(con que|en que) (cosas |tipo de cosas )?(me )?(ayudas|ayudan|puedes ayudar|me puedes ayudar|sirves|sirve esto)\b|\bque tipo de (ayuda|cosas)\b|\bque (cosas )?(haces|hacen) (aqui|aca)\b|\bpara que (es|sirve) esto\b/.test(t)) P = 'FAQ_QUE';
+    if (/^(sexo|quiero sexo|hagamos sexo|tengamos sexo|hablemos de sexo|sexting)$/.test(t)) P = 'SEXUAL';
+    if (P === 'SALUDO' && a.intents.includes('OTRO_IDIOMA')) P = 'OTRO_IDIOMA';
+    if (P === 'PRESENCIA' && S.turn <= 2 && !S.themes.size && RANK[S.risk] < 1 && !S.used.has('presIni')) P = 'PRESENCIA_INICIO';
+    if (pendT === 'ideacion' && P === 'NO_LO_HARIA') P = 'NADA';
+    if (!RISKY.has(P) && S.turn > 1 && /^(hola )?(volvi|ya volvi|aqui estoy de nuevo|hola de nuevo|de nuevo yo|soy yo de nuevo|regrese|aqui de nuevo|otra vez yo)$/.test(t)) P = 'VOLVIO';
+    if (['BROMA','NADA'].includes(P) && S.lastPrimary === 'POSITIVO' && /^(mentira|no mentira|era mentira|mentira no estoy bien|no es verdad|no es cierto|no estoy bien)$/.test(t)) P = 'VERDAD_MAL';
+    if (!RISKY.has(P) && (S.track === 'violence' || S.flags.has('VIOLENCIA')) && /\b(subir|publicar|mostrar|pasar|difundir|mandar) (mis |unas |las )?(fotos|videos|foto|video)\b|\bfotos mias\b/.test(t)) P = 'VIOLENCIA';
+    if (P === 'TEMA' && ['ayudo','razon','persona'].includes(lastQ) && a.toks.length <= 4 && /^(si,? )?(a |con )?(mi|mis) \w+$/.test(t)) P = 'NADA';
+    if (P === 'VIOL_MIEDO' && /\bno me (crea|crean|cree|creen|va a creer|van a creer|vaya a creer|vayan a creer)\b/.test(t)) P = 'NADA';
+    if (P === 'POSITIVO' && /^(ta|esta|ya esta|ok esta|bueno esta|ah esta|oka esta) bien$/.test(t)) { P = 'NADA'; a.answer = 'ack'; }
+    if (P === 'DANO_OTROS' && (a.laugh || a.intents.includes('BROMA')) && /\b(hermano chico|hermana chica|hermanit[oa]|mi hermano|mi hermana|mi mama|mi papa|mi profe|mi jefe|mi jefa|mi polola|mi pololo|mi primo|mi prima|ese weon|esa weona)\b/.test(t) && !/\b(cuchillo|arma|pistola|en serio|de verdad|veneno)\b/.test(t)) P = 'DANO_BROMA';
+    if (!RISKY.has(P) && /\b(subio|publico|puso|posteo|escribio|mando|dejo) (una |un )?(historia|post|estado|publicacion|mensaje|tweet|video|carta|audio)\b.*\b(despid\w*|despedida|adios)\b|\b(historia|post|estado|publicacion|mensaje) (de )?despedida\b/.test(t) && /\b(mi|mis|un|una|el|la) \w+\b/.test(t) && !/\b(les|le) (mande|escribi|deje)\b/.test(t)) P = 'TERCERO_DESPEDIDA';
+    if (/\b(metro|anden|estacion|tren|linea|vias|puente|edificio|azotea|techo|balcon|ventana|acantilado|cerro)\b/.test(t) && /\b(quiero|voy a|ganas de|me dan ganas de|pienso|estoy pensando en|me quiero|tentad[oa] de|se me pasa por la cabeza) (saltar|tirarme|lanzarme|botarme|tirar)\b/.test(t)) P = 'LUGAR_PELIGRO';
+    if (lastQ === 'postresp' && !RISKY.has(P) && a.toks.length <= 6 && ['NADA','TEMA','POSITIVO','MINIMIZA','GRACIAS'].includes(P)) P = 'POST_RESP';
+    if (/^(prefiero |mejor )?(conversar|hablar|que conversemos|conversemos)$/.test(t) && !RISKY.has(P)) P = 'CONVERSAR';
+    if (!RISKY.has(P) && S.searching && pendT !== 'busco' && /^(ok |ya |bueno |dale )?(espero|esperare|te espero|lo espero|la espero|aqui espero|voy a esperar)$/.test(t)) P = 'ESPERA_OK';
+    if (!RISKY.has(P) && ['NADA','PREGUNTA','TEMA','AYUDA'].includes(P) && !a.themes.length && /^(es que |bueno |hola |oye )?(me pasa|me paso|me esta pasando|me sucede) algo$|^(quiero|queria|necesito|puedo) (contarte|decirte|contar|decir|hablar de) algo$|^(tengo|tengo un) (un )?problema$|^te (quiero|queria) (contar|decir) algo$|^puedo (hablar contigo|contarte algo|decirte algo)$/.test(t)) P = 'QUIERE_CONTAR';
+    if (!RISKY.has(P) && a.toks.length <= 6 && /^(estoy |ando |sigo )?(con|junto a|junto con) (mi|mis) \w+( en (la|mi) casa)?$/.test(t)) P = 'COMPANIA';
+    if (!RISKY.has(P) && ['NADA','TEMA'].includes(P) && /^(estoy |ando |sigo )?en (mi|la|el|un|una) (pieza|casa|cama|bano|living|cocina|patio|colegio|liceo|trabajo|pega|calle|auto|micro|metro|plaza|parque|depto|departamento|universidad|carrete|fiesta|junta|bar|disco)( sol[oa]| encerrad[oa])?$/.test(t)) P = 'UBICACION';
+    if (S.track === 'helper' && !RISKY.has(P) && /^(esta|estan|ahora esta|se fue a|se encerro en) (en )?(su|la|el) (pieza|casa|cama|bano|colegio|trabajo|pega)\b/.test(t)) P = 'TERCERO_UBIC';
+    if (!RISKY.has(P) && ['NADA','TEMA','POSITIVO','MINIMIZA'].includes(P) && pendT !== 'safe' && pendT !== 'safev' && /\b(estoy|me siento) (a salvo|segur[oa])\b/.test(t) && !/\bno (estoy|me siento)\b/.test(t) && (S.track === 'violence' || crisisMode0() || RANK[S.risk] >= 2)) P = 'SEGURO_AHORA';
+    if (!RISKY.has(P) && S.flags.has('LUGAR_PELIGRO') && !S.alejado && /\b(me baje|ya baje|baje|me aleje|ya me aleje|estoy abajo|me fui de ahi|sali de ahi|me sali|me entre|ya entre|estoy adentro|me sente|me devolvi|volvi a (la|mi) (casa|pieza)|ya no estoy (ahi|arriba|en el borde|en el puente|en la azotea))\b/.test(t)) P = 'ALEJADO';
+    if (!RISKY.has(P) && /\b(no quiero que me (internen|encierren|hospitalicen|lleven al psiquiatrico|manden al psiquiatrico)|me van a (internar|encerrar|hospitalizar)|me (internan|encierran)|miedo (a|de) que me (internen|encierren|hospitalicen)|no me quiero internar)\b/.test(t)) P = 'MIEDO_INTERNACION';
+    if (!RISKY.has(P) && (crisisMode0() || RANK[S.risk] >= 1) && /\bpor (mis|mi) (hijos|hijas|hijo|hija|nietos|nieta|nieto|papas|viejos|mama|papa|familia|hermanos|hermana|hermano|perro|perrita|gato|gata|mascota|pareja|polola|pololo|abuela|abuelo)\b|\bno (le|les) (podria|puedo|haria) (hacer )?eso a (mi|mis) \w+|\b(mis|mi) (hijos|hija|hijo|mama|papa|familia|perro|gato) me (mantiene|mantienen|sostiene|sostienen|dan fuerza|da fuerza)\b/.test(t)) P = 'RAZON_VIVIR';
+    if (!RISKY.has(P) && ['TEMA','NADA'].includes(P) && a.toks.length <= 5 && !['persona','ayudo','razon'].includes(lastQ) && !['with','contact'].includes(pendT) && /^(es |es por |se trata de |es sobre |por )?(mi|mis) (mama|papa|hermano|hermana|hermanos|amigo|amiga|amigos|amigas|pareja|polola|pololo|abuela|abuelo|tia|tio|prima|primo|esposa|esposo|marido|hijo|hija|hijos|hijas|vecino|vecina|jefe|jefa|profe|familia|papas|viejos|vieja|viejo)$/.test(t)) P = 'SOBRE_PERSONA';
+    if (!RISKY.has(P) && (S.themes.has('posparto') || a.themes.includes('posparto')) && (P === 'ENTUMECIDO' || /\bno siento (nada|amor|carino) (por|hacia) (ella|el|mi guagua|mi bebe|mi hij[oa]|la guagua|el bebe)\b|\bno me nace (quererla|quererlo)\b/.test(t))) P = 'POSPARTO_VINCULO';
+    if (['BROMA_BOT','FAQ_PROTOCOLO','PREG_SUICIDIO','NOTICIA_SUICIDIO','CORRIGE','PANICO','MED_NORMAL','IDEACION_HIPERBOLE','MASCOTA','DOLOR_GOLPE','GOLPE_PARED','IDEACION_PASADA','ACADEMICO','FAQ_SENALES','PREG_AYUDA','CRIANZA','MALTRATO_LABORAL','MEDICA_URG','ROMPER'].includes(P)) { S.risk = prevRisk; a.flags = a.flags.filter(f => !['IDEACION','DANO_OTROS','PASIVA','INMINENTE','METODO','PLAN','AUTOLESION','MEDIOS'].includes(f)); if (P === 'IDEACION_HIPERBOLE') S.flags.add('HIPERBOLE'); }
     const ownRisk = RISKY.has(P) || ['PASIVA','IDEACION_NEGADA','INTENTO_PREVIO','LUGAR_PELIGRO','IDEACION_HUMOR'].includes(P);
     a.flags.forEach(f => { if (f !== 'INMINENTE' || ownRisk) S.flags.add(f); });
     if (a.imminent && ownRisk) urgent = true;
@@ -1094,10 +1369,14 @@ function create(saved){
     if ((F.ideation === true || S.track === 'suicide') && ch.alone === true && before.alone !== true && P === 'TEMA' && a.themes.every(x => x === 'soledad')) P = 'NADA';
     { const mN = t.match(/\b(?:soy|me llamo|mi nombre es|aqui)\s+([a-z]+)\b/); if (mN && NAMES.has(mN[1]) && !S.name) S.name = ({maria:'María',sofia:'Sofía',matias:'Matías',tomas:'Tomás',martin:'Martín',joaquin:'Joaquín',sebastian:'Sebastián',nicolas:'Nicolás',ivan:'Iván',hector:'Héctor',monica:'Mónica',belen:'Belén',raul:'Raúl',agustin:'Agustín',bastian:'Bastián',fabian:'Fabián',cristobal:'Cristóbal',lucia:'Lucía',rene:'René',simon:'Simón',oscar:'Óscar',hernan:'Hernán',cristian:'Cristián',ines:'Inés',andres:'Andrés',jose:'José',anais:'Anaís',veronica:'Verónica',barbara:'Bárbara',alvaro:'Álvaro',maximo:'Máximo',damian:'Damián',ramon:'Ramón',ruben:'Rubén',angela:'Ángela',victor:'Víctor',joaquina:'Joaquina'})[mN[1]] || (mN[1].charAt(0).toUpperCase() + mN[1].slice(1)); }
     const repeated = a.norm && a.toks.length >= 3 && a.norm === S.last; S.last = a.norm;
-    if (a.themes.length || a.risk !== 'low') S.distress++;
+    if ((a.themes.length && !/^FAQ_/.test(P)) || a.risk !== 'low') S.distress++;
     const crisisMode = () => F.ideation === true || S.track === 'suicide';
     const long = a.toks.length >= 9;
     const pend = S.pending; S.pending = null;
+    if (lastQ === 'estado' && !/\?/.test(String(a.raw)) && a.toks.length && !['SALUDO','PRESENCIA','NO_ENTIENDO','SILENCIO','GIBBERISH','REPETIR','ES_BOT','FAQ_QUE','FAQ_CONF','FAQ_COSTO','PERSONAL_BOT'].includes(P)) S.estadoKnown = true;
+    if (a.themes.length || ['POSITIVO','MINIMIZA','TEMA','NO_AGUANTO','PASIVA','IDEACION'].includes(P)) S.estadoKnown = true;
+    S.themeAt = S.themeAt || {}; a.themes.forEach(x => { S.themeAt[x] = S.turn; });
+    S.minimal = (P === 'NADA' && a.toks.length <= 2 && /^(no se|nose|nc|x|ok|si|no|mm|ya|nada|na|no c|ns|sip|nop|tal vez|puede ser|quizas)$/.test(t)) ? (S.minimal || 0) + 1 : 0;
     let asked = null;             // tipo de la pregunta hecha en este turno
     let answered = false;
     let deferQ = false;           // hay una pregunta importante sin responder
@@ -1108,24 +1387,49 @@ function create(saved){
     /* modo especialista humano: solo se registra */
     if (S.mode === 'humano') return finish(true);
 
-    /* ejercicio 5-4-3-2-1 en curso */
+    /* ejercicio 5-4-3-2-1 en curso: solo avanza cuando la persona nombra cosas */
     if (S.ground && !['TERCERO','AYUDA','ESPERA','NO_LLAMAR','YA_LLAME'].includes(P)) {
+      const n = S.ground, raw0 = String(a.raw || '');
       if (P === 'GROUNDING') { S.ground = 5; say('Empecemos de nuevo, con calma.'); say('Escríbeme 5 cosas que veas a tu alrededor.'); return finish(); }
-      if (P === 'POSITIVO' && S.ground < 5 && !S.used.has('gpos')) { S.used.add('gpos'); say('Qué bueno leer eso.'); ask('¿Seguimos con el ejercicio o lo dejamos aquí?', 'gcont', ['Sigamos','Lo dejamos aquí']); return finish(); }
-      if (/^(para|basta|stop|ya basta|no|nop|no quiero|no puedo|no me sirve|nica|ni ahi|ni cagando|paso|nah|na|no gracias)$/.test(t) || /\b(no quiero seguir|dejemoslo|lo dejamos|dejemos|no me sirve|no quiero hacerlo|no tengo ganas)\b/.test(t)) { S.ground = 0; say('Está bien, lo dejamos aquí. No hay una forma correcta de hacerlo.'); next(); return finish(); }
-      const side = (a.raw && /\?/.test(String(a.raw)) || (SPECIFIC.has(P) && !['GRACIAS','NADIE','DISCULPA','SILENCIO','HERIDA','NO_SE_DECIR','RESPIRAR','MINIMIZA'].includes(P))) && !['TEMA','NADA','POSITIVO'].includes(P);
-    if (P === 'NO_ENTIENDO' || /\b(como (es|era|se hace)|no entiendo el ejercicio|para que sirve)\b/.test(t)) { say('Es un ejercicio para volver al presente: vas nombrando cosas que notas con los sentidos, sin pensarlo mucho. No hay respuestas malas.'); say(`Ahora escríbeme ${GROUND_PENDING[S.ground]}.`); return finish(); }
-    if (/^(nada|no se|nose|ninguna|ninguno|no veo nada|no escucho nada|no siento nada)$/.test(t) && !S.used.has('ghint:' + S.ground)) { S.used.add('ghint:' + S.ground); say('Está bien si cuesta. Puede ser algo muy simple, como la pared, tus manos o el ruido de la calle.'); say(`Inténtalo: ${GROUND_PENDING[S.ground]}.`); return finish(); }
-    if (side) groundPause = S.ground; else {
-      const n = S.ground; const emo = a.themes.some(x => ['animo','ansiedad','soledad','culpa','rabia','autoestima','verguenza','sueno'].includes(x)) || ['NADIE','AYUDA','TEMA','QUEJA','PASIVA','HERIDA'].includes(P) || /\b(me siento|estoy|tengo) (mal|muy|mucha|mucho|horrible|pesim)/.test(t);
-      if (emo && n > 1) { say(pick(['Te leo. Sigamos un poquito más; esto ayuda a bajar la intensidad de a poco.','Está bien sentir eso mientras lo hacemos. Sigamos de a poco.'],'groundEmo')); say(GROUND[n].replace(/^(Bien|Muy bien|Vas bien)\. (\w)/, (m, x, c) => c.toUpperCase())); }
-      else if (n === 1 && /\b(mejor|bien|tranquil)/.test(t) && !/\bno\b/.test(t)) say('Bien hecho. Lo hiciste completo, y me alegra leer que te sientes un poco mejor.');
-      else if (n === 1 && (emo || /\b(nada|ninguna|fracaso|no hay|no se me ocurre|no tengo)\b/.test(t))) say('Entiendo que hoy cueste encontrar algo bueno. Igual llegaste hasta el final, y eso no es poco.');
-      else say(GROUND[n]);
-      S.ground = n > 1 ? n - 1 : 0;
-      if (!S.ground && !(/\b(mejor|bien|tranquil)/.test(t) && !/\bno\b/.test(t))) { ask('¿Cómo te sientes ahora, aunque sea un poquito distinto?', 'estado', ['Un poco mejor','Igual','Peor']); }
-      return finish();
-    } }
+      if (/^(para|basta|stop|ya basta|no|nop|no quiero|no puedo|no me sirve|nica|ni ahi|ni cagando|paso|nah|na|no gracias|lo dejamos aqui|prefiero conversar|mejor conversemos|conversemos)$/.test(t) || /\b(no quiero seguir|dejemoslo|lo dejamos|dejemos|no me sirve|no quiero hacerlo|no tengo ganas|prefiero conversar|prefiero hablar)\b/.test(t)) { S.ground = 0; say('Está bien, lo dejamos aquí. No hay una forma correcta de hacerlo.'); next(); return finish(); }
+      if (/^(sigamos|sigo|dale|ya|ok|si|bueno|vamos|listo|ya po|ok sigamos|si sigamos|bueno sigamos|ya sigamos|sigamos con el ejercicio)$/.test(t)) { say(`Bien. Escríbeme ${GROUND_PENDING[n]}.`); return finish(); }
+      if (P === 'POSITIVO' && n < 5 && !S.used.has('gpos') && !/,/.test(raw0)) { S.used.add('gpos'); say('Qué bueno leer eso.'); ask('¿Seguimos con el ejercicio o lo dejamos aquí?', 'gcont', ['Sigamos','Lo dejamos aquí']); return finish(); }
+      const pregunta = /\?/.test(raw0) || /^(y |pero |ok |ya )?(con |por )?(cual|cuales|como|donde|cuantas|cuantos|para que|por que)\b/.test(t) || /^(y )?que (pongo|escribo|hago|tengo que|cosas|digo|cuento)\b/.test(t);
+      const sobreEjercicio = /\b(empiez\w*|empez\w*|parto|partir|escribo|pongo|hago|cosas|cual|cuales|como|ejercicio|sirve|entiendo|tengo que|ejemplo|cuantas|cuantos)\b/.test(t);
+      if (P === 'NO_ENTIENDO' || /\b(no entiendo el ejercicio|para que sirve)\b/.test(t) || (pregunta && sobreEjercicio)) {
+        if (!S.used.has('gexpl')) { S.used.add('gexpl'); say('Es un ejercicio para volver al presente: vas nombrando cosas que notas con los sentidos, sin pensarlo mucho. Puedes partir por la que quieras; no hay respuestas malas.'); }
+        else say('Puedes partir por la que quieras; no hay respuestas malas.');
+        say(`Por ejemplo: ${GROUND_EX[n]}. Ahora escríbeme ${GROUND_PENDING[n]}.`);
+        return finish();
+      }
+      if (/^(nada|no se|nose|ninguna|ninguno|no veo nada|no escucho nada|no siento nada|no se me ocurre nada)$/.test(t) && !S.used.has('ghint:' + n)) { S.used.add('ghint:' + n); say('Está bien si cuesta. Puede ser algo muy simple, como la pared, tus manos o el ruido de la calle.'); say(`Inténtalo: ${GROUND_PENDING[n]}.`); return finish(); }
+      const side = (pregunta || (SPECIFIC.has(P) && !['GRACIAS','NADIE','DISCULPA','SILENCIO','HERIDA','NO_SE_DECIR','RESPIRAR','MINIMIZA'].includes(P))) && !['TEMA','NADA','POSITIVO'].includes(P);
+      // ¿nombró cosas? (una lista, o algo corto y neutro)
+      const items = raw0.toLowerCase().split(/,|;|\n|\s+y\s+|\s+e\s+|\//).map(x => x.trim()).filter(Boolean);
+      const seps = items.length >= 2 && items.filter(x => x.split(/\s+/).length <= 4).length >= Math.ceil(items.length * 0.6) ? items.length - 1 : 0;
+      const arts0 = (t.match(/\b(el|la|los|las|un|una|unos|unas|mi|mis|tu|tus)\b/g) || []).length, arts = a.toks.length <= arts0 * 2 + 1 ? arts0 : 0;
+      const siente = /\b(me siento|siento que|estoy|no puedo|no quiero|me cuesta|me duele|me late|me ahogo|me falta|tengo (miedo|pena|rabia|angustia|ganas|ansiedad)|me da (miedo|pena|rabia|angustia)|no me sirve|no funciona|no resulta|sigo (mal|igual)|llorando|lloro|angusti\w*|ansios\w*|alterad[oa]|nervios\w*|asustad[oa]|desesperad[oa]|mal|peor)\b/.test(t);
+      const lista = !pregunta && (seps >= 1 || arts >= 2 || (n === 1 && a.toks.length >= 2) || (!siente && a.toks.length <= 6 && !a.themes.length && ['NADA','RISA','GIBBERISH'].includes(P)));
+      if (side) groundPause = n;
+      else if (!lista && a.toks.length >= 7 && (a.themes.length || ['TEMA','PASIVA'].includes(P))) { S.ground = 0; S.used.add('groundInterrumpido'); }
+      else if (!lista && (siente || a.themes.length || ['TEMA','PASIVA','NADIE','QUEJA','HERIDA'].includes(P))) {
+        // lo que siente va primero: se acoge sin avanzar el ejercicio
+        if (/\b(no puedo respirar|me ahogo|me falta el aire|me late|taquicardia|el corazon)\b/.test(t)) { S.ground = 0; say('Te leo. Cuando falta el aire, ayuda más respirar lento primero.'); ask('¿Quieres que respiremos juntos ahora?', 'respirar', ['Respirar juntos','Ahora no']); return finish(); }
+        say(pick(['Te leo. Tiene sentido sentirse así, y por eso vamos lento.','Gracias por decírmelo. Es normal que cueste; este ejercicio ayuda a que baje de a poco.','Está bien sentirse así mientras lo hacemos. Sin apuro.'],'gfeel'));
+        if (!S.used.has('gfeelQ')) { S.used.add('gfeelQ'); ask(`¿Seguimos? Puede ser con lo primero que ${n === 5 ? 'veas' : n === 4 ? 'toques' : n === 3 ? 'escuches' : 'se te ocurra'}, aunque sea una cosa. O, si prefieres, lo dejamos y conversamos.`, 'gcont', ['Sigamos','Prefiero conversar']); return finish(); }
+        say(`Cuando puedas, escríbeme ${GROUND_PENDING[n]}, aunque sea una.`); return finish();
+      }
+      else {
+        const emo = siente || a.themes.some(x => ['animo','ansiedad','soledad','culpa','rabia','autoestima','verguenza','sueno'].includes(x));
+        if (emo && n > 1) { say(pick(['Te leo. Sigamos un poquito más; esto ayuda a bajar la intensidad de a poco.','Está bien sentir eso mientras lo hacemos. Sigamos de a poco.'],'groundEmo')); say(GROUND[n].replace(/^(Bien|Muy bien|Vas bien)\. (\w)/, (m, x, c) => c.toUpperCase())); }
+        else if (n === 1 && /\b(mejor|bien|tranquil)/.test(t) && !/\bno\b/.test(t)) say('Bien hecho. Lo hiciste completo, y me alegra leer que te sientes un poco mejor.');
+        else if (n === 1 && (emo || /\b(nada|ninguna|fracaso|no hay|no se me ocurre|no tengo)\b/.test(t))) say('Entiendo que hoy cueste encontrar algo bueno. Igual llegaste hasta el final, y eso no es poco.');
+        else say(GROUND[n]);
+        S.ground = n > 1 ? n - 1 : 0;
+        if (!S.ground && !(/\b(mejor|bien|tranquil)/.test(t) && !/\bno\b/.test(t))) { ask('¿Cómo te sientes ahora, aunque sea un poquito distinto?', 'estado', ['Un poco mejor','Igual','Peor']); }
+        return finish();
+      }
+    }
 
     /* la persona no quiere hablar: presencia sin preguntas */
     if (P === 'NO_HABLAR') S.quiet = S.turn;
@@ -1163,23 +1467,31 @@ function create(saved){
     function handleAnswer(p, forced){
       let ans = forced || a.answer;
       const type = p.type;
-      if (ans === 'ack') ans = ['ejercicio','busco','especialista','means','respirar'].includes(type) ? 'yes' : null;
+      if (ans === 'ack') ans = type === 'means' ? (/^(listo|ya esta)$/.test(t) ? 'yes' : 'commit') : ['ejercicio','busco','especialista','respirar'].includes(type) ? 'yes' : null;
       if (type === 'contact' && /\bya le (escribi|mande|hable|dije|conte|avise)\b/.test(t)) { F.someone = true; say('Qué bueno que le escribiste. Mientras responde, aquí sigo contigo.'); next(true); return true; }
+      if (type==='with' && /^(yo )?vivo con (mi|mis) \w+/.test(t) && ch.alone === undefined) { const w = tildes(t.match(/\b(mi|mis) (\w+)/)[0].replace(/^mi /,'tu ').replace(/^mis /,'tus ')); ask(`¿${w.charAt(0).toUpperCase() + w.slice(1)} ${/^tus /.test(w) ? 'están' : 'está'} en la casa ahora?`, 'with', CHIPS.with, p.tries); return true; }
+      if (type==='with' && /\b(carrete|fiesta|junta|con amigos|con mis amigos|con gente|hay gente|con mi familia|con mi pololo|con mi polola)\b/.test(t) && !/\bno\b/.test(t)) ans = 'yes';
       if ((type==='with' || type==='contact') && (ch.alone === true || ch.someone === false || /^(no|nop|nadie|sola|solo|estoy sola|estoy solo|no tengo|no hay)$/.test(t) || /\b(no hay nadie|no tengo a nadie|no tengo a quien|nadie)\b/.test(t))) ans = 'no';
       else if ((type==='with' || type==='contact') && (ch.alone === false || /^(si,? )?(mi|mis) \w+/.test(t))) ans = ans || 'yes';
       if (type==='safe' && ch.safe !== undefined) ans = ch.safe ? 'yes' : 'no';
       if (type==='means' && /\b(no tengo nada|no hay nada|nada cerca)\b/.test(t)) ans = 'nothing';
-      if (type==='means' && (ch.meansAway || /\b(ya lo hice|listo|ya esta|lo hice)\b/.test(t))) ans = 'yes';
+      if (type==='means' && (ch.meansAway || /\b(ya lo hice|listo|ya esta|lo hice|ya (la|las|los) (deje|guarde|bote|tire|saque|aleje|escondi|entregue|pase))\b/.test(t))) ans = 'yes';
+      if (type==='means' && !ch.meansAway && /\b(aqui|aca|al lado|conmigo|en mi velador|en el velador|en la mano|en mis manos|debajo|en mi pieza|en el cajon|en mi mochila|en la cartera|las tengo|los tengo|la tengo|lo tengo)\b/.test(t) && !/\b(deje|guarde|bote|tire|saque|aleje|escondi|lejos|otra pieza)\b/.test(t)) ans = 'near';
+      if (type==='means' && /\bno lo he hecho\b|\bno me he (cortado|hecho dano)\b|\btodavia no lo hago\b/.test(t) && S.flags.has('GANAS_AUTOLESION')) ans = 'notyet';
+      if (type==='means' && /\b(no tengo a nadie|a nadie|no hay nadie|nadie)\b/.test(t) && !/\b(no quiero|no voy)\b/.test(t)) { F.someone = false; ans = 'nadie'; }
       if (type==='means' && /\b(no quiero|no voy)\b/.test(t)) ans = 'no';
+      if (type==='means' && !ans && /\b(son|es) (de )?(mi|mis) \w+|\b(las|los|la|el) de (mi|mis) \w+|^(son|es) mi(a|o|as|os)$/.test(t)) ans = 'owner';
+      if (['ejercicio','busco','especialista','respirar'].includes(type) && !ans && /^(ok |ya |dale |bueno |si )?(espero|esperare|te espero|lo espero|por favor|ya po|dale|bueno ya|ok ya|dale ya|ok dale|ya dale|si por favor|hagamoslo|vamos|ya bueno|ya ok)$/.test(t)) ans = 'yes';
       if (['ejercicio','busco','especialista'].includes(type) && /^(nada|nah|na|no gracias|paso|no quiero|no ahora|ahora no|despues|mas rato)$/.test(t)) ans = 'no';
       if (type==='llamo131' && (/\b(ya llame|llame|vienen|viene|en camino)\b/.test(t) || P === 'YA_LLAME')) ans = 'yes';
       if (type==='llamo131' && /\b(no puedo|no tengo)\b/.test(t)) ans = 'no';
-      if (type==='alejarse' && /\b(me aleje|ya me aleje|me baje|ya baje|me sente|estoy abajo)\b/.test(t)) ans = 'yes';
+      if (type==='alejarse' && /\b(me aleje|ya me aleje|me baje|ya baje|me sente|estoy abajo|ya entre|entre|estoy adentro|ya estoy adentro|me entre|cerre la ventana|me fui de ahi|sali de ahi|me sali)\b/.test(t)) ans = 'yes';
       if (type==='alejarse' && /\bno estoy (en el|arriba|cerca)\b/.test(t)) ans = 'yes';
       else if (ans === 'no' && ['alejarse','llamo131','means','ejercicio','busco','especialista'].includes(type) && /^no (estoy|soy|me siento|era|es|fue|se)\b/.test(t) && !/\b(puedo|quiero|voy|alcanzo|me atrevo)\b/.test(t)) ans = null;
       if (type==='safe' && !ans && LOC.test(t)) {
         const place = (t.match(LOC)||[])[0];
-        say(`Ok, estás en ${place === 'pieza' ? 'tu pieza' : place === 'casa' ? 'tu casa' : place === 'bano' ? 'el baño' : place}.`);
+        const ART = { pieza:'tu pieza', casa:'tu casa', bano:'el baño', cama:'tu cama', trabajo:'el trabajo', pega:'la pega', colegio:'el colegio', liceo:'el liceo', universidad:'la universidad', calle:'la calle', auto:'el auto', micro:'la micro', metro:'el metro', plaza:'una plaza', parque:'un parque', departamento:'tu departamento', depto:'tu depto', hospital:'el hospital', living:'el living', cocina:'la cocina', patio:'el patio' };
+        say(`Ok, estás en ${ART[place] || place}.`);
         ask('¿Ahí estás a salvo, sin nada a mano con lo que te puedas hacer daño?', 'safe', CHIPS.safe, p.tries);
         return true;
       }
@@ -1188,6 +1500,10 @@ function create(saved){
         if (/^(👍|👌|✅)+[\ufe0f\s]*$/u.test(em)) ans = 'yes'; else if (/^(👎|❌|🙅)+[\u200d\u2640\u2642\ufe0f\s]*$/u.test(em)) ans = 'no'; else if (/^🤷[\u200d\u2640\u2642\ufe0f\s]*$/u.test(em)) ans = 'unsure';
         if (ans === 'unsure' && ['ideacion','safe','safev'].includes(type) && a.toks.length > 2 && !/^(no se|no lo se|ni idea|no sabria( decir)?|a veces|tal vez|quizas|quiza|puede ser|mas o menos|no estoy (tan )?segur[oa]|algo asi|depende|capaz|si y no|un poco|creo|no se po|no se la verdad|la verdad no se|a ratos|de repente|aveces|no se si|no se bien|no se igual)\b/.test(a.toks.filter(w => !LAUGH.test(w)).join(' '))) ans = null;
         if (ans === 'unsure' && /\bno se (que hacer|que decir|como|por que|donde|si voy a)\b/.test(t)) ans = null;
+        if (ans === 'unsure' && /^no se (que|como|por que|porque|donde|cuando|cuanto|cuanta|cuantos|cuantas|quien|cual|pa que|para que) \w+/.test(t) && !/no s[eé]\s*[,.;]/i.test(String(a.raw))) ans = null;
+        if ((type === 'safe' || type === 'safev') && a.intents.includes('IDEACION_NEGADA')) ans = null;
+        if (type === 'safev' && /\b(esta durmiendo|se durmio|ahora no esta|no esta|salio|se fue|no esta aca|no esta en la casa|esta trabajando|estoy en (otra parte|la casa de|el colegio|el trabajo|la pega))\b/.test(t)) ans = 'yes';
+        if (type === 'safe' && /^(hoy|ahora) si$/.test(t)) ans = 'yes';
         const tNL = a.toks.filter(w => !LAUGH.test(w)).join(' ');
         const DENY_IDEA = /^(no+|nop|nope|nah|na|nunca|jamas|para nada|nada que ver|no no|claro que no|obvio que no|creo que no|no creo|no tanto|no no tanto|no nunca|no jamas|no he pensado( en eso)?|no lo he pensado|no se me ha pasado|no me ha pasado|no no lo haria|no lo haria|no eso no|no gracias a dios|no por suerte|no tranqui|no tranquila|no tranquilo|ni ahi|ni cagando|nica|cero|no po|no nada|no la verdad|la verdad no)( po)?$/;
         const improved = type === 'ideacion' && !ans && /\b(ahora|ya) (estoy )?(mejor|bien)\b/.test(t) && !/\bpero\b/.test(t);
@@ -1200,15 +1516,24 @@ function create(saved){
         if (ans === 'yes' && type === 'means' && (ch.alone !== undefined || /\b(solo|sola|en la casa|en mi casa|en mi pieza)\b/.test(t)) && !/\b(lo hice|ya lo|listo|guarde|deje|bote|tire|aleje|saque)\b/.test(t)) ans = null;
         if (type === 'means' && /\b(no (quiero|voy a|lo voy a|lo quiero|la quiero|la voy a) (soltarlo|soltarla|dejarlo|dejarla|soltar|botarlo|botarla|alejarlo|alejarla)|no lo suelto|no la suelto)\b/.test(t)) ans = 'no';
       }
-      if (!ans) return false;
+      if (['ideacion','autoles'].includes(type)) {
+        const core = a.toks.filter(w => !LAUGH.test(w) && !['weon','po','cachai','oye','pues','bueno','mira','igual','la','verdad','eh','em','mm','mmm','uf','ay','pucha','osea'].includes(w)).join(' ');
+        if (!ans && /^(si|sip|si po|obvio|claro|si si)$/.test(core)) ans = 'yes';
+        if (!ans && /^(algo|un poco|un poquito|poco|a ratos|de repente|de vez en cuando|ultimamente|algo de eso|algo asi|si un poco|como que si|un poco si|algunas veces|aveces|una vez|una que otra vez|ya no tanto|ya no mucho|menos|menos que antes|un poco menos|no tanto como antes)$/.test(core)) ans = 'unsure';
+        if (!ans && /^(harto|mucho|bastante|seguido|muy seguido|todos los dias|siempre|a cada rato|constantemente|todo el tiempo|todo el rato|cada vez mas|cada dia|todas las noches|demasiado)$/.test(core)) ans = 'yes';
+        if ((!ans || ans === 'unsure') && !/^(no|nunca|jamas|tampoco)\b/.test(core) && /\b(se me (ha )?pasa(do)? por la (cabeza|mente)|lo (he )?pensado|lo pienso|lo pense|pienso en eso|lo he considerado|lo considero|me ha pasado|me pasa|lo he sentido)\b/.test(core)) ans = 'yes';
+        if (type === 'ideacion' && !ans && a.intents.includes('NO_LO_HARIA') && !/\b(no (lo )?he pensado|nunca (lo )?he pensado|no pienso en eso|no se me ha pasado)\b/.test(t)) ans = 'sinplan';
+      }
+      if (!ans && !['pregsui','arma','matarIdiom'].includes(type)) return false;
       switch (type) {
         case 'ideacion':
-          if (ans==='yes' || ans==='unsure') {
+          if (ans==='yes' || ans==='unsure' || ans==='sinplan') {
             bump('high'); S.flags.add('IDEACION'); F.ideation = true; S.ideaDone = true; setTrack('suicide'); showCrisis = true; crisisRes(); startSearch = true;
-            say(pick(['Gracias por responderme con honestidad. Lo que sientes es importante y tiene ayuda.','Gracias por decírmelo. Es valiente reconocerlo.'],'yes1'));
+            if (ans === 'sinplan') { S.flags.add('SIN_PLAN'); say('Gracias por contármelo. Entonces esos pensamientos aparecen, aunque no tengas un plan. Igual pesan, y es importante que no los cargues sin apoyo.'); }
+            else say(pick(['Gracias por responderme con honestidad. Lo que sientes es importante y tiene ayuda.','Gracias por decírmelo. Es valiente reconocerlo.'],'yes1'));
             say(pick(['Ya avisé con prioridad a un especialista. No te voy a dejar con esto sin apoyo.','El especialista ya tiene tu caso como prioritario.'],'yes2'));
             next();
-          } else { F.ideation = false; S.ideaNoTurn = S.turn; say(pick(['Me alegra leer eso. Igual lo que sientes importa, y aquí estoy para escucharte.','Qué bueno. Gracias por responderme.'],'ideaNo')); if (S.leaving) say(closing()); else if (S.used.has('despEnc') && !S.used.has('despEncQ')) { S.used.add('despEncQ'); ask('Me quedé pensando en lo que dijiste de no molestar más. ¿Qué quisiste decir con eso?', 'open'); } else next(true); }
+          } else { F.ideation = false; S.ideaNoTurn = S.turn; if (S.lastPrimary === 'FAQ_PROTOCOLO' || /\b(no es para mi|es (una |solo una )?pregunta|solo (preguntaba|pregunto)|por saber|curiosidad)\b/.test(t)) { if (S.riskPreFaq) { S.risk = S.riskPreFaq; S.riskPreFaq = null; } say('Entiendo, gracias por aclararlo. Si alguna vez te pasa a ti o a alguien cercano, aquí estoy.'); wrapUp(); return true; } say(pick(['Me alegra leer eso. Igual lo que sientes importa, y aquí estoy para escucharte.','Qué bueno. Gracias por responderme.'],'ideaNo')); if (S.leaving) say(closing()); else if (S.used.has('despEnc') && !S.used.has('despEncQ')) { S.used.add('despEncQ'); ask('Me quedé pensando en lo que dijiste de no molestar más. ¿Qué quisiste decir con eso?', 'open'); } else next(true); }
           return true;
         case 'safe':
           if (ans==='no' || ans==='unsure') {
@@ -1217,21 +1542,27 @@ function create(saved){
             const who = personIn(t); if (who) { F.someone = true; say(`Si puedes, escríbele a ${who} ahora y dile que no estás bien; no tienes que dar detalles.`); }
             const c = callLine('urgent'); if (c) say(c);
             next();
-          } else { F.safe = true; S.safeTurn = S.turn; say(pick(['Me alegra que estés a salvo. Quédate ahí conmigo mientras llega el especialista.','Bien, me alivia leer eso.'],'safeY')); if (S.leaving) say(closing()); else next(); }
+          } else { F.safe = true; S.safeTurn = S.turn; say(pick(['Me alegra que estés en un lugar seguro. Sigo aquí contigo mientras llega el especialista.','Bien, me alivia leer eso.'],'safeY')); if (S.leaving) say(closing()); else next(); }
           return true;
         case 'means':
+          if (ans==='commit') { const mo = meansObj(); say('Gracias. Hazlo con calma; aquí te espero.'); ask(`¿Me avisas cuando ${mo.pl ? (mo.fem ? 'las' : 'los') : (mo.fem ? 'la' : 'lo')} hayas dejado lejos?`, 'means', ['Ya lo hice','No puedo'], (p.tries||0)); return true; }
+          if (ans==='owner') { const who = personIn(t), mo = meansObj(); say(who ? `Entiendo, ${mo.son} de ${who}.` : 'Entiendo.'); ask(who ? `¿Puedes dejar${mo.cl} en otra pieza, o pedirle${/^tus /.test(who) ? 's' : ''} a ${who} que ${mo.cl2} guarde${/^tus /.test(who) ? 'n' : ''}?` : `¿Puedes dejar${mo.cl} en otra pieza mientras conversamos?`, 'means', CHIPS.means, (p.tries||0)); return true; }
           if (ans==='yes') { F.meansAway = true; say('Bien hecho. Eso es muy importante y te cuida.'); }
           else if (ans==='nothing') { F.meansAway = true; say('Ok, bien.'); }
-          else if (ans==='no') { F.meansAway = false; S.flags.add('MEDIOS');
-            if (S.flags.has('MEDIOS_CERCA') && !S.used.has('meansHR')) { S.used.add('meansHR'); urgent = true; say(/\b(soltar|en la mano)/.test(t + ' ' + S.lastBot) ? 'Entiendo que ahora no quieras soltarlo, y no te voy a retar.' : 'Entiendo que ahora te cueste, y no te voy a retar.'); ask(/\b(soltar|en la mano)/.test(t + ' ' + S.lastBot) ? '¿Podrías al menos dejarlo sobre una mesa o en el suelo, lejos de tu mano, mientras conversamos?' : '¿Podrías al menos dejarlo un poco más lejos, aunque sea al otro lado de la pieza, mientras conversamos?', 'means', ['Ya lo dejé','No puedo']); return true; }
-            say('Te entiendo, no te voy a obligar. Si en algún momento puedes, aunque sea dejarlo en otra pieza ayuda mucho.'); }
+          else if (ans==='near') { S.flags.add('MEDIOS_CERCA'); urgent = true; say('Gracias por decírmelo.'); ask((mo => `¿Puedes llevar${mo.cl} ahora a otra pieza, o pasárse${mo.cl} a alguien de confianza? Yo te espero aquí.`)(meansObj()), 'means', ['Ya lo hice','No puedo'], (p.tries||0)); return true; }
+          else if (ans==='notyet') { say('Qué bueno que no lo hayas hecho. Eso habla de una parte tuya que se está cuidando.'); ask('¿Puedes dejar lejos lo que usarías, aunque sea en otra pieza, mientras conversamos?', 'means', CHIPS.means, (p.tries||0)); return true; }
+          else if (ans==='nadie') { say('Entonces quedémonos aquí: en este momento no estás sin compañía.'); ask('Y sobre lo que te pedí: ¿pudiste dejar lejos lo que te podría hacer daño?', 'means', CHIPS.means, (p.tries||0) + 1); return true; }
+          else if (ans==='no') { const mo = meansObj(); F.meansAway = false; S.flags.add('MEDIOS');
+            if (S.flags.has('MEDIOS_CERCA') && !S.used.has('meansHR')) { S.used.add('meansHR'); urgent = true; say(/\b(soltar|en la mano)/.test(t + ' ' + S.lastBot) ? 'Entiendo que ahora no quieras soltarlo, y no te voy a retar.' : 'Entiendo que ahora te cueste, y no te voy a retar.'); ask(/\b(soltar|en la mano)/.test(t + ' ' + S.lastBot) ? '¿Podrías al menos dejarlo sobre una mesa o en el suelo, lejos de tu mano, mientras conversamos?' : `¿Podrías al menos dejar${mo.cl} un poco más lejos, aunque sea al otro lado de la pieza, mientras conversamos?`, 'means', ['Ya lo dejé','No puedo']); return true; }
+            say(`Te entiendo, no te voy a obligar. Si en algún momento puedes, aunque sea dejar${mo.cl} en otra pieza ayuda mucho.`); }
           else return false;
           next(); return true;
         case 'with':
           if (ans==='yes') {
             F.alone = false;
-            if (/durm/.test(t)) { say('Qué bueno que no estés sin compañía.'); ask('¿Podrías despertar a esa persona y decirle que no estás bien? No tienes que darle detalles.', 'despertar', ['Sí, voy','No quiero despertarla']); return true; }
-            say('Qué bueno que haya alguien contigo. Si puedes, acércate a esa persona y cuéntale que no te estás sintiendo bien; no tienes que dar detalles.');
+            if (/durm/.test(t)) { const w = personIn(t), pl = w && /^tus /.test(w); say('Qué bueno que no estés sin compañía.'); ask(w ? `¿Podrías despertar a ${w} y decirle${pl ? 's' : ''} que no estás bien? No tienes que dar${pl ? 'les' : 'le'} detalles.` : '¿Podrías despertar a esa persona y decirle que no estás bien? No tienes que darle detalles.', 'despertar', ['Sí, voy', pl ? 'No quiero despertarlos' : 'No quiero despertarla']); return true; }
+            if (S.used.has('malviaje')) { say('Qué bueno que no estés sin compañía. Pídele a alguien de confianza que se quede contigo en un lugar más tranquilo, lejos del ruido, hasta que se te pase.'); return true; }
+            { const wq = personIn(t); say(wq ? `Qué bueno que ${wq} ${/^tus /.test(wq) ? 'estén' : 'esté'} cerca. Si puedes, acércate y cuéntale${/^tus /.test(wq) ? 's' : ''} que no te estás sintiendo bien; no tienes que dar detalles.` : 'Qué bueno que haya alguien contigo. Si puedes, acércate a esa persona y cuéntale que no te estás sintiendo bien; no tienes que dar detalles.'); }
             say('Yo sigo aquí.'); return true;
           }
           if (ans==='no' || ans==='unsure') { F.alone = true; S.flags.add('SOLO'); say(F.emergency ? 'Entiendo.' : 'Entiendo. Me quedo aquí contigo mientras llega el especialista.'); next(); return true; }
@@ -1248,7 +1579,8 @@ function create(saved){
           S.safevDone = true;
           if (ans==='yes') { say('Bien. Lo importante ahora es que sigas a salvo.'); ask('¿Esto pasa seguido?', 'open'); return true; }
           if (ans==='no' || ans==='unsure') { urgent = true; S.flags.add('NO_SEGURO');
-            if (S.used.has('safevNo')) { say('Tu seguridad es lo primero. Si puedes, sal de ahí o enciérrate en una pieza con tu celular.'); say('El 133 responde a cualquier hora si esa persona te está haciendo daño. Yo sigo aquí.'); }
+            if (/\bno tengo (a )?donde (ir|irme|quedarme)\b|\bno tengo (otro lugar|a quien ir|a donde arrancar)\b/.test(t)) { say('Entiendo que sientas que no tienes a dónde ir. Hay redes que pueden ayudarte a encontrar un lugar seguro, de forma confidencial: ' + (S.minor ? 'el 147 (Fono Niños) y el 1515 te orientan.' : 'el 1455 y el 149 te orientan.')); say('Si estás en peligro ahora, llama al 133. Yo sigo aquí.'); }
+            else if (S.used.has('safevNo')) { say('Tu seguridad es lo primero. Si puedes, sal de ahí o enciérrate en una pieza con tu celular.'); say('El 133 responde a cualquier hora si esa persona te está haciendo daño. Yo sigo aquí.'); }
             else { say('Si puedes, ve a un lugar donde esa persona no pueda llegar: donde un vecino, un familiar o una amistad.'); say('Si estás en peligro ahora, llama al 133. Yo sigo aquí.'); }
             S.used.add('safevNo'); S.lastQ = 'open'; return true; }
           return false;
@@ -1256,8 +1588,13 @@ function create(saved){
           if (ans==='yes') { say('Qué bueno que tengas dónde quedarte esta noche.'); next(true); return true; }
           if (ans==='no' || ans==='unsure') { S.flags.add('SIN_VIVIENDA'); say('Eso es importante, y se lo dejo anotado al especialista para que te ayude a buscar dónde quedarte.'); say('Si esta noche estás en la calle y corres peligro, llama al 133.'); next(); return true; }
           return false;
+        case 'edad': {
+          const n = S.pendingAge; S.pendingAge = null;
+          if (ans === 'yes' || ans === 'ack') { if (n < 18) { S.minor = true; S.flags.add('MENOR'); S.resources.add('1515'); S.used.add('menor'); say('Gracias por contármelo.'); say('A tu edad pueden pasar cosas muy difíciles, y está muy bien pedir ayuda. También existe el 1515 (Línea Libre), una línea especial para jóvenes, gratis.'); } else say('Gracias por contármelo.'); next(true); return true; }
+          if (ans === 'no') { say('Ah, perdona, entendí mal.'); ask('¿Qué me querías decir?', 'open'); return true; }
+          return false; }
         case 'respirar':
-          if (ans === 'yes' || ans === 'ack') { out.push({ type:'breath' }); S.sug.exercise++; S.lastQ = 'estado'; return true; }
+          if (ans === 'yes' || ans === 'ack') { out.push({ type:'breath' }); S.sug.exercise++; S.lastQ = 'postresp'; return true; }
           if (ans === 'no') { say('Está bien. Aquí sigo contigo mientras pasa.'); next(true); return true; }
           return false;
         case 'arma':
@@ -1274,7 +1611,7 @@ function create(saved){
         case 'pregsui':
           if (/\b(mi|yo)\b/.test(t) && !/\b(alguien|amig|herman|mama|papa|pareja|hij)/.test(t) || ans === 'yes') { S.askedIdeation = true; say('Gracias por decírmelo. Me importa saber cómo estás tú.'); ask('¿Has tenido pensamientos de quitarte la vida?', 'ideacion', CHIPS.ideacion); return true; }
           if (/\b(alguien|amig|herman|mama|papa|pareja|hij|cercan|conocid)/.test(t)) { setTrack('helper'); S.flags.add('TERCERO_PREOCUPA'); say('Qué bueno que te preocupes por esa persona.'); ask('¿Qué has notado en ella que te preocupa?', 'open'); return true; }
-          if (/\b(curiosidad|nada|por saber|nomas|no mas|solo)\b/.test(t) || ans === 'no') { say('Está bien. Si en algún momento te toca de cerca, aquí estoy para conversarlo.'); next(true); return true; }
+          if (/\b(curiosidad|nada|por saber|nomas|no mas|solo)\b/.test(t) || ans === 'no') { if (S.riskPreFaq) { S.risk = S.riskPreFaq; S.riskPreFaq = null; } say('Está bien. Si en algún momento te toca de cerca, aquí estoy para conversarlo.'); next(true); return true; }
           return false;
         case 'autoles':
           S.autolesDone = true;
@@ -1299,10 +1636,10 @@ function create(saved){
           }
           return false;
         case 'alejarse':
-          if (ans==='yes') { S.alejado = true; say('Bien. Siéntate si puedes, respira lento, y quédate conmigo.'); next(); return true; }
+          if (ans==='yes') { S.alejado = true; say('Qué alivio leer eso. Gracias por hacerlo; no es poco. Si puedes, siéntate y respira lento.'); if (F.safe === null || F.safe === 'sin_respuesta') { F.safe = null; ask('Ahora que te alejaste, ¿estás en un lugar seguro, sin nada a mano con lo que te puedas hacer daño?', 'safe', CHIPS.safe); } else next(); return true; }
           if (ans==='no') { urgent = true;
             if (noCall() || S.used.has('alejNo')) { say('Te entiendo. Entonces quédate conmigo: siéntate en el suelo si puedes, agárrate de algo firme y respira lento.'); say('Si pasa alguien cerca, pídele que se quede contigo. El especialista ya tiene tu caso con prioridad máxima.'); }
-            else { say('Por favor llama al 133 o al 131 ahora. Si te cuesta hablar, marca igual y deja la llamada abierta.'); say('Yo sigo aquí contigo.'); }
+            else { say('Entiendo que ahora no quieras moverte, y no te voy a apurar. Te pido algo más pequeño: siéntate donde estás, aunque sea un paso más lejos del borde.'); say('Y si puedes, llama al 133 o al 131 y deja la llamada abierta. Yo sigo aquí contigo.'); S.used.add('alejNo'); ask('¿Puedes sentarte, un poco más lejos del borde?', 'alejarse', ['Ya me senté','No puedo'], (p.tries||0)); return true; }
             S.used.add('alejNo'); return true; }
           return false;
         case 'especialista':
@@ -1346,6 +1683,26 @@ function create(saved){
 
     /* ── utilidades de composición ── */
     function say(x){ if (x) out.push(x); }
+    function reflectP(){
+      for (let i = 0; i < REFLECT_P.length; i++) {
+        const r = REFLECT_P[i];
+        if (S.used.has('rp' + i) || !r.re.test(t) || (r.when && !r.when(S, t))) continue;
+        S.used.add('rp' + i);
+        const x = pick(r.s, 'rps' + i); say(typeof x === 'function' ? x(t, S) : x);
+        return r;
+      }
+      return null;
+    }
+    function meansObj(){
+      const src = (S.meansText || '') + ' ' + t;
+      if (/pastill|pildora|pastis/.test(src)) return { cl:'las', cl2:'se las', noun:'las pastillas', son:'son', pl:true, fem:true };
+      if (/remedio|medicament|clonazepam|ravotril|rivotril/.test(src)) return { cl:'los', cl2:'se los', noun:'los remedios', son:'son', pl:true, fem:false };
+      if (/cuchill|cutter|cortaplum/.test(src)) return { cl:'lo', cl2:'se lo', noun:'el cuchillo', son:'es', pl:false, fem:false };
+      if (/gillette|gilette|hoja|navaja|cuchilla/.test(src)) return { cl:'la', cl2:'se la', noun: /navaja/.test(src) ? 'la navaja' : 'la hoja', son:'es', pl:false, fem:true };
+      if (/cuerda|soga/.test(src)) return { cl:'la', cl2:'se la', noun:'la cuerda', son:'es', pl:false, fem:true };
+      if (/pistola|arma|revolver|escopeta/.test(src)) return { cl:'la', cl2:'se la', noun:'el arma', son:'es', pl:false, fem:true };
+      return { cl:'lo', cl2:'se lo', noun:'eso', son:'es', pl:false, fem:false };
+    }
     function noCall(){ return F.refusedCall || F.cantCall; }
     function isPrevQ(x){ return !!S.prevQ && (x === S.prevQ || x.endsWith(S.prevQ)); }
     function inRecent(x){ return (S.recent || []).some(r => r === x || r.endsWith(x)); }
@@ -1361,18 +1718,21 @@ function create(saved){
       S.pending = type ? { type, tries: tries||0 } : null;
       S.lastQ = type || qtype(q);
       if (type) S.asked[type] = (S.asked[type]||0) + 1;
+      if (type === 'ideacion') S.ideaAskTurn = S.turn;
       if (ch) chips = ch;
     }
-    function reflect(list, max){ let n=0; for (const th of list) { if (n>=max) break; if (T[th]) { say(pick(T[th].r, 'r'+th)); n++; } } const second = list.find((x, i) => i > 0 && ALSO[x] && !(list[0] === 'duelo' && x === 'familia') && !(list[0] === 'bullying' && x === 'estudios') && !(list[0] === 'posparto' && ['familia','pareja','animo'].includes(x)) && !(list[0] === 'vivienda' && x === 'familia')); if (max === 1 && second && n) say(`Y además está ${ALSO[second]}. Es mucho junto.`); return n; }
+    function famOk(){ return a.toks.length <= 4 || /\b(pelea|pelean|peleamos|peleas|peleando|discut\w*|grit\w*|problema|problemas|mal|no me (acepta|aceptan|entiende|entienden|quiere|quieren|pesca|pescan|habla|hablan|deja|dejan|apoya|apoyan)|me odia|me odian|toxic\w*|pesad\w*|tens\w*|me echaron|me quieren echar|no (los|lo|la) soporto|me tratan|me trata|me culpa|me culpan|me presiona\w*|me exige\w*|maltrat\w*|abandon\w*)\b/.test(t); }
+    function reflect(list, max){ let n=0; list = list.filter(th => th !== 'familia' || (famOk() && !['violence','grooming','past','helper'].includes(S.track))); for (const th of list) { if (n>=max) break; if (T[th]) { say(pick(T[th].r, 'r'+th)); n++; } } const second = list.find((x, i) => i > 0 && ALSO[x] && !(list[0] === 'duelo' && x === 'familia') && !(['bullying','soledad'].includes(list[0]) && x === 'estudios') && !(list[0] === 'posparto' && ['familia','pareja','animo'].includes(x)) && !(list[0] === 'vivienda' && x === 'familia') && !(list[0] === 'identidad' && x === 'familia' && /\bfamilia\b/.test(t) && a.toks.length <= 8)); if (max === 1 && second && n) say(`Y además está ${ALSO[second]}. Es mucho junto.`); return n; }
     function closing(){ return (S.name ? '' : '') + pick([noCall() ? 'Gracias por conversar. Si lo necesitas, aquí estoy. Cuídate mucho.' : 'Gracias por conversar. Si lo necesitas, aquí estoy, y el *4141 atiende las 24 horas. Cuídate mucho.','Gracias por escribir. Este espacio queda abierto para cuando lo necesites. Cuídate.'],'close'); }
     function crisisNext(){
       if (pend && IMPORTANT.has(pend.type) && !answered && !frustrated && stillNeeded(pend) && (pend.tries||0) < (LIMIT[pend.type]||0) && !asked) { reask(pend); return; }
       const steps = [
         ['emergencia_sola', () => F.emergency && !F.called && F.alone === true && !S.used.has('emerg_sola'), () => { S.used.add('emerg_sola'); say('Escucha: es importante que alguien te vea ahora. Si puedes, sal y golpea la puerta de un vecino, o grita para pedir ayuda.'); say('Si logras marcar el 131, aunque no puedas hablar mucho, deja la llamada abierta.'); ask('¿Puedes hacer alguna de esas cosas?', 'llamo131', CHIPS.llamo131); }],
         ['llamo131', () => F.emergency && !F.called, () => ask('¿Ya pudiste llamar al 131, o hay alguien llamando por ti?', 'llamo131', CHIPS.llamo131)],
-        ['safe', () => F.ideation === true && F.safe === null && !F.emergency, () => ask(pick(R.askSafe,'askSafe'), 'safe', CHIPS.safe)],
+        ['alejarse', () => S.flags.has('LUGAR_PELIGRO') && !S.alejado && (S.asked.alejarse||0) < MAXASK.alejarse, () => ask(REASK.alejarse.find(x => !isPrevQ(x) && !inRecent(x)) || REASK.alejarse[0], 'alejarse', CHIPS.alejarse)],
+        ['safe', () => F.ideation === true && F.safe === null && !F.emergency && !(S.flags.has('LUGAR_PELIGRO') && !S.alejado), () => ask(pick(R.askSafe,'askSafe'), 'safe', CHIPS.safe)],
         ['means', () => F.safe === false && F.meansAway === null, () => ask(R.askMeans, 'means', CHIPS.means)],
-        ['with', () => F.alone === null && (S.asked.with||0) < 2 && !frustrated, () => ask(pick(R.askWith,'askWith'), 'with', CHIPS.with)],
+        ['with', () => F.alone === null && (S.asked.with||0) < 2 && !frustrated, () => ask(S.flags.has('LUGAR_PELIGRO') || S.flags.has('PLAN_LUGAR') ? '¿Estás con alguien en este momento?' : pick(R.askWith,'askWith'), 'with', CHIPS.with)],
         ['contact', () => F.alone === true && F.someone === null && !F.refusedCall && (S.asked.contact||0) < 1 && !frustrated, () => ask(pick(R.askContact,'askContact'), 'contact', CHIPS.contact)],
         ['ejercicio', () => !S.sug.exercise && !S.ground, () => { S.sug.exercise++; ask(R.offerExercise, 'ejercicio', CHIPS.ejercicio); }]
       ];
@@ -1390,19 +1750,21 @@ function create(saved){
     function nextQ(soft){
       if (TRACK_F[S.track] && !crisisMode()) return trackNext();
       if (S.turn >= 3 && RISKY_OWN(S) && S.distress >= 2 && !S.askedIdeation && !soft) { S.askedIdeation = true; return ask(R.screen, 'ideacion', CHIPS.ideacion); }
+      if (F.ideation === 'sin_respuesta' && RISKY_OWN(S) && S.distress >= 3 && (S.asked.ideacion||0) < MAXASK.ideacion && !S.used.has('ideaLater') && S.turn - (S.ideaAskTurn||0) >= 3 && !soft) { S.used.add('ideaLater'); F.ideation = null; return ask('Antes te pregunté algo importante y no quiero dejarlo pasar: ¿has tenido pensamientos de quitarte la vida?', 'ideacion', CHIPS.ideacion); }
       if (S.risk === 'high') return ask(pick(['¿Cómo estás en este momento?','¿Qué es lo más difícil ahora mismo?','¿Qué estás sintiendo ahora?'],'hiQ'), 'estado');
-      if (!S.themes.size && F.ideation !== true && !S.used.has('opener:2') && S.turn <= 3) return ask(pick(R.openers,'opener'));
-      if (!S.themes.size && RANK[S.risk] < 1) return ask(pick(['¿Cómo te sientes hoy?','¿Cómo ha sido tu día hoy?','¿Hay algo que te esté preocupando?','¿Qué te gustaría conversar?'],'neutral'), 'estado');
-      for (let k=0;k<R.follow.length;k++){ const q = pick(R.follow,'follow'); const ty = qtype(q); if ((ty==='cuando' && F.timeKnown) || (ty==='persona' && F.personKnown)) continue; return ask(q); }
+      const noEstado = l => S.estadoKnown ? l.filter(q => qtype(q) !== 'estado') : l;
+      if (!S.themes.size && F.ideation !== true && !S.used.has('opener:2') && S.turn <= 3) return ask(pick(noEstado(R.openers),'opener' + (S.estadoKnown ? 'K' : '')));
+      if (!S.themes.size && RANK[S.risk] < 1) return ask(pick(noEstado(['¿Cómo te sientes hoy?','¿Cómo ha sido tu día hoy?','¿Hay algo que te esté preocupando?','¿Qué te gustaría conversar?']),'neutral' + (S.estadoKnown ? 'K' : '')), 'estado');
+      for (let k=0;k<R.follow.length;k++){ const q = pick(R.follow,'follow'); const ty = qtype(q); if ((ty==='cuando' && (F.timeKnown || lastQ === 'cuando')) || (ty==='persona' && (F.personKnown || F.someone === false))) continue; return ask(q); }
       ask('Te sigo leyendo. ¿Quieres contarme un poco más?');
     }
     function next(soft){ if (crisisMode()) crisisNext(); else if (TRACK_F[S.track]) trackNext(); else nextQ(soft); }
     function trackNext(){
       const tr = S.track;
-      if (TRACK_TIP[tr] && !S.used.has('tip:' + tr) && S.turn > S.trackStart && !deferQ) { S.used.add('tip:' + tr); say(tr === 'violence' && S.minor ? 'Algo que ayuda: cuéntale a un adulto de confianza fuera de la casa, como un profe o el orientador del colegio. El 147 y el 1515 también te pueden ayudar, gratis.' : TRACK_TIP[tr]); }
+      if (TRACK_TIP[tr] && !S.used.has('tip:' + tr) && S.turn > S.trackStart && !deferQ) { S.used.add('tip:' + tr); say(tr === 'violence' && S.minor ? 'Algo que ayuda: cuéntale a un adulto de confianza fuera de la casa, como un profe o el orientador del colegio. ' + (out.some(x => typeof x === 'string' && /1515/.test(x)) ? 'El 147 (Fono Niños) también te puede ayudar, gratis.' : 'El 147 y el 1515 también te pueden ayudar, gratis.') : TRACK_TIP[tr]); }
       const list = TRACK_F[tr];
       if (!list) return crisisMode() ? crisisNext() : nextQ(true);
-      for (let i = 0; i < list.length; i++) { const q = pick(list, 'tr' + tr); if (!(S.recent || []).includes(q) && q !== S.prevQ && !(S.askedQs || []).includes(q)) return ask(q, tr === 'helper' && /sabe/.test(q) ? 'sabe' : 'open'); }
+      for (let i = 0; i < list.length; i++) { const q = pick(list, 'tr' + tr); if (!(S.recent || []).includes(q) && q !== S.prevQ && !(S.askedQs || []).includes(q)) { let q2 = q; if (tr === 'helper' && S.tercWho && !/^tus /.test(S.tercWho)) { q2 = q.replace(/^¿Esa persona/, '¿' + S.tercWho.charAt(0).toUpperCase() + S.tercWho.slice(1)); if (S.tercFem === false) q2 = q2.replace('que la acompañe', 'que lo acompañe'); } return ask(q2, tr === 'helper' && /sabe/.test(q) ? 'sabe' : 'open'); } }
       return ask(pick(['¿Quieres contarme un poco más?','¿Cómo te sientes ahora?'],'trx'), 'open');
     }
     function setTrack(tr){ if (S.track === 'suicide' && tr !== 'suicide') return; if (S.track !== tr) { S.track = tr; S.trackStart = S.turn; } }
@@ -1411,13 +1773,258 @@ function create(saved){
       if (crisisMode()) return crisisNext();
       if (TRACK_F[S.track]) return trackNext();
       if (S.turn >= 3 && RISKY_OWN(S) && S.distress >= 2 && !S.askedIdeation) { S.askedIdeation = true; return ask(R.screen, 'ideacion', CHIPS.ideacion); }
-      if (ft && T[ft]) { const q = pick(T[ft].f, 'f'+ft); if (!(qtype(q)==='cuando' && F.timeKnown)) { if (ft === 'vivienda') return ask(q, 'techo', ['Sí','No']); ask(q); S.lastQTheme = ft; return; } }
+      if (a.themes.length >= 3 && a.toks.length >= 12) { ask('De todo eso, ¿qué es lo que más te pesa hoy?', 'open'); return; }
+      if (ft === 'vivienda' && /\b(me van a|me va a) (echar|botar|desalojar)\b/.test(t) && !/\b(hoy|ahora|esta noche|manana)\b/.test(t)) { ask(S.themes.has('embarazo') ? '¿Ya saben, o todavía no les has contado?' : '¿Cuándo crees que podría pasar?', 'open'); return; }
+      if (ft && T[ft] && !(ft === 'familia' && !famOk())) { let q = pick(T[ft].f, 'f'+ft);
+        if (a.toks.length >= 5 && /^¿(Qué pasó|Qué está pasando|Cuándo pasó)/.test(q)) { const alt = T[ft].f.find(x => !/^¿(Qué pasó|Qué está pasando|Cuándo pasó)/.test(x) && !(S.askedQs || []).includes(x)); q = alt || pick(['¿Cómo te hace sentir eso?','¿Cómo lo estás llevando?'],'emoQ'); }
+        if (!(qtype(q)==='cuando' && F.timeKnown)) { if (ft === 'vivienda') return ask(q, 'techo', ['Sí','No']); ask(q); S.lastQTheme = ft; return; } }
       nextQ(true);
     }
 
     /* ── actos según la intención ── */
     function act(){
+      if (['TEMA','NADA'].includes(P) && !repeated && !(long && a.themes.length >= 2)) {
+        const rp = reflectP();
+        if (rp) {
+          if (P === 'TEMA') startSearch = true;
+          if (crisisMode()) return crisisNext();
+          if (P === 'TEMA' && !S.askedIdeation && S.turn >= 3 && RISKY_OWN(S) && S.distress >= 2 && !TRACK_F[S.track] && !deferQ) { S.askedIdeation = true; return ask(R.screen, 'ideacion', CHIPS.ideacion); }
+          if (rp.q && !deferQ) return ask(rp.q);
+          if (TRACK_F[S.track]) return trackNext();
+          return P === 'TEMA' ? themeFollow() : nextQ(true);
+        }
+      }
       switch (P) {
+        /* ── casos nuevos (tercera revisión: conversaciones reales) ── */
+        case 'EMERG_DETALLE':
+          urgent = true; showCrisis = true;
+          if (S.used.has('emergDet')) say('Gracias, eso también es importante para los médicos.');
+          else { S.used.add('emergDet'); say('Gracias por decírmelo; es información importante para los médicos.');
+          say(F.cantCall ? 'Pídele a alguien cerca que llame al 131 por ti y le cuente qué tomaste y cuánto.' : 'Llama ahora al 131 y cuéntales qué tomaste y cuánto. Si no puedes hablar, pídele a alguien cerca que llame por ti.'); }
+          deferQ = false; ask(REASK.llamo131.find(x => !isPrevQ(x)) || REASK.llamo131[0], 'llamo131', CHIPS.llamo131); break;
+        case 'EMERG_LLAMAR':
+          urgent = true; showCrisis = true;
+          say('Sí, llama ahora al 131. Es lo más importante en este momento: aunque ahora te sientas bien, algunos efectos aparecen más tarde.');
+          say(F.alone === true ? 'Si te cuesta hablar, marca igual y deja la llamada abierta, o golpea la puerta de un vecino.' : 'Si te cuesta hablar, pídele a alguien cerca que llame por ti.');
+          deferQ = false; ask('¿Puedes llamar ahora?', 'llamo131', CHIPS.llamo131); break;
+        case 'DUELO_IRSE':
+          startSearch = true; showCrisis = true; crisisRes(); bump('mid'); S.flags.add('PASIVA');
+          say('Cuando perdemos a alguien tan importante, a veces aparece el deseo de irse con esa persona. Gracias por decírmelo; es muy importante que lo pongas en palabras.');
+          if (F.ideation === true) { crisisNext(); break; }
+          S.askedIdeation = true; deferQ = false; ask('Te lo pregunto directo, porque me importa: ¿estás pensando en quitarte la vida?', 'ideacion', CHIPS.ideacion); break;
+        case 'EN_SERIO':
+          say('Te creo, y lo tomo en serio.'); next(true); break;
+        case 'OFFTOPIC_INSISTE':
+          say('De verdad no puedo ayudarte con eso, perdona.'); casual('Si algo te tiene con estrés o con la cabeza llena, eso sí lo podemos conversar. ¿Cómo estás tú?'); break;
+        case 'AYUDA_PREGUNTA':
+          say('Sí, para eso estoy.'); ask('Cuéntame qué está pasando, con tus palabras.', 'open'); break;
+        case 'QUIERE_CONTAR':
+          say(pick(['Claro, cuéntame. Te leo, sin apuro.','Aquí estoy. Cuéntame como te salga, sin apuro.'],'qcontar')); S.lastQ = 'open'; break;
+        case 'PRESENCIA_INICIO':
+          S.used.add('presIni');
+          say('Hola, aquí estoy. Soy Nexo, un asistente automático: te leo y, si lo necesitas, te conecto con un especialista humano del equipo.');
+          ask('Cuéntame, ¿cómo te sientes?', 'estado'); break;
+        case 'COMPANIA': {
+          const who = personIn(t); F.alone = false;
+          say(who ? `Qué bueno que estés con ${who}.` : 'Qué bueno que no estés sin compañía.');
+          if (!deferQ) next(true); break; }
+        case 'UBICACION': {
+          const place = (t.match(/\b(pieza|casa|cama|bano|living|cocina|patio|colegio|liceo|trabajo|pega|calle|auto|micro|metro|plaza|parque|depto|departamento|universidad|carrete|fiesta|junta|bar|disco)\b/) || [])[0] || ''; const lugar = Object.assign({ carrete:'un carrete', fiesta:'una fiesta', junta:'una junta', bar:'un bar', disco:'una disco' }, ARTLOC)[place] || place;
+          const consejo = !crisisMode() ? null : /^(colegio|liceo)$/.test(place) ? 'Si puedes, busca a un adulto de confianza ahí, como un profe, el orientador o alguien de inspectoría, y cuéntale que no estás bien.' : /^(universidad|trabajo|pega)$/.test(place) ? 'Si puedes, acércate a alguien de confianza ahí y cuéntale que no estás bien.' : /^(carrete|fiesta|junta|bar|disco)$/.test(place) ? 'Si puedes, busca a alguien de confianza ahí y quédate cerca; no te vayas sin compañía.' : null;
+          if (crisisMode() && F.safe === null) { say(`Ok, estás en ${lugar}.`); if (consejo) say(consejo); deferQ = false; ask('¿Ahí estás a salvo, sin nada a mano con lo que te puedas hacer daño?', 'safe', CHIPS.safe); break; }
+          say(`Ok, estás en ${lugar}. Gracias por decírmelo.`);
+          if (consejo) say(consejo);
+          if (!deferQ) next(true); break; }
+        case 'TERCERO_UBIC': {
+          const fem = S.tercFem !== false;
+          say(`Ok. Si puedes, quédate cerca y no ${fem ? 'la' : 'lo'} dejes ${fem ? 'sola' : 'solo'} por ahora. Si hay pastillas, armas u otras cosas con las que pueda hacerse daño, guárdalas donde no las encuentre.`);
+          if (pend && pend.type === 'third' && stillNeeded(pend)) { deferQ = false; reask(pend); } else trackNext(); break; }
+        case 'SEGURO_AHORA':
+          if (F.safe !== false) F.safe = true; if (S.track === 'violence') S.safevDone = true;
+          say('Qué bueno que ahora estés a salvo.');
+          if (!deferQ) next(true); break;
+        case 'ALEJADO':
+          S.alejado = true; deferQ = false;
+          say('Qué alivio leer eso. Gracias por hacerlo; no es poco.');
+          if (F.safe === null || F.safe === 'sin_respuesta') { F.safe = null; ask('Ahora que te alejaste, ¿estás en un lugar seguro, sin nada a mano con lo que te puedas hacer daño?', 'safe', CHIPS.safe); }
+          else crisisNext(); break;
+        case 'MIEDO_INTERNACION':
+          say('Entiendo ese miedo; es muy común. Contar lo que te pasa no significa que te vayan a internar: casi siempre el apoyo es conversar y buscar juntos formas de cuidarte.');
+          say('Una hospitalización solo se considera si hay un peligro muy alto, y aun así te explican todo y te escuchan.');
+          if (!deferQ) { if (crisisMode()) crisisNext(); else next(true); } break;
+        case 'RAZON_VIVIR': {
+          const m = t.match(/\b(mis|mi) (\w+)/); const who = m ? tildes(m[0].replace(/^mi /,'tu ').replace(/^mis /,'tus ')) : null;
+          S.flags.add('RAZONES');
+          say(who ? `${who.charAt(0).toUpperCase() + who.slice(1)} ${/^tus /.test(who) ? 'son' : 'es'} una razón muy importante. Gracias por decírmelo; guárdalo cerca estos días.` : 'Eso es muy importante. Gracias por decírmelo.');
+          if (!deferQ) { if (crisisMode()) crisisNext(); else next(true); } break; }
+        case 'SOBRE_PERSONA': {
+          const who = personIn(t) || 'esa persona'; startSearch = true;
+          ask(`¿Qué está pasando con ${who}?`, 'open'); break; }
+        case 'DANO_BROMA':
+          S.risk = prevRisk; S.flags.add('HIPERBOLE');
+          say('Te leo; a veces la rabia se dice así. Si en algún momento sientes que se pone muy fuerte con alguien, aquí puedes contarlo.');
+          casual('¿Cómo estás tú?'); break;
+        case 'VOLVIO':
+          say(pick(['Qué bueno que volviste. Aquí sigo contigo.','Hola de nuevo. Me alegra que escribas.'],'volvio'));
+          if (crisisMode()) crisisNext(); else ask('¿Cómo estás ahora?', 'estado'); break;
+        case 'VERDAD_MAL':
+          S.themes.add('animo'); S.distress++; bump('mid'); startSearch = true;
+          say('Gracias por decírmelo. Aquí no tienes que hacer como que estás bien.');
+          ask('¿Cómo estás de verdad?', 'estado'); break;
+        case 'POST_RESP':
+          if ((/\b(mejor|bien|tranquil|calm|bajo|baje|un poco|algo|relaj|alivi)/.test(t) && !/\b(no|peor|igual|nada)\b/.test(t)) || a.answer === 'yes' || a.answer === 'ack') { say(pick(['Qué bueno que haya bajado aunque sea un poco. Cuando quieras, lo repetimos.','Me alegra. Los pequeños respiros también cuentan.'],'postR')); if (crisisMode()) crisisNext(); else ask('¿Quieres seguir conversando, o prefieres intentar descansar?', 'open'); break; }
+          say(/\bpeor\b/.test(t) ? 'Lamento que no haya ayudado esta vez. A veces el cuerpo necesita más tiempo, y está bien.' : 'Está bien, a veces cuesta más. No hay una forma correcta de hacerlo.');
+          if (crisisMode()) { crisisNext(); break; }
+          ask('¿Quieres que lo repitamos, o prefieres que conversemos?', 'open', ['Respirar juntos','Prefiero conversar']); break;
+        case 'ESPERA_OK':
+          say(pick(['Bueno. Mientras tanto, aquí sigo contigo; si quieres, me puedes ir contando.','Perfecto. Mientras esperas, aquí estoy por si quieres conversar.'],'espOk')); S.lastQ = 'open'; break;
+        case 'POSPARTO_VINCULO':
+          S.themes.add('posparto'); S.themes.add('animo'); S.distress++; startSearch = true; bump('mid');
+          say('Lo que cuentas le pasa a más mamás de lo que se cree, y no te hace mala madre. A veces es parte de una depresión posparto, que es común y tiene tratamiento.');
+          ask('¿Has podido contárselo a alguien, como tu matrona o tu médico?', 'open'); break;
+        /* ── casos nuevos (segunda revisión) ── */
+        case 'NO_SEGURO_LUGAR':
+          bump('mid'); startSearch = true; F.safe = false; S.flags.add('NO_SEGURO'); showCrisis = true; crisisRes(['133']);
+          say('Gracias por decírmelo. Que no te sientas a salvo donde estás es muy importante.');
+          ask('¿Qué está pasando? ¿Alguien te puede hacer daño ahí?', 'open'); break;
+        case 'PLAN_CUANDO':
+          S.flags.add('PLAN_CON_FECHA'); bump('high'); urgent = true; showCrisis = true; crisisRes(); startSearch = true; setTrack('suicide');
+          say('Gracias por responderme. Lo que me cuentas me preocupa mucho.');
+          ask('Te lo pregunto directo, porque me importa: lo que tienes planeado, ¿es quitarte la vida?', 'ideacion', ['Sí','No']); S.askedIdeation = true; break;
+        case 'DESPEDIDA_CONFIRMA':
+          urgent = true; showCrisis = true; crisisRes(); bump('high'); startSearch = true; setTrack('suicide'); S.flags.add('DESPEDIDA_EN_CRISIS');
+          if (F.ideation === null || F.ideation === 'sin_respuesta') { F.ideation = true; S.flags.add('IDEACION'); }
+          say('Cuando dices eso, me preocupa mucho tu seguridad. No te voy a dejar con esto sin apoyo.');
+          { const c = callLine(noCall() ? 'override' : 'urgent'); if (c) say(c); }
+          if (F.safe === null) ask(pick(R.askSafe,'askSafe'), 'safe', CHIPS.safe); else crisisNext(); break;
+        case 'IDEACION_PASADA':
+          S.flags.add('IDEACION_PASADA'); bump('mid'); startSearch = true; S.askedIdeation = true;
+          say('Gracias por contármelo. Me alegra que hoy no estés en ese lugar; se nota que te costó llegar hasta aquí.');
+          ask('¿Hay días en que esos pensamientos vuelven, aunque sea un poco?', 'ideacion', CHIPS.ideacion); break;
+        case 'GRACIAS_INICIO':
+          say('Gracias a ti.'); ask('¿Cómo estás hoy?', 'estado'); break;
+        case 'IDIOMA_LIMITADO':
+          say('No te preocupes: escribe como puedas, aunque sea con errores o mezclando idiomas. Te entiendo igual.');
+          crisisMode() ? crisisNext() : ask('¿Cómo te sientes?', 'estado'); break;
+        case 'QUEJA_ROBOT':
+          say(pick(['Sí, soy un programa y a veces sueno así. Igual te estoy leyendo con atención.','Tienes razón, soy un asistente automático y se nota. Igual leo con atención todo lo que escribes.'],'qrobot'));
+          casual('¿Qué te gustaría contarme?'); break;
+        case 'COMO_SABES':
+          say('No lo sé, salvo lo que tú me cuentes: no adivino nada, solo leo lo que escribes aquí.');
+          casual('¿Me cuentas cómo estás tú?'); break;
+        case 'NO_PSICOLOGO':
+          S.flags.add('NO_QUIERE_PSICOLOGO');
+          say(pick(['Está bien, nadie te va a obligar. Aquí puedes conversar conmigo lo que necesites.','Está bien. No tienes que hablar con nadie que no quieras; aquí puedes escribir igual.'],'nopsi'));
+          if (crisisMode()) { if (!noCall()) say('Igual, si en algún momento sientes que no puedes más, el *4141 atiende las 24 horas.'); crisisNext(); break; }
+          if (S.used.has('nopsiQ') || /\b(no me gusta|no me sirv|mala experiencia|me fue mal|no sirven|no me gustan)\b/.test(t)) { next(true); break; }
+          S.used.add('nopsiQ'); ask('Si quieres contarme, ¿qué es lo que no te convence?', 'open'); break;
+        case 'DESAHOGO':
+          say(pick(['Claro. Aquí puedes desahogarte, sin filtro y a tu ritmo.','Para eso está este espacio. Escribe todo lo que necesites, como te salga.'],'desah'));
+          crisisMode() ? crisisNext() : ask('Te leo. ¿Qué pasó?', 'open'); break;
+        case 'ACADEMICO':
+          S.flags.add('ACADEMICO');
+          say('Qué bueno que estés trabajando en esto; es un tema muy importante. Lo básico: casi nunca hay una sola causa, y la mayoría de las personas que piensan en quitarse la vida dan señales y pueden recibir ayuda.');
+          say('Para cifras y material confiable, el Ministerio de Salud tiene información oficial, y el *4141 es la línea nacional de prevención.');
+          ask('¿Hay algo puntual que te sirva, como las señales de alerta o cómo ayudar a alguien?', 'open', ['Señales de alerta','Cómo ayudar a alguien']); break;
+        case 'FAQ_SENALES':
+          say('Algunas señales de alerta: hablar de querer morir o de ser una carga, despedirse o regalar sus cosas, aislarse, cambios bruscos de ánimo, tomar o consumir más, o buscar formas de hacerse daño.');
+          say('Si las ves en alguien, pregúntale directo cómo está, no lo dejes sin compañía y busquen ayuda juntos: el *4141 orienta las 24 horas, también a quien acompaña.');
+          casual(); break;
+        case 'PREG_AYUDA':
+          say('Si alguien está pensando en quitarse la vida, lo más importante es tomarlo en serio: preguntarle directo cómo está, escucharlo sin juzgar, no dejarlo sin compañía y buscar ayuda juntos.');
+          say('El *4141 orienta las 24 horas, también a quien acompaña. Y si hay peligro inmediato, el 131.');
+          ask('¿Lo preguntas por alguien en particular, o por ti?', 'pregsui', ['Por mí','Por alguien cercano','Solo curiosidad']); break;
+        case 'FAQ_COMO':
+          say('Nada especial: escribe lo que te pasa, como te salga. Yo te leo y te acompaño, y si lo necesitas, dejo tu caso para que te escriba un especialista del equipo.');
+          ask(S.estadoKnown ? '¿Qué te gustaría contarme?' : '¿Cómo te sientes hoy?', 'estado'); break;
+        case 'BUENA_NOTICIA':
+          S.goodNews = S.turn;
+          say(pick(['¡Qué buena noticia! Me alegra mucho leerlo.','¡Qué bueno! Eso merece celebrarse.'],'buena'));
+          ask('¿Cómo te sientes con eso?', 'estado'); break;
+        case 'MALTRATO_LABORAL':
+          S.flags.add('MALTRATO_LABORAL'); S.themes.add('trabajo'); startSearch = true; bump('mid');
+          say('Que te trate así no está bien, y menos delante de otras personas. Nadie debería pasar por eso en la pega.');
+          if (!S.used.has('karin')) { S.used.add('karin'); say('Si se repite, guarda registro de lo que pasa (fechas, mensajes, testigos): la Ley Karin también protege contra el maltrato en el trabajo.'); }
+          ask('¿Cómo te está afectando todo esto?', 'estado'); break;
+        case 'VIOLENCIA_AHORA':
+          setTrack('violence'); S.flags.add('VIOLENCIA'); S.flags.add('NO_SEGURO'); S.flags.add('VIOLENCIA_EN_CURSO'); bump('high'); urgent = true; showCrisis = true; crisisRes(S.minor ? ['133','147','1515'] : ['133','1455','149']); startSearch = true; S.used.add('violAway'); S.safevDone = true;
+          if (!S.used.has('violNow')) { S.used.add('violNow'); say('Lo que me cuentas es muy peligroso, y tu seguridad es lo primero.');
+            say(/\b(encerrad[oa]|me encerre|bano|me escondi)\b/.test(t) ? 'Si puedes, quédate ahí con la puerta cerrada y el celular en silencio, y llama al 133. Si no puedes hablar, escríbele a un familiar o a un vecino para que llame por ti y dé tu dirección.' : 'Si puedes, sal de ahí o enciérrate en un lugar seguro con tu celular, y llama al 133. Si no puedes hablar, escríbele a un familiar o a un vecino para que llame por ti y dé tu dirección.'); }
+          else say('Sigo aquí contigo. Si puedes, llama al 133 o pídele a alguien por mensaje que llame por ti.');
+          ask('¿Puedes avisarle a alguien por mensaje ahora?', 'open'); break;
+        case 'TERCERO_DESPEDIDA': {
+          const who = personIn(t) || 'esa persona'; const fem = /\b(mi|una) (amiga|mama|hermana|abuela|tia|prima|polola|esposa|hija|vecina|companera|pareja)\b/.test(t) || who === 'esa persona';
+          setTrack('helper'); S.flags.add('TERCERO'); S.flags.add('TERCERO_URGENTE'); S.thirdDanger = true; S.tercUrgTurn = S.turn; S.tercWho = who; S.tercFem = fem;
+          urgent = true; showCrisis = true; crisisRes(['133']); startSearch = true; bump('mid');
+          say('Eso es muy preocupante, y hiciste muy bien en escribir.');
+          say(`Si crees que ${who} puede estar en peligro ahora, llama al 133 o al 131 y pide que vayan a ver${fem ? 'la' : 'lo'}. Si alguien vive cerca o está con ${fem ? 'ella' : 'él'}, avísale para que vaya ya.`);
+          ask(`¿Sabes dónde está ${who} ahora?`, 'open'); break; }
+        case 'TERCERO_URG_SEG': {
+          urgent = true; showCrisis = true; const o = S.tercFem === false ? 'o' : 'a', who = S.tercWho || 'esa persona';
+          if (/\b(me contesto|me respondio|esta bien|ya aparecio|lo encontraron|la encontraron|lo ubique|la ubique|esta con (el|ella|alguien|su familia))\b/.test(t)) { say(`Qué alivio que ya sepas de ${who}.`); say(`Igual, lo que te mandó es una señal de que lo está pasando muy mal: intenten que no esté sin compañía hoy y que pida ayuda. El *4141 también los orienta.`); S.flags.delete('TERCERO_URGENTE'); ask('¿Y tú cómo estás con todo esto?', 'estado'); break; }
+          if (/\b(ya llame|llame|vienen|van en camino|van para alla|fueron|ya van|llego la policia|llegaron)\b/.test(t) || P0 === 'YA_LLAME') { F.called = true; say('Hiciste lo correcto. Pedir ayuda así es cuidar' + (o === 'a' ? 'la' : 'lo') + '.'); say('Mientras tanto, sigue intentando contactar' + (o === 'a' ? 'la' : 'lo') + ' y avísale a alguien cercano.'); ask('¿Y tú cómo estás con todo esto?', 'estado'); break; }
+          if (/\b(no (me )?contesta|no responde|no me responde|tiene el celular apagado|no l[oa] ubico|no s[eé] nada)\b/.test(t)) say(`Si no te contesta, no esperes más: llama al 133 o al 131 y pide que vayan a ver${o === 'a' ? 'la' : 'lo'}.`);
+          else if (/\b(esta en|vive en|en su (casa|depto|departamento|pieza)|en la casa)\b/.test(t)) say('Si sabes la dirección, llama al 133 o al 131 y dásela para que vayan. Si alguien tiene llave o vive cerca, que vaya ahora.');
+          else if (/\b(miedo|haga algo|se haga algo|le pase algo)\b/.test(t)) say(`Tu miedo tiene sentido, y por eso es importante actuar ahora: llama al 133 o al 131, o pídele a alguien cercano que vaya a ver${o === 'a' ? 'la' : 'lo'}.`);
+          else say(`Lo más importante ahora es que alguien vaya a ver${o === 'a' ? 'la' : 'lo'}: si crees que está en peligro, llama al 133 o al 131.`);
+          S.lastQ = 'open'; break; }
+        case 'EMERG_OTRO_SEG': {
+          urgent = true; showCrisis = true; const lo = S.otroFem ? 'la' : 'lo', solo = S.otroFem ? 'sola' : 'solo';
+          if (/\b(no respira|dejo de respirar|no reacciona|no despierta|esta morad[oa]|no tiene pulso)\b/.test(t)) say(`Llama al 131 ahora mismo y dile que no respira o no reacciona: te van a guiar para hacer compresiones en el pecho hasta que llegue la ambulancia.`);
+          else if (/\b(llegaron|llego la ambulancia|se l[oa] llevaron|esta en el hospital|l[oa] atendieron|l[oa] estan atendiendo)\b/.test(t)) { S.flags.delete('EMERG_OTRO'); say('Qué bueno que ya esté recibiendo atención. Hiciste todo lo que tenías que hacer.'); ask('¿Y tú cómo estás después de esto?', 'estado'); break; }
+          else if (P0 === 'YA_LLAME' || /\b(ya llame|llame|vienen|viene|en camino|ya vienen|ya viene)\b/.test(t)) { F.called = true; say(`Hiciste muy bien. Quédate a su lado hasta que llegue la ayuda y sigue lo que te digan por teléfono.`); say('Si deja de respirar o no reacciona, vuelve a llamar al 131 de inmediato.'); }
+          else if (/\b(respira|esta respirando)\b/.test(t)) { say('Bien que respire. Si todavía no llamas al 131, hazlo ahora.'); say(`Mientras llega la ayuda, pon${lo === 'la' ? 'la' : 'lo'} de costado para que no se ahogue si vomita, y no ${lo} dejes ${solo}.`); }
+          else if (/\b(no puedo|no tengo|no se como)\b/.test(t)) say(`Pídele a alguien cerca que llame al 131, o grita para pedir ayuda a un vecino. No ${lo} dejes ${solo}.`);
+          else say(`Sigue las indicaciones del 131 y quédate a su lado. Yo sigo aquí contigo.`);
+          S.lastQ = 'open'; break; }
+        case 'MEDICA_URG':
+          urgent = true; showCrisis = true; S.resources.add('131'); S.flags.add('URGENCIA_MEDICA'); F.emergency = F.emergency || false;
+          say(/pecho/.test(t) ? 'Un dolor en el pecho, sobre todo si se va al brazo, la mandíbula o la espalda, puede ser una emergencia del corazón.' : 'Eso puede ser una emergencia médica.');
+          say('Llama ahora al 131 (SAMU) o pídele a alguien que te lleve a un servicio de urgencia. No te quedes esperando a ver si se pasa.');
+          ask('¿Ya pudiste llamar, o hay alguien que pueda llamar por ti?', 'llamo131', CHIPS.llamo131); break;
+        case 'CRIANZA': {
+          S.flags.add('CRIANZA'); S.themes.add('familia'); startSearch = true; bump('mid');
+          const quien = /\b(mama|madre)\b/.test(t) ? 'la peor mamá' : /\b(papa|padre)\b/.test(t) ? 'el peor papá' : 'una mala persona';
+          say(`Que a veces se te escape un grito cuando el cansancio te sobrepasa no te convierte en ${quien}. Que te duela tanto habla de cuánto te importa.`);
+          say('Cuando sientas que la rabia sube, aléjate un momento: respira y vuelve cuando estés con más calma. Pedir ayuda para descansar también es cuidar a tu familia.');
+          ask('¿Tienes a alguien que te pueda ayudar con la crianza, aunque sea un rato?', 'open'); break; }
+        case 'ROMPER':
+          S.themes.add('rabia');
+          say('Cuando la rabia sube tanto, a veces sale rompiendo cosas. Si sientes que sigue subiendo, aléjate un momento y respira lento.');
+          ask(/\b(vaso|vasos|plato|platos|vidrio|espejo)\b/.test(t) ? '¿Te cortaste o te hiciste daño con eso?' : '¿Te hiciste daño?', 'open'); break;
+        case 'HELPER_SECRETO': {
+          const o = S.tercFem === false ? 'o' : 'a';
+          say('Entiendo el dilema: quieres cuidar su confianza. Pero cuando alguien habla de quitarse la vida o de hacerse daño, su seguridad va primero.');
+          say(`${S.tercMinor || S.minor ? 'Contarle a un adulto de confianza (su familia, un profe o alguien del colegio)' : 'Contarle a alguien que pueda ayudar, como su familia'} no es traicionar${o === 'a' ? 'la' : 'lo'}: es cuidar${o === 'a' ? 'la' : 'lo'}. Puedes decirle que lo haces porque te importa.`);
+          trackNext(); break; }
+        case 'TERCERO_MENOR':
+          S.tercMinor = true; crisisRes(['1515']);
+          say('Como es menor de edad, es importante que algún adulto de confianza lo sepa: su familia, un profe o alguien del colegio. También pueden llamar gratis al 1515 (Línea Libre).');
+          trackNext(); break;
+        case 'VIOL_AMOR':
+          say('Es muy común querer a alguien que también te hace daño. Que lo quieras no hace que lo que te hace esté bien, ni que sea tu culpa.');
+          trackNext(); break;
+        case 'RETRACTA_BROMA':
+          S.flags.delete('BROMA'); bump('mid');
+          say('Gracias por decírmelo. Entonces sí te está pasando algo fuerte, y me alegra que lo digas.');
+          if (crisisMode()) crisisNext(); else if (!S.askedIdeation || F.ideation === null) { S.askedIdeation = true; ask('Te lo pregunto directo, porque me importa: ¿has tenido pensamientos de quitarte la vida?', 'ideacion', CHIPS.ideacion); } else next(); break;
+        case 'PERDIDO':
+          urgent = true; showCrisis = true; S.resources.add('133'); S.resources.add('131'); S.flags.add('NO_SEGURO');
+          say('Si no sabes bien dónde estás, busca un lugar con luz y con gente, como un negocio abierto, una bencinera o una estación, y pide ayuda ahí.');
+          say(noCall() ? 'Quédate cerca de otras personas, no sigas tomando, y escríbeme cuando estés en un lugar con gente.' : 'Si te sientes en peligro, llama al 133 o al 131: atienden a cualquier hora.');
+          ask('¿Ves algún lugar así cerca?', 'open'); break;
+        case 'BATERIA':
+          say('Entonces aprovechemos. Si se te apaga, busca a alguien cerca y quédate con esa persona; no te quedes sin compañía.');
+          say(crisisMode() || RANK[S.risk] >= 1 ? 'El *4141 y el 131 son gratuitos y atienden las 24 horas. Y cuando vuelvas a tener batería, puedes seguir escribiendo aquí mismo.' : 'Cuando vuelvas a tener batería, puedes seguir escribiendo aquí mismo; tu conversación queda guardada.');
+          S.lastQ = 'open'; break;
+        case 'EDAD_NUM':
+          ask(`¿Tienes ${S.pendingAge} años?`, 'edad', ['Sí','No']); break;
+        case 'DOLOR_CABEZA':
+          say('Si te golpeaste fuerte la cabeza y tienes mareo, vómitos, mucho sueño o te cuesta hablar, es importante que te vean pronto en un servicio de urgencia.');
+          next(); break;
+        case 'FAQ_RASTREO':
+          say('No te pedimos nombre, teléfono ni ubicación, y no buscamos saber quién eres. Lo que escribes se guarda cifrado, solo para el equipo que te atiende.');
+          casual(); break;
         case 'EMERGENCIA':
           setTrack('suicide');
           urgent = true; showCrisis = true; crisisRes(); startSearch = true; F.emergency = true; F.ideation = true; bump('high');
@@ -1442,7 +2049,7 @@ function create(saved){
           break;
         case 'DESPEDIDA_OCULTA':
           urgent = true; showCrisis = true; crisisRes(); bump('high'); startSearch = true; S.flags.add('DESPEDIDA_EN_CRISIS'); S.used.add('despEnc');
-          say('Gracias por contarme cómo estás. Hay algo de lo que escribiste que me preocupa: suena a que te estás despidiendo.');
+          say('Gracias por contármelo. Hay algo de lo que escribiste que me preocupa: suena a que te estás despidiendo.');
           ask('Te lo pregunto directo, porque me importa: ¿estás pensando en quitarte la vida?', 'ideacion', CHIPS.ideacion); S.askedIdeation = true; break;
         case 'DECISION':
           S.flags.add('DECISION'); bump('mid');
@@ -1455,10 +2062,11 @@ function create(saved){
         case 'HOSPITAL':
           S.used.add('hosp'); say('Lamento que estés en el hospital.'); ask('¿Qué pasó?', 'open'); break;
         case 'EMERGENCIA_OTRO':
-          urgent = true; showCrisis = true; S.resources.add('131'); S.flags.add('EMERG_OTRO');
-          if (!S.used.has('emergOtro')) { S.used.add('emergOtro'); say('Llama ahora al 131 (SAMU). Te van a guiar por teléfono mientras llega la ayuda.'); say('Si no respira o no reacciona, díselo al operador: te va a indicar cómo hacer reanimación. Yo sigo aquí.'); }
+          urgent = true; showCrisis = true; S.resources.add('131'); S.flags.add('EMERG_OTRO'); S.emergOtroTurn = S.turn; startSearch = true; bump('mid');
+          S.otroFem = /\b(mi|una|la) (amiga|mama|hermana|abuela|tia|prima|polola|esposa|hija|vecina|companera|pareja|senora)\b/.test(t);
+          if (!S.used.has('emergOtro')) { S.used.add('emergOtro'); say('Llama ahora al 131 (SAMU). Te van a guiar por teléfono mientras llega la ayuda.'); say(`Si no respira o no reacciona, díselo al operador: te va a indicar cómo hacer reanimación. No ${S.otroFem ? 'la' : 'lo'} dejes ${S.otroFem ? 'sola' : 'solo'}; yo sigo aquí.`); }
           else say('Mantente en la línea con el 131 y sigue sus indicaciones. Si todavía no has llamado, hazlo ahora o pídele a alguien que llame.');
-          break;
+          ask('¿Ya pudiste llamar al 131?', 'open', ['Ya llamé','No puedo']); break;
         case 'AGRESOR':
           S.flags.add('AGRESOR'); bump('high'); setTrack('agresor'); startSearch = true; S.resources.add('149');
           say('Gracias por decírmelo con honestidad. Reconocerlo y querer cambiar es el primer paso, y se puede aprender a manejar la rabia sin dañar a nadie.');
@@ -1475,6 +2083,7 @@ function create(saved){
         case 'CUIDADOR':
           S.flags.add('CUIDADOR'); startSearch = true; S.themes.add('familia');
           say('Cuidar a alguien así es agotador, física y emocionalmente. Que no des más no habla mal de ti: habla de todo lo que estás cargando.');
+          if (/\b(no doy mas|no puedo mas|no aguanto|ya no puedo)\b/.test(t) && !S.askedIdeation && F.ideation === null) { S.askedIdeation = true; ask('A veces, con tanto cansancio, aparecen pensamientos de no querer seguir. Te lo pregunto directo, porque me importa: ¿te ha pasado?', 'ideacion', CHIPS.ideacion); break; }
           ask('¿Hace cuánto tiempo que cuidas sin descanso?'); break;
         case 'CUIDADOR_SOLO':
           say('Cuidar sin relevo desgasta muchísimo. Pedir ayuda a la familia, al CESFAM o a programas de apoyo a cuidadores no es abandonar a nadie: es cuidarte para poder seguir cuidando.'); next(true); break;
@@ -1528,7 +2137,7 @@ function create(saved){
         case 'MINIMIZAN':
           say('Que te digan eso, aunque sea con cariño, a veces hace sentir que tu pena no tiene espacio. Aquí lo tiene, y no hay apuro.'); next(true); break;
         case 'REPETIR':
-          deferQ = false; say((S.used.has('repetir') ? 'Lo que te dije fue: ' : 'Te decía: ') + (S.lastContent || R.start.join(' ')).slice(-260)); S.used.add('repetir'); if (pend) { S.pending = pend; S.lastQ = pend.type; } break;
+          deferQ = false; { const lc = (S.lastContent || R.start.join(' ')).slice(-260); say((S.used.has('repetir') ? 'Lo que te dije fue: ' : 'Te decía: ') + (/^[A-ZÁÉÍÓÚ][a-záéíóúñ]/.test(lc) && !/^(Nexo|ConténMente|Chile|Ps\.|Dr)/.test(lc) ? lc.charAt(0).toLowerCase() + lc.slice(1) : lc)); } S.used.add('repetir'); if (pend) { S.pending = pend; S.lastQ = pend.type; } break;
         case 'NO_QUIERO_IR':
           say('Tiene sentido que no quieras ir. Ir a un lugar donde te hacen sentir así es muy difícil.');
           say(ADVICE.bullying); next(true); break;
@@ -1583,7 +2192,7 @@ function create(saved){
           say('No grabo audio ni nada fuera de este chat. Lo que escribes queda en tu conversación, y solo lo ve el especialista que toma tu caso.');
           casual(); break;
         case 'FAQ_CREADOR':
-          say('Me hizo el equipo de Red Acompaña, junto a profesionales de salud mental, para acompañarte mientras un especialista humano toma tu caso.');
+          say('Me hizo el equipo de ConténMente, junto a profesionales de salud mental, para acompañarte mientras un especialista humano toma tu caso.');
           if (/chatgpt|gpt|openai|ia|inteligencia/.test(t)) say('No soy ChatGPT: soy un asistente automático hecho para este servicio.');
           casual(); break;
         case 'FAQ_VOLVER':
@@ -1601,8 +2210,10 @@ function create(saved){
           say('Claro. A veces distraerse un rato ayuda.');
           ask('¿Te gusta la música, las series, los animales, el fútbol…? Elige algo y conversamos de eso.', 'tema'); break;
         case 'ALGO_BONITO':
-          say(pick(['Algo bonito: las nutrias marinas se toman de las manos cuando duermen, para no separarse con la corriente.','Algo bonito: en algunos años de lluvia, el desierto de Atacama se cubre de flores. Le llaman "desierto florido", y es de las cosas más lindas que pasan en Chile.','Algo bonito: hay estudios que muestran que las vacas tienen "mejores amigas", y se estresan menos cuando están juntas.'],'bonito'));
-          casual('¿Cómo te sientes hoy?'); break;
+          { const BON = ['Algo bonito: las nutrias marinas se toman de las manos cuando duermen, para no separarse con la corriente.','Algo bonito: en algunos años de lluvia, el desierto de Atacama se cubre de flores. Le llaman "desierto florido", y es de las cosas más lindas que pasan en Chile.','Algo bonito: hay estudios que muestran que las vacas tienen "mejores amigas", y se estresan menos cuando están juntas.','Algo bonito: los pingüinos de Humboldt, que viven en la costa de Chile, suelen volver cada año a reencontrarse con su misma pareja.','Algo bonito: cuando un bebé agarra tu dedo con fuerza, es un reflejo que trae desde que nace. Viene "de fábrica" sabiendo aferrarse a alguien.','Algo bonito: algunos árboles comparten nutrientes con los árboles vecinos a través de hongos en sus raíces, como si se cuidaran entre ellos.'];
+            const next1 = BON.find((x, i) => !S.used.has('bonito:' + i));
+            if (next1) { S.used.add('bonito:' + BON.indexOf(next1)); say(next1); ask(pick(['¿Quieres otro, o me cuentas algo de ti?','¿Te cuento otro?'],'bonQ'), 'open', ['Otro','Mejor conversemos']); }
+            else { say('Por ahora se me acabaron las cosas bonitas.'); ask('¿Me cuentas tú algo que te guste?', 'libre'); } } break;
         case 'MALTRATO_MENOR':
           setTrack('violence'); bump('mid'); startSearch = true; S.flags.add('MALTRATO_MENOR'); crisisRes(['147','1515']);
           say('Que te traten así da mucho miedo, y no es tu culpa. Ningún niño ni niña merece que lo traten mal.');
@@ -1620,7 +2231,7 @@ function create(saved){
           say('Los aniversarios remueven mucho. Es muy natural que hoy ' + (who ? `extrañes a ${who} con más fuerza.` : 'la pena se sienta con más fuerza.'));
           ask(who ? `¿Quieres contarme un poco de ${who}?` : '¿Quieres contarme un poco de esa persona?', 'open'); break; }
         case 'NECESIDAD_BASICA':
-          S.flags.add('NECESIDAD_BASICA'); startSearch = true;
+          S.flags.add('NECESIDAD_BASICA'); S.themes.add('dinero'); startSearch = true;
           say('Gracias por contármelo. No tener para comer es muy angustiante, y no tienes por qué pasarlo sin apoyo.');
           say('En la municipalidad de tu comuna (DIDECO) pueden orientarte con ayuda social. Se lo dejo anotado al especialista también.');
           if (!S.flags.has('SIN_VIVIENDA') && !S.used.has('techoQ')) { S.used.add('techoQ'); ask('¿Tienes dónde quedarte esta noche?', 'techo', ['Sí','No']); } else next(true); break;
@@ -1677,12 +2288,13 @@ function create(saved){
           if (/\b(131|133|ambulancia|samu|carabineros|pacos|bomberos)\b/.test(t) && !F.emergency) { say('Si es una emergencia, marca tú el 131 o pídele a alguien cerca que lo haga; responden a cualquier hora.'); ask('¿Qué está pasando?', 'open'); break; }
           if (F.emergency || urgent || RANK[S.risk] >= 2) say(F.emergency ? 'Pero tú o alguien cerca sí: marca el 131, y si no puedes hablar, deja la llamada abierta.' : 'Si es una emergencia, pídele a alguien cerca que llame al 131 por ti.');
           else if (/\b(131|133|4141)\b/.test(t)) say('Si es una emergencia, márcalo tú o pídele a alguien cerca que lo haga. Yo me quedo aquí contigo.');
+          else if (/\b(me|nos) (pueden|puedes|podrian) llamar\b|\bllamame\b/.test(t)) { say('La atención es por este chat: aquí mismo te escriben.'); if (!noCall()) say('Si necesitas hablar por teléfono con alguien ahora, el *4141 atiende las 24 horas.'); }
           else say('Pero el especialista sí te puede ayudar a pensar cómo contactar a quien necesites.');
           casual(); break;
         case 'FAQ_NUMEROS':
           crisisRes(); S.resources.add('133');
           say('Estos números atienden en Chile, gratis:\n• *4141: prevención del suicidio, 24 horas.\n• 131: SAMU, emergencias médicas.\n• 1515: Línea Libre, para jóvenes.\n• 133: Carabineros, si estás en peligro.');
-          casual(); break;
+          casual(/\b(si me siento|por si|en caso|si alguna vez)\b/.test(t) ? '¿Te estás sintiendo mal ahora?' : '¿Cómo te estás sintiendo tú?'); break;
         case 'FAQ_WHATSAPP':
           say('Por ahora el contacto es por este chat: aquí mismo te va a escribir el especialista.');
           casual(); break;
@@ -1695,7 +2307,7 @@ function create(saved){
           else if (/\belegir\b/.test(t)) say('Si tienes alguna preferencia, por ejemplo que sea hombre o mujer, dímela y la dejo anotada para el equipo.');
           else if (/\bcobra\b/.test(t)) say('Para ti no tiene costo.');
           else if (/\bpresencial\b/.test(t)) say('La primera conversación es por aquí. Si necesitas atención presencial, el especialista te puede orientar sobre dónde y cómo.');
-          else say('Son profesionales de salud mental registrados en la plataforma.');
+          else say('Sí. Quienes atienden son personas reales: profesionales de salud mental del equipo.');
           casual(); break;
         case 'FAQ_RIESGO':
           say('Leo lo que escribes buscando señales de riesgo, como ideas de quitarse la vida, planes, autolesiones o violencia. Si aparecen, pregunto directo, entrego líneas de ayuda y aviso con prioridad a un especialista humano.');
@@ -1703,9 +2315,8 @@ function create(saved){
           casual(); break;
         case 'FAQ_BORRAR':
           if (S.used.has('borrar')) { say('Lo entiendo. Se lo dejo anotado al equipo para que lo tengan en cuenta.'); S.flags.add('PIDE_BORRAR'); casual(); break; } S.used.add('borrar');
-          if (S.used.has('borrar')) { say('Lo entiendo. Puedes escribir sin dar tu nombre ni datos personales, y el especialista te puede explicar cómo se cuida tu información.'); casual(); break; } S.used.add('borrar');
-          say('Entiendo que quieras cuidar tu privacidad. Lo que escribes aquí es confidencial y solo lo ve el especialista que toma tu caso.');
-          say('Si quieres que se elimine, pídeselo al especialista o al equipo de la plataforma.');
+          say('Con el botón «Olvidar esta conversación en este dispositivo», abajo, deja de verse en este celular o computador. Y arriba está «Salir rápido», por si necesitas cerrar de inmediato.');
+          say('Lo que ya escribiste queda guardado de forma confidencial, solo para el equipo que te atiende. Si quieres que lo eliminen, puedes pedírselo al especialista.');
           casual(); break;
         case 'FAQ_SISTEMA':
           if (/\b(entiende|cae bien|gusta|ayuda|sirve)\b/.test(t)) say('Puedes decírselo con confianza; está para eso. Y si no te acomoda, se puede buscar a otra persona.');
@@ -1716,8 +2327,10 @@ function create(saved){
           say('¡Hola! Qué bueno que estés probando. Puedes escribir como lo haría alguien que consulta, con faltas o jerga incluidas, y ver cómo responde el acompañamiento.');
           say('En la pestaña "Especialista" está el panel con las alertas y los casos.'); break;
         case 'HORA': {
-          const d = new Date(); say(`Son las ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}.`);
-          if (d.getHours() >= 0 && d.getHours() < 6) say('Es tarde. Las noches a veces se hacen más pesadas.');
+          const d = new Date(); let hh = d.getHours(), mm = d.getMinutes();
+          try { const pr = new Intl.DateTimeFormat('es-CL', { timeZone:'America/Santiago', hour:'2-digit', minute:'2-digit', hour12:false }).formatToParts(d); hh = +pr.find(x => x.type === 'hour').value % 24; mm = +pr.find(x => x.type === 'minute').value; } catch (e) { /* sin zona horaria */ }
+          say(`Son las ${hh}:${String(mm).padStart(2,'0')}.`);
+          if (hh >= 0 && hh < 6) say('Es tarde. Las noches a veces se hacen más pesadas.');
           casual(); break; }
         case 'LUGAR_ATENCION':
           say('No puedo ver dónde estás, pero si es una emergencia llama al 131 (SAMU): te orientan o envían ayuda.');
@@ -1772,7 +2385,7 @@ function create(saved){
         case 'MEDIOS_CRISIS':
           urgent = true; showCrisis = true; crisisRes(); bump('high'); setTrack('suicide'); startSearch = true; S.flags.add('MEDIOS'); S.flags.add('MEDIOS_CERCA'); F.meansAway = null; S.asked.means = 0;
           say(pick(['Gracias por decírmelo. Es importante que lo sepa.','Gracias por contármelo; me importa que estés a salvo.'],'medios1'));
-          ask(/\b(en la mano|en mis manos|aqui conmigo|lo tengo aqui|la tengo aqui|al lado)\b/.test(t) ? '¿Puedes soltarlo y dejarlo lejos de ti, aunque sea en otra pieza, mientras conversamos?' : pick(['¿Puedes dejarlo lejos de ti ahora, en otra pieza o con alguien de confianza? Eso te cuida mucho.','¿Podrías dejar eso lejos de ti, aunque sea en otra pieza, mientras conversamos?'],'medios2'), 'means', CHIPS.means); break;
+          ask(/\b(en la mano|en mis manos|aqui conmigo|lo tengo aqui|la tengo aqui|al lado)\b/.test(t) ? '¿Puedes soltarlo y dejarlo lejos de ti, aunque sea en otra pieza, mientras conversamos?' : (mo => pick([`¿Puedes dejar${mo.cl} lejos de ti ahora, en otra pieza o con alguien de confianza? Eso te cuida mucho.`, `¿Podrías dejar ${mo.noun} lejos de ti, aunque sea en otra pieza, mientras conversamos?`],'medios2'))(meansObj()), 'means', CHIPS.means); break;
         case 'RETRACTA':
           F.called = 'retracta'; S.flags.add('RETRACTA_EMERGENCIA');
           if (!S.used.has('retracta')) { S.used.add('retracta'); say('Ok, te creo, y me alegra que no lo hayas hecho.'); say('Igual, si llegaste a tomar algo, aunque sea poco, dímelo: es importante que te vea un médico. Y si estás pasando por algo difícil, aquí estoy.'); ask('¿Cómo estás de verdad?', 'estado'); }
@@ -1797,12 +2410,12 @@ function create(saved){
           say('Las noticias así impactan mucho, sobre todo cuando esa persona era importante para ti o cuando remueven cosas propias.');
           ask('¿Cómo te dejó a ti esa noticia?', 'estado'); break;
         case 'PREG_SUICIDIO':
-          bump('mid'); S.askedIdeation = true;
+          S.riskPreFaq = S.risk; bump('mid'); S.askedIdeation = true;
           say('Es una pregunta muy importante. Casi nunca hay una sola razón: suele juntarse un dolor muy grande con la sensación de que no hay salida, muchas veces con depresión u otras dificultades.');
           say('Lo esperanzador es que ese dolor se puede tratar, y pedir ayuda funciona.');
           ask('¿Te lo preguntas por algo que estás viviendo tú, o alguien cercano?', 'pregsui', ['Por mí','Por alguien cercano','Solo curiosidad']); break;
         case 'PLAN_AMBIGUO':
-          bump('mid'); S.flags.add('FRASE_AMBIGUA');
+          bump('mid'); S.flags.add('FRASE_AMBIGUA'); S.planAmbTurn = S.turn;
           ask('¿Qué es lo que vas a hacer?', 'planamb'); break;
         case 'BROMA_BOT':
           say(pick(['Jaja, aquí estoy, no me he ido. Perdona si me demoré.','Aquí sigo, tranqui. Perdona la demora.'],'brbot'));
@@ -1857,17 +2470,17 @@ function create(saved){
           say(pick(['Es muy común sentir culpa después de una pérdida así. Pero una decisión así casi nunca depende de una sola cosa ni de una sola persona. No es tu culpa.','Ese "y si hubiera…" es parte del duelo, pero no te hace responsable de lo que pasó.'],'culpaD'));
           next(); break;
         case 'FAQ_PROTOCOLO':
-          bump('mid'); S.askedIdeation = true;
+          S.riskPreFaq = S.risk; bump('mid'); S.askedIdeation = true;
           say('Si alguien me dice eso, lo tomo en serio: le pregunto si está a salvo, le doy las líneas de ayuda y aviso con prioridad a un especialista humano, que le escribe por aquí mismo.');
           ask('¿Te está pasando algo así a ti ahora?', 'ideacion', CHIPS.ideacion); break;
         case 'METODO_EXCUSA':
-          say(S.used.has('metExc') ? 'Eso no lo voy a compartir, sea para lo que sea.' : 'Entiendo. Igual no puedo dar esa información, ni para una historia: podría dañar a alguien.'); S.used.add('metExc');
+          say(S.used.has('metExc') ? 'Eso no lo voy a compartir, sea para lo que sea.' : 'Entiendo. Igual no puedo dar esa información, aunque sea para un trabajo o una historia: podría dañar a alguien.'); S.used.add('metExc');
           if (!deferQ) casual('Si en algún momento te pasa a ti, aquí estoy. ¿Cómo estás tú?'); break;
         case 'TERCERO_MAL':
           setTrack('helper'); startSearch = true; S.flags.add('TERCERO_PREOCUPA');
           if (/\b(toma|bebe|droga|consume|fuma|curad)/.test(t)) S.resources.add('1412');
           say(pick(['Se nota que te preocupa mucho. Hiciste bien en escribir.','Qué difícil ver así a alguien que quieres. Gracias por escribir.'],'tmal'));
-          ask(BEH.test(t) ? '¿Qué más has notado en esa persona últimamente?' : '¿Qué está pasando con esa persona?', 'open'); break;
+          { const who = personIn(t); S.tercWho = who || S.tercWho; ask(BEH.test(t) ? `¿Qué más has notado en ${who || 'esa persona'} últimamente?` : `¿Qué está pasando con ${who || 'esa persona'}?`, 'open'); } break;
         case 'HELPER_IFYES':
           say('Si te dice que sí: mantén la calma, agradécele que te lo cuente y no le prometas guardar el secreto.');
           say('No lo dejes sin compañía, aleja lo que pueda usar para hacerse daño y busquen ayuda ese mismo día: el *4141 los orienta, y si hay riesgo inmediato, el 131.');
@@ -1913,6 +2526,7 @@ function create(saved){
           if (a.intents.includes('TERCERO')) { S.flags.add('TERCERO'); crisisRes(); showCrisis = true; startSearch = true; bump('mid'); }
           if (S.thirdDanger && !S.used.has('howNow')) { S.used.add('howNow'); say('Quédate a su lado y háblale con calma: "Estoy aquí contigo y no me voy a ir". No necesitas tener las palabras perfectas.'); say('Escúchala sin discutir ni retar, y si puedes, aleja lo que pueda usar para hacerse daño. Si la ves en peligro, llama al 131.'); trackNext(); break; }
           if (/\b(matar|suicid|morir|quitar|dano|cortar)/.test(t) && !S.used.has('howSui')) { S.used.add('howSui'); say('Puedes preguntarle directo y con calma, en un momento a solas: "Me preocupas. ¿Has pensado en quitarte la vida?". Preguntarlo no le mete la idea; al contrario, suele aliviar.'); say('Si se enoja, no pasa nada: dile que preguntas porque te importa y que vas a estar ahí. Si te dice que sí, no lo dejes sin compañía y busquen ayuda ese mismo día (*4141).'); trackNext(); break; }
+          if (S.minor && /\btu (mama|papa)\b/.test(S.tercWho || '') && !S.used.has('howHijo')) { S.used.add('howHijo'); say(`No te toca a ti sanar a ${S.tercWho}. Puedes decirle que l${/mama/.test(S.tercWho) ? 'a' : 'o'} quieres y que te preocupa, y contarle a otro adulto de confianza (otro familiar, un profe o alguien del colegio) para que l${/mama/.test(S.tercWho) ? 'a' : 'o'} ayude a consultar.`); say('Y tú también mereces apoyo: el 1515 (Línea Libre) escucha a jóvenes, gratis.'); trackNext(); break; }
           say('Puedes empezar con algo simple y directo, en un momento tranquilo: "He notado que lo estás pasando mal y me preocupas. ¿Cómo estás de verdad?".');
           say('Escucha sin retar ni minimizar. Si te cuenta que se hace daño o que piensa en morir, agradécele la confianza y busquen ayuda juntos (el *4141 también orienta a quien acompaña).');
           trackNext(); break;
@@ -1925,22 +2539,27 @@ function create(saved){
           say('Si sientes que te va a hacer daño, llama al 133. Yo sigo aquí contigo.');
           S.lastQ = 'open'; break;
         case 'TEMA_LIBRE': {
-          say('Me parece bien despejarse un rato.');
+          say(S.used.has('libre1') ? pick(['Buena elección.','Me gusta.'],'libre2') : 'Me parece bien despejarse un rato.'); S.used.add('libre1');
           const q = /futbol|partido|equipo|colo|la u\b/.test(t) ? '¿De qué equipo eres?' : /musica|cancion|banda|escuchar/.test(t) ? '¿Qué estás escuchando últimamente?' : /serie|pelicula|netflix|anime/.test(t) ? '¿Qué has visto que te haya gustado?' : /juego|jugar|play|fortnite|minecraft|lol\b/.test(t) ? '¿A qué juegas?' : 'Cuéntame, ¿qué te gusta de eso?';
           ask(q, 'libre'); break; }
         case 'OPCION':
           say('Es una opción que vale la pena pensar con calma, sin apuro.');
           ask('¿Qué te hace dudar?', 'open'); break;
         case 'SECRETO':
-          if (S.flags.has('TRATAMIENTO') || /psicolog|psiquiatr|terapeut/.test(S.lastBot + ' ' + t)) { say('Tiene sentido que cueste. Contarle a tu psicólogo cómo estás de verdad puede ayudar a que el tratamiento te sirva más.'); next(true); break; }
+          if (S.flags.has('TRATAMIENTO') || /psicolog|psiquiatr|terapeut/.test(S.lastBot + ' ' + t)) { const pr = /psiquiatr/.test(t) ? 'tu psiquiatra' : /psicologa/.test(t) ? 'tu psicóloga' : /terapeut/.test(t) ? 'tu terapeuta' : /psiquiatr/.test(S.lastBot) ? 'tu psiquiatra' : 'tu psicólogo o psicóloga'; say(`Tiene sentido que cueste. Contarle a ${pr} cómo estás de verdad puede ayudar a que el tratamiento te sirva más.`); next(true); break; }
           if (S.track === 'past') { say('Gracias por confiarme algo que nunca habías contado. Eso requiere mucho valor.'); say('Aquí puedes ir a tu ritmo; no tienes que contar nada más de lo que quieras.'); trackNext(); break; }
           if (S.track === 'violence' && S.minor) { S.used.add('tip:violence'); say('Entiendo que no quieras que se sepa; da mucho miedo. Pero lo que te pasa no está bien, y mereces que un adulto te proteja.'); say('No tienes que contarlo a todos: basta con un adulto de confianza, como un familiar, el orientador o un profe que no sea esa persona. El 147 y el 1515 también te escuchan, gratis.'); trackNext(); break; }
           if (S.track === 'grooming') { say('Entiendo que dé miedo contarlo. Pero contarle a un adulto de confianza es lo que más te puede proteger, y no te van a culpar a ti.'); trackNext(); break; }
+          if (S.minor && (crisisMode() || RANK[S.risk] >= 2)) { say('Entiendo que cueste contarlo. Igual me gustaría que un adulto de confianza supiera cómo estás: tu mamá o tu papá, un profe o alguien del colegio.'); say('No tienes que contarle todo; basta con decirle "no estoy bien y necesito ayuda".'); next(true); break; }
+          if (crisisMode()) { say('Entiendo que cueste. No tienes que contarle todo: a veces basta con decir "no estoy bien, ¿te puedes quedar conmigo?".'); next(true); break; }
+          if (!S.flags.has('VIOLENCIA') && RANK[S.risk] < 2 && ['pareja','estudios','familia','soledad','trabajo','despido','dinero'].some(x => S.themes.has(x)) && !['alimentacion','autoestima','embarazo','identidad'].some(x => S.themes.has(x))) { say('A veces contarle a alguien de confianza, aunque sea un poco, alivia. Pero no tienes que hacerlo si no quieres.'); next(true); break; }
           say(pick(['Está bien. No tienes que contarle a nadie ahora si no quieres.','Entiendo. Es tu decisión a quién contarle y cuándo.'],'secreto'));
           say('Si algún día quieres hacerlo, el especialista te puede ayudar a pensar cómo.');
           next(true); break;
         case 'NO_LO_HARIA':
+          if (!RISKY_OWN(S) && !S.askedIdeation && F.ideation === null && !S.flags.has('PASIVA') && !S.flags.has('AUTOLESION')) { say('Qué bueno. A veces las ganas aparecen fuertes, y lo importante es no hacerle daño a nadie, ni a ti.'); next(true); break; }
           say('Gracias por contarme eso; me alivia leerlo. Igual esos pensamientos pesan, y vale la pena conversarlos con el especialista.');
+          if (!crisisMode() && F.ideation === null && (S.asked.ideacion||0) < MAXASK.ideacion && !deferQ) { S.askedIdeation = true; S.flags.add('SIN_PLAN'); ask('Para entenderte bien: ¿aparecen pensamientos de quitarte la vida, aunque no tengas un plan?', 'ideacion', CHIPS.ideacion); break; }
           crisisMode() ? crisisNext() : nextQ(true); break;
         case 'EMERG_SINTOMA':
           urgent = true; showCrisis = true;
@@ -1954,8 +2573,8 @@ function create(saved){
           next(); break;
         case 'LUGAR_PELIGRO':
           setTrack('suicide');
-          urgent = true; showCrisis = true; crisisRes(['133']); startSearch = true; F.ideation = true; bump('high'); S.flags.add('PLAN');
-          say('Por favor, aléjate del borde ahora mismo: da unos pasos hacia atrás, hacia un lugar donde puedas sentarte.');
+          urgent = true; showCrisis = true; crisisRes(['133']); startSearch = true; F.ideation = true; bump('high'); S.flags.add('PLAN'); S.flags.add('LUGAR_PELIGRO');
+          say(/\b(balcon|ventana)\b/.test(t + ' ' + (S.lastUser || '')) ? 'Por favor, entra ahora mismo y aléjate del balcón o la ventana: siéntate adentro, en el suelo si puedes.' : 'Por favor, aléjate del borde ahora mismo: da unos pasos hacia atrás, hacia un lugar donde puedas sentarte.');
           say(callLine(F.refusedCall ? 'override' : 'urgent'));
           ask('¿Puedes alejarte un poco y avisarme?', 'alejarse', CHIPS.alejarse); break;
         case 'METODO':
@@ -1969,11 +2588,12 @@ function create(saved){
           setTrack('suicide');
           urgent = true; showCrisis = true; crisisRes(); startSearch = true; F.ideation = true; bump('high');
           if (pend && pend.type === 'alejarse' && stillNeeded(pend)) { say('Lo que me cuentas me preocupa mucho, y quiero que estés a salvo ahora.'); if (S.sug.call < 2) say(callLine(F.refusedCall ? 'override' : 'urgent')); reask(pend); break; }
-          say('Lo que me cuentas me preocupa mucho y quiero que estés a salvo ahora.');
+          if (S.planWhen && !S.used.has('planWhen')) { S.used.add('planWhen'); say(`Me dices que es ${S.planWhen.replace(/\bmanana\b/, 'mañana').replace(/\bmiercoles\b/, 'miércoles').replace(/\bsabado\b/, 'sábado')}. Eso me preocupa mucho, y quiero que estés a salvo.`); }
+          else say('Lo que me cuentas me preocupa mucho y quiero que estés a salvo ahora.');
           say(callLine(F.refusedCall ? 'override' : 'urgent'));
           say('Ya alerté al especialista con prioridad máxima.');
           if (S.flags.has('PLAN_LUGAR') && !S.used.has('donde')) { S.used.add('donde'); ask('¿Dónde estás en este momento?', 'donde'); }
-          else if (F.meansAway === null && (S.asked.means||0) < MAXASK.means) ask(R.askMeans, 'means', CHIPS.means); else crisisNext();
+          else if (F.meansAway === null && (S.asked.means||0) < MAXASK.means) ask(S.flags.has('PLAN_PASTILLAS') ? '¿Puedes dejar las pastillas lejos de ti ahora, en otra pieza o con alguien de confianza?' : R.askMeans, 'means', CHIPS.means); else crisisNext();
           break;
         case 'IDEACION':
           setTrack('suicide');
@@ -1985,15 +2605,16 @@ function create(saved){
             crisisNext(); break;
           }
           F.ideation = true; S.ideaDone = true;
-          if (a.intents.includes('OTRO_IDIOMA') || a.intents.includes('OTRO_RIESGO')) say('Puedes escribir en tu idioma; el especialista lo va a leer. / You can write in your language.');
+          if (a.intents.includes('OTRO_IDIOMA') || a.intents.includes('OTRO_RIESGO')) say(/\b(quero|morrer|vou|estou|nao|voce)\b/.test(t) ? 'Pode escrever em português; a equipe vai ler. Se você estiver em perigo, ligue para o 131 ou o *4141 (24 h).' : 'Puedes escribir en tu idioma; el especialista lo va a leer. / You can write in your language. If you are in danger, call 131 or *4141 (24/7).');
           if (urgent) { say('Lo que me cuentas es muy serio y quiero que estés a salvo ahora mismo.'); say(callLine(F.refusedCall ? 'override' : 'urgent')); }
           else say(pick(['Gracias por confiarme algo tan importante. No tienes que pasar por esto sin compañía.','Gracias por decírmelo. Sé que no es fácil, y me alegra que hayas escrito.'],'idea'));
+          if (a.intents.includes('SUSTANCIAS')) { S.resources.add('1412'); say('Con alcohol o drogas encima, todo se siente más intenso y más riesgoso. Si puedes, no sigas tomando ni consumiendo.'); }
           reflect(freshThemes, 1);
           say('Ya alerté con prioridad máxima a los especialistas disponibles.');
           if (a.flags.includes('MEDIOS') && F.meansAway !== true) { S.flags.add('MEDIOS_CERCA'); S.flags.add('MEDIOS'); ask(/\b(en la mano|en mis manos|aqui conmigo|al lado)\b/.test(t) ? '¿Puedes soltarlo y dejarlo lejos de ti mientras conversamos?' : '¿Puedes dejar eso lejos de ti ahora, en otra pieza o con alguien, mientras conversamos?', 'means', CHIPS.means); break; }
           crisisNext(); break;
         case 'IDEACION_HUMOR':
-          S.risk = RANK[prevRisk] >= 1 ? prevRisk : 'mid'; startSearch = true; S.askedIdeation = true;
+          S.risk = RANK[prevRisk] >= 1 ? prevRisk : 'mid'; startSearch = true; S.askedIdeation = true; S.flags.add('IDEACION_HUMOR');
           say('Lo dices medio en broma, y a veces se dice así. Pero igual te lo quiero preguntar en serio, porque me importa.');
           ask('¿Has pensado en quitarte la vida?', 'ideacion', CHIPS.ideacion); break;
         case 'AUTOLESION':
@@ -2004,8 +2625,10 @@ function create(saved){
             say('Las ganas suelen subir y bajar como una ola: si logras esperar un rato, suelen bajar. Ya avisé a un especialista.');
             S.flags.add('MEDIOS_CERCA'); S.flags.add('GANAS_AUTOLESION'); ask('¿Puedes dejar lejos lo que usarías, mientras conversamos?', 'means', CHIPS.means); break;
           }
-          say('Gracias por contármelo; sé que no es fácil decirlo. No te voy a juzgar.');
-          say('Si tienes una herida que sangra mucho o es profunda, llama ahora al 131.');
+          if (S.flags.has('AUTOLESION_SIN_IDEACION') && !S.used.has('asi')) { S.used.add('asi'); say('Gracias por contármelo, y por explicarme que no es para quitarte la vida. Muchas veces hacerse daño es una forma de aliviar un dolor muy grande por dentro, y no te voy a juzgar.'); }
+          else say('Gracias por contármelo; sé que no es fácil decirlo. No te voy a juzgar.');
+          if (/\b(llevaba|llevo|estuve) .{0,30}\bsin (cortarme|hacerme dano|lastimarme|hacerlo|quemarme)\b|\bvolvi a (cortarme|hacerme dano|lastimarme|hacerlo|quemarme)\b|\brecai\b/.test(t)) say('Llevabas tiempo sin hacerlo, y eso no se borra por un día difícil. Una recaída no te devuelve a cero.');
+          say(/cabezazo|cabesazo|en la cabeza|contra la pared/.test(t) ? 'Si te golpeaste fuerte la cabeza y tienes mareo, vómitos o mucho sueño, es importante que te vean en un servicio de urgencia.' : 'Si tienes una herida que sangra mucho o es profunda, llama ahora al 131.');
           say('Ya avisé a un especialista.');
           if (F.safe === null) ask(pick(R.askSafe,'askSafe'), 'safe', CHIPS.safe); else crisisNext();
           break;
@@ -2036,15 +2659,23 @@ function create(saved){
             ask('¿Cómo te afecta hoy lo que viviste?', 'open'); break;
           }
           bump('high'); setTrack('violence');
+          if (/\b(me violaron|me violo|abusaron de mi|me abuso|me abusaron|me obligaron a tener sexo|me forzaron)\b/.test(t) && /\b(ayer|anoche|hoy|recien|el fin de semana|este fin|el (lunes|martes|miercoles|jueves|viernes|sabado|domingo)|hace (un|dos|tres|unos|un par de) dias|esta semana|en una fiesta|en un carrete)\b/.test(t)) {
+            S.flags.add('VIOLENCIA_SEXUAL_RECIENTE'); S.used.add('tip:violence');
+            say('Lo que me cuentas es muy grave, y no es tu culpa. Gracias por confiármelo.');
+            say('Si pasó hace menos de 72 horas, es importante que consultes en un servicio de urgencia: te pueden dar tratamiento para prevenir infecciones y embarazo, aunque no hagas una denuncia.');
+            say(S.minor ? 'También puedes llamar al 147 (Fono Niños) o al 1515, y contarle a un adulto de confianza.' : 'El 1455 orienta las 24 horas, sin obligarte a denunciar.');
+            ask('¿Ahora mismo estás en un lugar seguro?', 'safev', CHIPS.safe); break;
+          }
           say('Lo que me cuentas es grave, y no es tu culpa. Tienes derecho a estar a salvo.');
           say(S.minor ? 'Si estás en peligro ahora, llama al 133. También puedes llamar al 147 (Fono Niños) o al 1515 (Línea Libre), o contarle a un adulto de confianza.'
                       : /\b(soy hombre|porque soy hombre|siendo hombre|como hombre)\b/.test(t) ? 'Te creo. La violencia en la pareja también les pasa a los hombres, y no es menos grave. Si estás en peligro ahora, llama al 133; el 149 (Fono Familia) también orienta.' : /\b(toca|tocaba|toco|manosea|abus|viol|mete mano|cosas que no me gusta)/.test(t) ? 'Si estás en peligro ahora, llama al 133. Para orientación está el 149 (Fono Familia), y si eres menor de edad, el 147 (Fono Niños) o el 1515.' : 'Si estás en peligro ahora, llama al 133. Para orientación están el 1455 (violencia contra la mujer, 24 h) y el 149 (Fono Familia).');
           say('Ya avisé a un especialista.'); ask('¿Ahora mismo estás a salvo de esa persona?', 'safev', CHIPS.safe); break; }
         case 'TERCERO':
           startSearch = true; crisisRes(); showCrisis = true; setTrack('helper');
-          say(pick(['Gracias por preocuparte por esa persona; lo que haces es importante.','Qué difícil es ver así a alguien que te importa. Hiciste bien en escribir.'],'terc1'));
+          { const who = personIn(t) || (S.lastPerson && S.turn - (S.lastPersonTurn || 0) <= 3 && !/^tus /.test(S.lastPerson) ? S.lastPerson : null); S.tercWho = who || S.tercWho; S.tercFem = who ? /\b(amiga|mama|hermana|abuela|tia|prima|polola|esposa|hija|vecina|madrina|jefa|pareja)\b/.test(who) : true;
+            say(who && !S.used.has('terc1:0') ? (S.used.add('terc1:0'), `Gracias por preocuparte por ${who}; lo que haces es importante.`) : pick(['Gracias por preocuparte por esa persona; lo que haces es importante.','Qué difícil es ver así a alguien que te importa. Hiciste bien en escribir.'],'terc1')); }
           say(S.used.has('terc2') ? 'Si ves que corre peligro, no la dejes sola y llama al 131.' : 'Si crees que está en peligro ahora, llama al 131 o al *4141 (también orientan a quien acompaña).'); S.used.add('terc2');
-          ask('¿Esa persona está en peligro en este momento?', 'third', CHIPS.third); break;
+          ask(S.tercWho && !/^tus /.test(S.tercWho) ? `¿${S.tercWho.charAt(0).toUpperCase() + S.tercWho.slice(1)} está en peligro en este momento?` : '¿Esa persona está en peligro en este momento?', 'third', CHIPS.third); break;
         case 'INTENTO_PREVIO':
           startSearch = true; S.askedIdeation = true; S.flags.add('INTENTO_PREVIO');
           say(S.flags.has('HOSPITAL') ? 'Gracias por contármelo. Qué bueno que estés recibiendo atención, y que estés aquí.' : 'Gracias por contarme algo tan importante. No te voy a juzgar.');
@@ -2063,6 +2694,8 @@ function create(saved){
           S.askedIdeation = true; break;
         case 'IDEACION_NEGADA':
           startSearch = true; S.askedIdeation = true;
+          if (S.flags.has('AUTOLESION') && F.ideation !== true) { F.ideation = false; say('Gracias por aclarármelo; me ayuda a entender lo que estás viviendo.'); if (pend && IMPORTANT.has(pend.type) && stillNeeded(pend) && !asked) { deferQ = false; reask(pend); } else crisisNext(); break; }
+          if (F.ideation === null && /\b(cansad[oa]|chat[oa]|agotad[oa]|harto|harta|reventad[oa])\b/.test(t)) { S.askedIdeation = true; say('Gracias por aclarármelo. El cansancio también pesa mucho, y vale la pena hablarlo.'); reflect(freshThemes, 1); ask('A veces, con tanto cansancio, igual aparecen ideas de no querer seguir, aunque uno no quiera hacer nada. ¿Te ha pasado?', 'ideacion', CHIPS.ideacion); break; }
           if (F.ideation === false) { say(pick(['Qué bueno, gracias por aclarármelo.','Entendido, me alegra leerlo.'],'negOk')); next(true); break; }
           if (F.ideation === true) { say('Me alegra leer eso. Igual sigo aquí contigo, y el especialista ya está avisado.'); next(true); break; }
           say('Entiendo. A veces esos pensamientos aparecen aunque uno no quiera hacer nada.');
@@ -2079,7 +2712,9 @@ function create(saved){
 
         /* lo que la persona le dice al bot */
         case 'NO_LLAMAR': {
+          if (F.emergency && F.called !== true) { F.refusedCall = true; S.flags.add('NO_PUEDE_LLAMAR'); say('Sé que no quieres llamar, pero esto es distinto: es una urgencia médica, y tu cuerpo puede necesitar atención aunque ahora te sientas bien.'); say('Si no quieres hablar tú, pídele a alguien cerca que llame al 131 por ti, o ve a un servicio de urgencia (SAPU u hospital).'); ask('¿Hay alguien cerca que pueda ayudarte a hacerlo?', 'llamo131', CHIPS.llamo131); break; }
           const nobody = /\b(a nadie|no tengo a quien|no tengo con quien|no hay a quien|con nadie)\b/.test(t);
+          if (S.flags.has('VIOLENCIA_EN_CURSO') || (S.track === 'violence' && /\b(escuch|oir|oye|me va a)\b/.test(t))) { say('Entiendo: que no te escuche es lo primero. Escríbele por mensaje a alguien de confianza (un familiar, una amistad, un vecino) para que llame al 133 por ti y dé tu dirección.'); say('Pon el celular en silencio y quédate donde estés más a salvo. Yo sigo aquí.'); S.lastQ = 'open'; break; }
           if (a.intents.includes('YA_DIJE')) say('Tienes razón, ya me lo habías dicho. Perdona.');
           if (F.refusedCall && S.n.refuse) {
             S.n.refuse++; say('No te voy a insistir más con eso. Seguimos por aquí.');
@@ -2104,7 +2739,7 @@ function create(saved){
           crisisMode() ? crisisNext() : nextQ(true); break;
         case 'NADIE':
           F.someone = false; if (F.alone === null && /\b(estoy|hay)\b/.test(t)) F.alone = true;
-          say(pick(['Siento que estés pasando esto sin compañía. Aquí estoy, y el especialista también va a estar.','Entiendo. Por eso es tan valioso que hayas escrito aquí.'],'nadie'));
+          say(pick(['Siento que estés pasando esto sin compañía. Aquí estoy contigo, y no tienes que cargarlo sin apoyo.','Entiendo. Por eso es tan valioso que hayas escrito aquí.'],'nadie'));
           next(true); break;
         case 'AYUDA':
           startSearch = true; S.n.help++;
@@ -2125,10 +2760,14 @@ function create(saved){
             say('Lo más importante que puedes hacer por esa persona:\n• Si crees que está en peligro, no la dejes sola y llama al 131.\n• Háblale directo y sin juzgar: pregúntale cómo está y si ha pensado en hacerse daño.\n• Llama al *4141 para que te orienten a ti; también atienden a quien acompaña.\n• Ayúdala a pedir hora con un profesional, y si puedes, acompáñala.');
             ask('¿Esa persona sabe que te preocupa?', 'sabe');
           } else if (S.themes.size && (!freshThemes.length || freshThemes.every(x => x === 'animo' || x === 'ansiedad'))) {
-            const top = [...S.themes].filter(x => ADVICE[x]).sort((x,y)=>TPRI.indexOf(x)-TPRI.indexOf(y))[0] || [...S.themes].sort((x,y)=>TPRI.indexOf(x)-TPRI.indexOf(y))[0];
+            const at = S.themeAt || {}; const top = [...S.themes].filter(x => ADVICE[x]).sort((x,y)=>((at[y]||0)-(at[x]||0)) || (TPRI.indexOf(x)-TPRI.indexOf(y)))[0] || [...S.themes].sort((x,y)=>TPRI.indexOf(x)-TPRI.indexOf(y))[0];
             say(ADVICE[top] || 'No tienes que resolverlo todo de una vez, ni sin apoyo. Ir paso a paso y apoyarte en alguien de confianza suele ayudar mucho.');
             say(S.searching ? 'El especialista ya está avisado y te va a ayudar a pensar qué hacer.' : pick(R.search,'search')); S.searching = true;
-            ask('¿Qué te parece?', 'open');
+            ask('¿Te hace sentido?', 'open');
+          } else if (S.n.help >= 2 && /^((ayuda|ayudame|ayudenme|auxilio|socorro|por favor|ya|ahora|urgente)\s*)+$/.test(t)) {
+            bump('mid'); showCrisis = true; crisisRes();
+            say(S.used.has('helpRep') ? pick(['Aquí estoy. No me voy a ir.','Te leo. Estoy aquí contigo.'],'helpRep2') : 'Estoy aquí contigo. Si estás en peligro ahora, llama al 131 o al *4141.'); S.used.add('helpRep');
+            ask('Para saber cómo ayudarte: ¿estás a salvo en este momento?', 'safe', CHIPS.safe);
           } else {
             say(pick(['Estoy aquí para ayudarte.','Claro, aquí estoy.'],'help3'));
             reflect(freshThemes, 1);
@@ -2139,6 +2778,7 @@ function create(saved){
         case 'ESPERA':
           if (!S.searching && S.mode === 'normal' && !crisisMode()) { say('Todavía no he pedido un especialista. Normalmente contestan en pocos minutos.'); ask('¿Quieres que lo busque ahora?', 'busco', ['Sí, búscame uno','Todavía no']); break; }
           startSearch = S.mode === 'normal'; S.n.wait++;
+          if (S.flags.has('PLAN_B') && S.planBGuardia && S.pros !== 0 && S.mode === 'normal') { say(pick(['La especialista de guardia ya tiene tu caso y te va a escribir por aquí. Sé que esperar se hace eterno.','Tu caso ya lo tiene la guardia. Sé que la espera se hace larga; aquí sigo contigo.'],'waitB')); if (crisisMode()) say(callLine('normal')); if (crisisMode()) crisisNext(); else ask('Mientras tanto, ¿cómo estás ahora?', 'estado'); break; }
           if (S.mode === 'agendado') { say('Tu hora quedó para mañana a las 10:00.'); say(noCall() ? 'Y mientras tanto, aquí sigo para conversar.' : 'Si antes de eso sientes que estás en peligro, el *4141 atiende las 24 horas. Y aquí sigo para conversar.'); break; }
           say(S.n.wait === 1 ? (crisisMode() ? 'Tu caso está marcado como urgente y el especialista ya fue avisado. En estos casos suelen contestar en pocos minutos.' : 'El especialista ya está avisado. Normalmente contestan en pocos minutos, y como máximo te dan hora para mañana.')
                              : pick(['Entiendo que la espera se hace larga. Ya volví a avisar.','Sé que cuesta esperar. Tu caso sigue primero en la fila.'],'wait'));
@@ -2151,15 +2791,19 @@ function create(saved){
           if (/\b(no contesta|no contestan|ocupad|nadie|no me contestaron|no responden)\b/.test(t)) { say('Gracias por intentarlo; eso es muy importante.'); say('A veces las líneas se saturan: vuelve a intentar en unos minutos. Si estás en peligro inmediato, llama al 131.'); say('Mientras, sigo aquí y el especialista ya fue alertado.'); S.lastQ = 'open'; }
           else { say('Hiciste muy bien en llamar.'); ask('¿Cómo te fue? ¿Cómo te sientes después de hablar con ellos?', 'estado'); }
           break;
-        case 'FAQ_CONF':
+        case 'FAQ_CONF': {
           S.n.conf++;
-          if (S.n.conf === 1) { say('Lo que escribes aquí es confidencial: solo lo lee el especialista que toma tu caso.'); say('La única excepción es si tu vida o la de otra persona corre peligro. Ahí el equipo podría tener que buscar ayuda para protegerte, y te lo diría.'); if (S.minor) say('Como eres menor de edad, en una situación de riesgo podría ser necesario avisar a un adulto responsable.'); }
-          else if (/\b(internar|internen|encerrar|encierren|psiquiatrico|loquero)\b/.test(t)) { say('Escribir aquí no hace que te internen. El especialista conversa contigo y juntos ven qué te puede ayudar; las decisiones sobre tu tratamiento se toman contigo.'); }
-          else if (/(papa|mama|padres|familia|apoderado|colegio|jefe|carabineros|pacos|policia)/.test(t)) { say('No, nadie le va a avisar a nadie solo porque escribiste aquí.'); say('Solo si tu vida corriera peligro podría ser necesario avisar a alguien para protegerte, y te lo diríamos antes.'); }
+          const anon = /\banonim/.test(t), lee = /\b(quien|quienes) (lee|leen|ve|ven|revisa|revisan|mas)\b/.test(t), fam = /\b(papa|mama|papas|padres|familia|apoderado|colegio|jefe|pareja|pololo|polola|esposo|esposa|marido|carabineros|pacos|policia|profe|liceo|trabajo|pega|empresa|universidad)\b/.test(t);
+          if (/\b(internar|internen|encerrar|encierren|psiquiatrico|loquero)\b/.test(t)) say('Escribir aquí no hace que te internen. El especialista conversa contigo y juntos ven qué te puede ayudar; las decisiones sobre tu tratamiento se toman contigo.');
+          else if (fam) { const quien = /\buniversidad\b/.test(t) ? 'tu universidad' : /\b(colegio|liceo|profe|apoderado)\b/.test(t) ? 'tu colegio' : /\b(jefe|trabajo|pega|empresa)\b/.test(t) ? 'tu trabajo' : /\b(pareja|pololo|polola|esposo|esposa|marido)\b/.test(t) ? 'tu pareja' : /\b(carabineros|pacos|policia)\b/.test(t) ? 'la policía' : 'tu familia'; say(`No. Lo que escribes aquí no se le muestra a ${quien} ni a nadie fuera del equipo que te atiende, y nadie va a avisar solo porque escribiste.`); say('Si usas un celular o computador compartido, al terminar puedes tocar «Olvidar esta conversación en este dispositivo», abajo.'); }
+          else if (S.n.conf === 1 || anon || lee) {
+            say(anon ? 'Sí. No te pedimos tu nombre ni datos personales para escribir aquí, y lo que escribes es confidencial.' : lee ? 'Solo el equipo de especialistas que atiende tu caso. Nadie más.' : 'Lo que escribes aquí es confidencial: solo lo lee el equipo de especialistas que atiende tu caso.');
+            if (!S.used.has('confExc')) { S.used.add('confExc'); say('La única excepción es si tu vida o la de otra persona corre peligro: ahí podríamos tener que buscar ayuda para protegerte, y te lo diríamos.'); if (S.minor) say('Como eres menor de edad, en una situación de riesgo podría ser necesario avisar a un adulto responsable.'); }
+          }
           else say('Como te decía, es confidencial. Solo se rompe si tu vida o la de otra persona corre peligro.');
-          wrapUp(); break;
+          wrapUp(); break; }
         case 'FAQ_COSTO': say('Para ti no tiene costo.'); wrapUp(); break;
-        case 'FAQ_QUE': say('Soy Acompaña, un asistente automático. Te escucho mientras un especialista humano toma tu caso, hoy mismo o mañana.'); wrapUp(); break;
+        case 'FAQ_QUE': if (/\b(como te llamas|tu nombre|quien eres|quien es nexo|que es nexo|significa nexo)\b/.test(t)) { say('Me llamo Nexo. Soy el asistente automático de ConténMente: te escucho y, si lo necesitas, dejo tu caso para que te escriba un especialista humano del equipo.'); wrapUp(); break; } if (/\b(conten ?mente)\b/.test(t)) say('ConténMente es un espacio de acompañamiento en salud mental. Yo soy Nexo, su asistente automático. Te escucho y te acompaño cuando lo estás pasando mal: tristeza, angustia, soledad, problemas en la casa, en el colegio o en la pega, o pensamientos de no querer vivir.'); else say('Soy Nexo, un asistente automático. Te escucho y te acompaño cuando lo estás pasando mal: tristeza, angustia, soledad, problemas en la casa, en el colegio o en la pega, o pensamientos de no querer vivir.'); say('Si lo necesitas, dejo tu caso para que te escriba un especialista humano del equipo.'); wrapUp(); break;
         case 'QUEJA':
           S.n.complaint++; startSearch = true;
           if (/\bcomo si te importa/.test(t)) { say('Entiendo que cueste creerlo. Soy un asistente automático, pero este espacio está hecho para escucharte de verdad, y un especialista humano también te va a leer.'); casual('¿Cómo estás tú?'); break; }
@@ -2180,7 +2824,8 @@ function create(saved){
           if (crisisMode()) say(callLine('soft'));
           break;
         case 'CAMBIO_TEMA':
-          say('Claro, podemos hablar de otra cosa.' + (crisisMode() ? ' Igual sigo pendiente de que estés bien.' : ''));
+          if (crisisMode() || (pend && IMPORTANT.has(pend.type) && stillNeeded(pend))) { say('Está bien, no tenemos que hablar de eso ahora. Sigo pendiente de que estés bien.'); if (!deferQ) crisisMode() ? crisisNext() : ask('¿De qué te gustaría hablar?', 'tema'); break; }
+          say('Claro, podemos hablar de otra cosa.');
           ask('¿De qué te gustaría hablar?', 'tema'); break;
         case 'PRESENCIA':
           say(pick(['Sí, aquí estoy. No me he ido.','Aquí sigo, te leo.','Sí, estoy aquí contigo.'],'pres'));
@@ -2212,15 +2857,17 @@ function create(saved){
         case 'TRATAMIENTO':
           if (/\bno (me )?(entiende|sirve|ayuda|gusta|escucha|pesca)|\bme (cae mal|juzga)|\bpenca\b/.test(t)) { say('Qué difícil sentir que la terapia no te está sirviendo. Eso se puede conversar, y a veces cambiar de profesional ayuda mucho.'); crisisMode() ? crisisNext() : ask('¿Qué es lo que no te ha funcionado?', 'open'); break; }
           if (/\b(tengo hora|me dieron hora|tengo cita|voy el|voy a ir el)\b/.test(t)) { S.flags.add('HORA_AGENDADA'); say('Qué bueno que ya tengas hora; es un paso importante.'); say('Mientras llega ese día, aquí puedes conversar, y el especialista también te puede acompañar.'); crisisMode() ? crisisNext() : ask('¿Cómo te has sentido estos días?', 'estado'); break; }
+          if (/\b(fui|empece|comence|volvi) (al|a la|a) (psicolog|psiquiatr|terapia|terapeuta)/.test(t)) { say('Qué bueno que hayas ido; no es fácil dar ese paso.'); crisisMode() ? crisisNext() : ask(S.distress ? '¿Cómo te sentiste después?' : '¿Cómo te fue?', 'estado'); break; }
           say('Qué bueno que tengas o hayas tenido apoyo profesional.');
           reflect(freshThemes, 1);
           crisisMode() ? crisisNext() : ask('¿Has podido contarle cómo te estás sintiendo estos días?', 'sabe'); break;
         case 'RELIGION':
-          if (/\b(pecado|infierno|castigo|me odia|me abandono|abandonado|condena|condenad)/.test(t)) say(S.used.has('relig1') ? 'Pensar en castigo o en el infierno en un momento así pesa muchísimo. Lo que sientes no te hace una mala persona: es dolor, y el dolor merece cuidado.' : 'Aquí nadie te va a juzgar. Lo que sientes merece cuidado, no castigo.'), S.used.add('relig1');
+          if (/\b(pecado|infierno|castigo|castiga|castigando|me odia|me abandono|abandonado|condena|condenad)/.test(t)) say(S.used.has('relig1') ? 'Pensar en castigo o en el infierno en un momento así pesa muchísimo. Lo que sientes no te hace una mala persona: es dolor, y el dolor merece cuidado.' : 'Aquí nadie te va a juzgar. Lo que sientes merece cuidado, no castigo.'), S.used.add('relig1');
           else say('Si tu fe es importante para ti, puede ser un apoyo en momentos así.');
           crisisMode() ? crisisNext() : ask('¿Cómo se mezcla tu fe con lo que estás sintiendo?', 'open'); break;
         case 'MINIMIZA_CRISIS':
           S.flags.add('MINIMIZA');
+          if (/\b(da igual|da lo mismo|ya no importa|no importa nada|nada importa|que mas da|ya fue|filo)\b/.test(t)) { say('Entiendo que ahora sientas que da igual; ese cansancio es real. Pero a mí sí me importa lo que te pase, y no tienes que pasar por esto sin compañía.'); crisisNext(); break; }
           if (!/\b(bien|mejor|tranquil|calm)/.test(t)) { say('Está bien, no tenemos que hablar de eso si no quieres. Igual me quedo atento, porque lo que dijiste es importante.'); crisisNext(); break; }
           say('Me alegra que se sienta un poco más liviano.');
           ask('Igual lo que sentiste hace un rato es importante, y me gustaría que lo converses con el especialista. ¿Te parece?', 'especialista', ['Sí','Prefiero que no']); break;
@@ -2231,14 +2878,17 @@ function create(saved){
           if (S.used.has('despR')) { say(pick(['Cuídate mucho. Aquí voy a estar si me necesitas, a la hora que sea.','Un abrazo. Este espacio sigue abierto para ti.'],'despR2')); break; }
           S.used.add('despR');
           say('Antes de que te vayas: me quedé con lo que me contaste, y me importa que estés bien.');
-          if (F.safe === null) ask('¿Estás en un lugar seguro en este momento?', 'safe', CHIPS.safe);
+          if (F.safe === null) { const c = callLine('normal'); if (c) say(c.replace('Si sientes que no puedes esperar, el *4141 atiende ahora mismo, las 24 horas.', 'Si en algún momento sientes que no puedes más, el *4141 atiende las 24 horas.')); ask('¿Estás en un lugar seguro en este momento?', 'safe', CHIPS.safe); }
           else if (F.safe === false) { say('Si en algún momento sientes que no puedes mantenerte a salvo, escribe aquí o pide ayuda a alguien cerca.'); say(callLine('soft')); ask('¿Cómo te sientes ahora, comparado con hace un rato?', 'estado'); }
           else { say('Si en la noche vuelve a ponerse difícil, escribe aquí de nuevo, a la hora que sea.'); say(callLine('soft')); }
           break;
-        case 'OTRO_IDIOMA':
-          S.flags.add('OTRO_IDIOMA');
-          say('Hola. Este espacio funciona en español, pero puedes escribir en tu idioma y el especialista lo va a leer. / You can write in your language; a specialist will read it.');
-          ask('¿Cómo te sientes?', 'estado'); break;
+        case 'OTRO_IDIOMA': {
+          const first = !S.used.has('otroIdioma'); S.used.add('otroIdioma'); S.flags.add('OTRO_IDIOMA');
+          const kre = /\b(mwen|anpil|konnen|vle|bonjou|poukisa|ede|tris)\b/.test(t), por = /\b(eu|voce|nao|estou|muito|obrigad\w*|falo|espanhol|oi|tudo|portugues)\b/.test(t);
+          say(first ? 'Hola. Este espacio funciona en español, pero puedes escribir en tu idioma y el equipo lo va a leer.' : 'Puedes seguir escribiendo en tu idioma, como te salga.');
+          if (first) say(kre ? 'Ou ka ekri nan lang ou.' : por ? 'Pode escrever em português; a equipe vai ler.' : 'You can write in your language; the team will read it.');
+          if (crisisMode() || RANK[S.risk] >= 2) say(kre ? 'Si ou an danje, rele 131 oswa *4141.' : por ? 'Se você estiver em perigo, ligue para o 131 (ambulância) ou o *4141 (prevenção do suicídio, 24 h).' : 'If you are in danger, call 131 (ambulance) or *4141 (suicide prevention line, 24/7).');
+          crisisMode() ? crisisNext() : ask('¿Cómo te sientes?', 'estado'); break; }
         case 'SILENCIO':
           say(pick(['Aquí sigo. Puedes escribir cuando quieras, aunque sea una palabra.','Sin apuro. Te leo cuando quieras.'],'sil'));
           if (pend && IMPORTANT.has(pend.type)) tryReask(pend);
@@ -2265,7 +2915,7 @@ function create(saved){
         case 'SUSTANCIAS':
           S.resources.add('1412'); startSearch = true;
           if (crisisMode()) { showCrisis = true; crisisRes(['1412']); say('Gracias por contarme. Con alcohol o drogas de por medio, lo que sientes puede ser más intenso y más riesgoso.'); say('Si puedes, no sigas tomando ni consumiendo, y busca a alguien que te acompañe.'); crisisNext(); }
-          else { setTrack('sustancias'); reflect(freshThemes, 1); say('Gracias por contarme. Si en algún momento quieres orientación, el Fono Drogas y Alcohol es el 1412 y atiende las 24 horas.'); ask('¿Cómo estás ahora mismo?', 'estado'); }
+          else { setTrack('sustancias'); reflect(freshThemes, 1); if (/\brecai\b|\bvolvi a (tomar|consumir|fumar|jalar)\b|\b(llevaba|llevo) .{0,25}\bsin (tomar|consumir|fumar|jalar)\b/.test(t)) say('Una recaída no borra lo que habías logrado. Se puede retomar, y con apoyo es más posible.'); say('Gracias por contarme. Si en algún momento quieres orientación, el Fono Drogas y Alcohol es el 1412 y atiende las 24 horas.'); ask('¿Cómo estás ahora mismo?', 'estado'); }
           break;
         case 'BROMA':
           S.flags.add('BROMA');
@@ -2275,9 +2925,10 @@ function create(saved){
         case 'HUMANO':
           startSearch = true;
           say(S.searching ? 'Ya hay un especialista humano avisado; te va a escribir por aquí.' : 'Entiendo. Ya estoy buscando un especialista humano para que te atienda.');
+          if (S.pros === 0 && !noCall() && !S.used.has('humano4141')) { S.used.add('humano4141'); say('Si necesitas hablar con una persona ahora mismo, el *4141 atiende por teléfono las 24 horas.'); }
           crisisMode() ? crisisNext() : ask('Mientras llega, ¿quieres contarme qué está pasando?', 'open'); break;
         case 'ES_BOT':
-          say('Soy un asistente automático, no una persona. Mi trabajo es escucharte mientras un especialista humano toma tu caso.');
+          say('Soy un asistente automático, no una persona. Te acompaño por aquí y, si lo necesitas, dejo tu caso para que te escriba un especialista humano del equipo.');
           if (S.searching) { say('Ya está avisado y viene en camino. Mientras, aquí sigo.'); if (crisisMode()) crisisNext(); }
           else ask('¿Quieres que busque uno ahora?', 'busco', ['Sí, búscame uno','Todavía no']);
           break;
@@ -2285,21 +2936,27 @@ function create(saved){
           startSearch = true;
           if (repeated) { ask('Te leo. ¿Quieres contarme un poco más de eso?', 'open'); break; }
           if (a.intents.includes('DISCULPA')) say('No tienes que pedir perdón.');
+          if (S.verdad === S.turn && !S.used.has('verdad')) { S.used.add('verdad'); say('Gracias por decirme cómo estás de verdad. Aquí no tienes que hacer como que estás bien.'); themeFollow(); if (!chips.length) chips = CHIPS.calm; break; }
           if (S.track === 'helper' && /\bno (sabe|sabia)\b/.test(t)) { S.used.add('trhelper:1'); say('Podrías decírselo con algo simple, en un momento tranquilo: "Me preocupas. ¿Cómo estás de verdad?". Preguntar directo ayuda, y no le mete ideas en la cabeza.'); trackNext(); break; }
           if (S.track === 'helper' && !RISKY_OWN(S) && a.themes.some(x => ['ansiedad','animo'].includes(x))) { say(pick(['Es normal sentir miedo cuando alguien que quieres está así. Que te preocupes muestra lo mucho que te importa.','Tiene mucho sentido sentirse así. Acompañar a alguien que lo está pasando mal es muy difícil.'],'helpfear')); trackNext(); break; }
           if (S.track === 'past' && /\b(cuesta|duele|dificil|verguenza)\b/.test(t)) { say('Tómate tu tiempo. No tienes que contar nada más de lo que quieras.'); trackNext(); break; }
           if (!freshThemes.length) { const rfT = REFLECT.find(x => x[0].test(t)); if (rfT && !S.used.has('rfT' + REFLECT.indexOf(rfT))) { S.used.add('rfT' + REFLECT.indexOf(rfT)); say(pick(rfT[1], 'rf' + REFLECT.indexOf(rfT))); themeFollow(); break; } }
           if (long) say(pick(R.ackLong,'ackL'));
           let did = reflect(freshThemes, 1);
-          if (!did) { const known = a.themes.slice().sort((x,y)=>TPRI.indexOf(x)-TPRI.indexOf(y)).find(x => T[x] && x !== 'animo'); if (known) { say(pick(T[known].r.concat(T[known].a || [], R2[known] || []), 'k' + known)); did = 1; } }
+          if (!did) { const known = a.themes.slice().sort((x,y)=>TPRI.indexOf(x)-TPRI.indexOf(y)).find(x => T[x] && x !== 'animo' && !(x === 'familia' && (!famOk() || ['violence','grooming','past','helper'].includes(S.track)))); if (known) { say(pick(T[known].r.concat(T[known].a || [], R2[known] || []), 'k' + known)); did = 1; } }
           if (!did && !long) say(pick(T.animo.r,'ranimo'));
           themeFollow();
           if (!chips.length && (RANK[S.risk] >= 1 || S.themes.has('ansiedad'))) chips = CHIPS.calm;
           break; }
-        case 'RESPIRAR': out.push({ type:'breath' }); S.sug.exercise++; S.lastQ = 'estado'; break;
+        case 'RESPIRAR': out.push({ type:'breath' }); S.sug.exercise++; S.lastQ = 'postresp'; break;
         case 'POSITIVO':
           if (/\by (tu|usted)\b/.test(t)) { say('Qué bueno. Por acá todo bien, gracias por preguntar.'); nextQ(true); break; }
           if (a.intents.includes('GRACIAS') && !a.intents.includes('DESPEDIDA')) { say('Me alegra que te haya servido. Aquí sigo si quieres seguir conversando.'); break; }
+          if (!S.distress && !S.themes.size && RANK[S.risk] < 1 && !a.intents.includes('DESPEDIDA')) {
+            if (/\b(mejor|bien de nuevo|ya estoy bien|estoy bien ahora|contarles|contarte|queria contar|queria contarles)\b/.test(t)) { say(pick(['¡Qué bueno leer eso! Me alegra mucho.','Qué alegría leerte así.'],'posF')); ask('¿Qué te ha ayudado a sentirte mejor?', 'open'); }
+            else { say(pick(['Qué bueno.','Me alegra leer eso.'],'posF2')); ask(S.used.has('posQ1') ? '¿Qué te trajo por aquí hoy?' : '¿Hay algo de lo que quieras conversar hoy?', 'open'); S.used.add('posQ1'); }
+            break;
+          }
           say(pick(['Qué bueno leer eso. Los pequeños respiros también cuentan.','Me alegra. Sigo aquí si quieres seguir conversando.','Qué bien. Eso también es importante notarlo.'],'pos'));
           if (a.intents.includes('DESPEDIDA')) say(closing());
           else if (S.sug.exercise && lastQ === 'estado') ask('¿Quieres seguir conversando, o prefieres intentar descansar?', 'open');
@@ -2310,17 +2967,21 @@ function create(saved){
           if (S.turn <= 1) { say('Está bien. Si en algún momento quieres conversar, aquí voy a estar.'); break; }
           say(closing()); break;
         case 'GRACIAS': say(pick(['No hay de qué. Gracias a ti por confiar.','Gracias a ti por escribir.'],'grac')); wrapUp(); break;
-        case 'SALUDO': if (S.turn === 1) ask(`Hola${S.name ? ', ' + S.name : ''}. Me alegra que hayas escrito. ¿Cómo te sientes ahora?`, 'estado'); else { say('Hola, aquí sigo.'); casual('¿Cómo vas?'); } break;
+        case 'SALUDO':
+          if (/\b(que onda|que tal|como estai|como estay|como estas|como te va|como andai|como andas|como va|que hay|que cuentas|que contai)\b/.test(t)) { if (S.turn === 1) S.used.add('meAlegra'); say(S.turn === 1 ? `Hola${S.name ? ', ' + S.name : ''}. Aquí estoy, para escucharte.` : 'Aquí estoy, para escucharte.'); ask('¿Y tú, cómo estás?', 'estado'); }
+          else if (S.turn === 1) { S.used.add('meAlegra'); ask(`Hola${S.name ? ', ' + S.name : ''}. Me alegra que hayas escrito. ¿Cómo estás hoy?`, 'estado'); }
+          else { say('Hola, aquí sigo.'); casual('¿Cómo vas?'); } break;
         case 'OFFTOPIC': S.n.offtopic++; say(S.n.offtopic === 1 ? 'Este espacio es solo para acompañarte con cómo te sientes, así que con eso no te puedo ayudar.' : 'Con eso tampoco te puedo ayudar, perdona.'); casual(S.n.offtopic === 1 ? '¿Cómo has estado tú?' : null); break;
         case 'PREGUNTA':
-          say(pick(['Es una buena pregunta, y no tengo una respuesta exacta.','No sé si tengo la respuesta a eso.'],'preg'));
-          crisisMode() ? ask('Lo que sí sé es que ahora lo importante eres tú. ¿Cómo estás en este momento?', 'estado') : ask('Es algo que puedes conversar con el especialista. ¿Qué te hizo pensar en eso?', 'open'); break;
+          if (crisisMode()) { say('No sé si tengo la respuesta a eso.'); ask('Lo que sí sé es que ahora lo importante eres tú. ¿Cómo estás en este momento?', 'estado'); break; }
+          say(pick(['No estoy seguro de haber entendido tu pregunta.','No sé si te entendí bien.'],'preg'));
+          ask('¿Me cuentas un poco más a qué te refieres?', 'open'); break;
         case 'GIBBERISH': S.n.gib = (S.n.gib||0) + 1; ask(S.n.gib === 1 ? 'No logré entenderte bien. ¿Me lo puedes escribir de otra forma? No te preocupes por la ortografía.' : 'Sigo sin entenderte, perdona. ¿Me cuentas con otras palabras cómo estás?', 'open'); break;
         default: fallback();
       }
     }
     function casual(q){ if (crisisMode()) return crisisNext(); if (pend && IMPORTANT.has(pend.type) && tryReask(pend)) return; if (TRACK_F[S.track]) return trackNext(); if (q && S.risk !== 'high') ask(q, 'estado'); else nextQ(true); }
-    function wrapUp(){ if (pend && IMPORTANT.has(pend.type) && tryReask(pend)) return; if (crisisMode()) return crisisNext(); if (!S.used.has('duda')) { S.used.add('duda'); return ask('¿Te queda alguna duda, o seguimos conversando?', 'open'); } nextQ(true); }
+    function wrapUp(){ if (pend && IMPORTANT.has(pend.type) && tryReask(pend)) return; if (crisisMode()) return crisisNext(); if (TRACK_F[S.track]) return trackNext(); if (S.distress || S.themes.size) { if (!S.used.has('wrapE')) { S.used.add('wrapE'); return ask(pick(['¿Quieres seguir contándome, o prefieres dejarlo aquí por ahora?','Aquí sigo. ¿Quieres seguir conversando?'],'wrapE'), 'open'); } return nextQ(true); } if (!S.used.has('duda')) { S.used.add('duda'); return ask('¿Te queda alguna duda, o seguimos conversando?', 'open'); } nextQ(true); }
     function fallback(){
       if (repeated) { say('Te leo. Tómate tu tiempo.'); return; }
       if (S.turn === 1 && a.age !== null) { say(S.minor ? 'Hola. Gracias por contarme tu edad.' : 'Gracias por contármelo.'); ask('Cuéntame con tus palabras qué está pasando.', 'open'); return; }
@@ -2342,9 +3003,24 @@ function create(saved){
       if (lastQ === 'sabe' && a.answer && S.track === 'helper') { say(a.answer === 'yes' ? 'Qué bueno que lo sepa; eso abre la puerta para conversar.' : 'Podrías decírselo con algo simple, en un momento tranquilo: "Me preocupas. ¿Cómo estás de verdad?". Preguntar directo ayuda, y no le mete ideas en la cabeza.'); return trackNext(); }
       if (lastQ === 'sabe' && a.answer) { say(a.answer === 'yes' ? 'Eso es muy importante. No tienes que cargar esto sin apoyo.' : 'A veces cuesta mucho contarlo. El especialista también te puede ayudar a pensar cómo hacerlo.'); return next(); }
       if (lastQ === 'razon') { if (/\b(nada|ninguna|ninguno|no se|nunca|no hay)\b/.test(t) || a.answer === 'no') say('Está bien si hoy no aparece nada. A veces hay que buscarlo con ayuda, y para eso viene el especialista.'); else say('Eso importa. Guárdalo cerca estos días.'); return next(true); }
+      const pq = S.prevQ || '';
+      if (/o es algo que se fue acumulando/.test(pq)) {
+        if (a.answer === 'yes' && a.toks.length <= 2) return ask('¿Qué pasó? Cuéntame, a tu ritmo.', 'open');
+        if (/\b(acumul\w*|de a poco|de todo|todo junto|hace tiempo|harto tiempo|las dos|ambas)\b/.test(t)) { say('Cuando se va acumulando, llega un punto en que todo pesa demasiado.'); return next(); }
+      }
+      if (/seguir contándome, o prefieres dejarlo/.test(pq)) {
+        if ((a.answer === 'yes' || a.answer === 'ack') && a.toks.length <= 2 || /\b(seguir|sigamos|seguimos)\b/.test(t)) { say('Bueno, te leo. Cuéntame lo que quieras.'); S.lastQ = 'open'; return; }
+        if (a.answer === 'no' || /\b(dejarlo|dejemoslo|hasta aqui|por ahora no)\b/.test(t)) { say(closing()); return; }
+      }
+      if (/alguna duda, o seguimos/.test(pq) && (a.answer === 'yes' || a.answer === 'ack') && a.toks.length <= 2) { say('Claro, dime.'); S.lastQ = 'open'; return; }
+      if (/quieres contarme/.test(pq) && (a.answer === 'yes' || a.answer === 'ack') && a.toks.length <= 2) { say(pick(['Te leo. Cuéntame como te salga.','Aquí estoy, te leo.'],'ackCont')); S.lastQ = 'open'; return; }
+      if (S.minimal >= 3 && S.used.has('emoChips') && !crisisMode() && a.toks.length <= 2) { if (RISKY_OWN(S) && !S.askedIdeation) { S.askedIdeation = true; say('No tienes que contestar mucho.'); return ask('Solo quiero preguntarte algo importante, porque me importa: ¿has tenido pensamientos de quitarte la vida?', 'ideacion', CHIPS.ideacion); } say(pick(['Está bien. No tienes que contestar nada; me quedo aquí contigo, sin apuro.','Aquí sigo, sin apuro.','Te acompaño igual, aunque no haya mucho que decir.'],'minQuiet')); chips = CHIPS.calm; S.lastQ = 'open'; return; }
+      if (S.minimal >= 2 && !crisisMode() && !S.used.has('emoChips') && a.toks.length <= 2) { S.used.add('emoChips'); say('No tienes que tener respuestas claras.'); ask('Si te sirve, elige lo que más se parezca a cómo estás hoy, o escríbelo con tus palabras:', 'estado', ['Me siento triste','Tengo angustia','Me siento solo/a','Tengo rabia','Estoy agotado/a']); return; }
       const rf0 = !TIME_RE.test(t) && REFLECT.find(x => x[0].test(t));
       if (rf0) { say(pick(rf0[1], 'rf' + REFLECT.indexOf(rf0))); if (rf0[2] === 'noQ') return; if (crisisMode()) return crisisNext(); if (TRACK_F[S.track]) return trackNext(); return nextQ(true); }
       if (lastQ === 'cuando' || (F.timeKnown && /^(hace|desde|como|unos|unas|un|una|\d+)\b/.test(t))) {
+        if (/\b(juntos|juntas|de pololeo|pololeando|de relacion|casados|de casados|de matrimonio|de amistad)\b/.test(t)) { F.timeKnown = true; say(S.themes.has('pareja') ? 'Es harto tiempo juntos; tiene sentido que duela tanto.' : 'Es harto tiempo.'); return next(); }
+        if (!TIME_RE.test(t) && !/^(hace|desde|como|unos|unas|un|una|\d+)\b/.test(t) && !/\b(semana|semanas|mes|meses|ano|anos|dia|dias|hoy|ayer|anoche|siempre|tiempo|rato|chic[oa]|nin[oa]|enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|verano|invierno|vacaciones|pandemia|manana|poco)\b/.test(t)) { say(pick(long ? R.ackLong : R.ackShort, long ? 'ackL' : 'ackS')); return next(); }
         F.timeKnown = true;
         if (S.themes.has('migracion') && lastQTheme === 'migracion') { say('Es harto tiempo lejos de los tuyos.'); return next(); }
         if (/\b(siempre|anos|ano|chico|chica|nino|nina|mucho tiempo|harto tiempo|toda la vida|meses)\b/.test(t)) say('Es mucho tiempo cargando con esto. Que lo hayas aguantado habla de tu fuerza, pero no tienes por qué seguir sin apoyo.');
@@ -2355,9 +3031,10 @@ function create(saved){
         return next();
       }
       if (lastQ === 'ayudo' && /\b(mi|mis) (\w+)/.test(t) && /\b(mama|papa|hermano|hermana|amigo|amiga|amigos|amigas|pareja|polola|pololo|abuela|abuelo|tia|tio|prima|primo|perro|perrita|gato|gata|familia|hijo|hija|esposa|esposo)\b/.test(t)) { const who = (t.match(/\b(mi|mis) (\w+)/) || [])[0].replace(/^mi /,'tu ').replace(/^mis /,'tus '); say(`${who.charAt(0).toUpperCase() + who.slice(1)}. Eso vale mucho.`); return ask(/perr|gat/.test(who) ? '¿Podrías pasar un rato con tu mascota hoy?' : '¿Podrías escribirle hoy, aunque sea un mensaje corto?', 'open'); }
-      if (lastQ === 'ayudo' && a.answer === 'yes') return ask('¿Qué cosa te ha ayudado?', 'open');
+      if (lastQ === 'ayudo' && (a.answer === 'yes' || a.answer === 'ack') && a.toks.length <= 2) return ask('¿Qué cosa te ha ayudado?', 'open');
       if (lastQ === 'ayudo') {
-        const none = /\b(nada|ninguna|ninguno|no se|nunca)\b/.test(t) || a.answer === 'no' || a.answer === 'unsure';
+        if (a.answer === 'unsure' || /^(no se|nose|ni idea|no sabria|no me acuerdo)$/.test(t)) { say('Está bien si ahora no se te ocurre nada; a veces cuesta verlo.'); return next(true); }
+        const none = /\b(nada|ninguna|ninguno|nunca)\b/.test(t) || a.answer === 'no';
         if (none) { say('Está bien si ahora nada parece servir. Eso no significa que no haya salida.'); return next(true); }
         return ask('Vale la pena tenerlo presente. ¿Podrías hacer algo de eso hoy, aunque sea un poquito?', 'open');
       }
@@ -2365,13 +3042,15 @@ function create(saved){
       if (a.toks.length === 1 && /^(nada|nah?)$/.test(a.toks[0])) { say(crisisMode() ? 'Está bien. No tienes que decir nada; me quedo aquí.' : 'Está bien. A veces no hay una sola cosa, o cuesta ponerle palabras.'); return next(true); }
       if (a.toks.length <= 2 && /\btodo\b/.test(t)) { say('Cuando todo pesa, es agotador.'); return ask('¿Por dónde te gustaría empezar?', 'open'); }
       if (F.emergency && !F.called && /\b(cuant|no se|no me acuerdo)/.test(t)) { say('No te preocupes por eso ahora. Lo importante es que te vea un médico.'); return next(); }
-      if (a.answer === 'unsure') { say('Está bien no tenerlo claro.'); return next(true); }
+      if (/^(ya )?(un poco|un poquito|algo)( mejor| mas tranquil[oa])?$/.test(t) && /(sientes|descansar|conversando|calmarte|distinto)/.test(S.prevQ || '')) { say('Bueno, aunque sea un poco ya es algo.'); return next(true); }
+      if (a.answer === 'ack') { say(pick(['Te leo.','Aquí sigo.','Sigo aquí contigo.'],'ackAck')); return next(true); }
+      if (a.answer === 'unsure') { say(pick(['Está bien no tenerlo claro.','No pasa nada si no lo tienes claro.','Está bien, a veces cuesta saberlo.'],'unsureA')); return next(true); }
       if (a.answer === 'yes') { say(pick(R.ackShort,'ackS')); return next(true); }
       if (a.answer === 'no') { say('Está bien.'); return next(true); }
       if (a.primary === 'RISA') { say(RANK[S.risk] >= 1 ? 'Te leo. A veces uno se ríe para no llorar.' : 'Te leo.'); return next(true); }
       const rf = REFLECT.find(x => x[0].test(t));
       if (rf) { say(pick(rf[1], 'rf' + REFLECT.indexOf(rf))); if (rf[2] === 'noQ') return; if (crisisMode()) return crisisNext(); if (TRACK_F[S.track]) return trackNext(); return nextQ(true); }
-      if (crisisMode()) { if (ch.alone === true && before.alone !== true) say('Gracias por decírmelo. No estás sin compañía: me quedo aquí contigo.'); else if (long) say(pick(R.ackLong,'ackL')); return crisisNext(); }
+      if (crisisMode()) { if (ch.alone === true && before.alone !== true) say('Gracias por decírmelo. No estás sin compañía: me quedo aquí contigo.'); else if (long) say(pick(R.ackLong,'ackL')); else if (a.toks.length >= 3 && !a.answer) say(pick(['Gracias por contármelo.','Te leo.','Entiendo, gracias por decírmelo.'],'crisAck')); return crisisNext(); }
       if (S.track === 'past' && /\b(cuesta|duele|dificil)\b/.test(t)) { say('Tómate tu tiempo. No tienes que contar nada más de lo que quieras.'); return trackNext(); }
       if (TRACK_F[S.track]) { say(pick(long ? R.ackLong : R.ackShort, long ? 'ackL' : 'ackS')); return trackNext(); }
       const qt = lastQTheme && T[lastQTheme] && T[lastQTheme].a;
@@ -2384,19 +3063,22 @@ function create(saved){
       if (forward) return { replies: [], chips: [], forward: true, risk: S.risk, urgent: [...S.flags].some(f => URGENT.has(f)), showCrisis: RANK[S.risk] >= 2, startSearch: false, flags:[...S.flags], themes:[...S.themes], safe: safeLabel(), minor: S.minor, resources:[...S.resources], analysis: a, primary: P, facts: Object.assign({}, F) };
       if (startSearch && !S.searching) {
         S.searching = true;
-        if (S.pros === 0) { if (!S.used.has('sinpro')) { S.used.add('sinpro'); out.splice(Math.max(out.length-1,0), 0, SINPRO); } }
+        if (S.pros === 0) { if (!S.used.has('sinpro')) { S.used.add('sinpro'); if (!out.some(x => typeof x === 'string' && /no hay especialistas conectados/.test(honest(x)))) { const has4141 = out.some(x => typeof x === 'string' && /4141/.test(x)); const v = RANK[S.risk] >= 2 ? (noCall() || has4141 ? SINPRO_CORTO : (S.sug.call++, SINPRO_ALTO)) : RANK[S.risk] >= 1 || crisisMode() ? SINPRO : SINPRO_SUAVE; out.splice(Math.max(out.length-1,0), 0, v); } } }
         else if (!RISKY.has(P) && !['TERCERO','INTENTO_PREVIO','PASIVA','IDEACION_NEGADA','HUMANO','AYUDA','ESPERA','QUEJA','LUGAR_PELIGRO','IDEACION_HUMOR','RAZON','NO_LLAMAR'].includes(P) && !S.pending) out.splice(Math.max(out.length-1,0), 0, pick(R.search,'search'));
       } else if (startSearch) startSearch = false;
-      if (S.flags.has('MENOR') && !S.used.has('menor') && RANK[S.risk]>=1) { S.used.add('menor'); out.splice(Math.max(out.length-1,0), 0, 'Como eres menor de edad, también puedes llamar gratis al 1515 (Línea Libre). Y si puedes, cuéntale a un adulto de confianza.'); }
+      if (S.flags.has('MENOR') && !S.used.has('menor') && RANK[S.risk]>=1) { S.used.add('menor'); if (!out.some(x => typeof x === 'string' && /1515/.test(x))) out.splice(Math.max(out.length-1,0), 0, 'Como eres menor de edad, también puedes llamar gratis al 1515 (Línea Libre). Y si puedes, cuéntale a un adulto de confianza.'); }
       if ([...S.flags].some(f => URGENT.has(f))) urgent = true;
       if (RANK[S.risk] >= 2) showCrisis = true;
       let cleaned = out.filter(Boolean);
+      // frases que se dicen una sola vez por conversación
+      if (S.turn > 2) cleaned = cleaned.map(x => typeof x === 'string' ? x.replace(/ ?Me alegra que hayas escrito\./, '').trim() : x).filter(x => typeof x !== 'string' || x.length);
+      cleaned = cleaned.map(x => { if (typeof x !== 'string') return x; for (const ph of ONCE) if (x.includes(ph)) { const k = 'once:' + ph; if (S.used.has(k)) x = x.replace(' ' + ph, '').replace(ph + ' ', '').replace(ph, '').trim(); else S.used.add(k); } return x; }).filter(x => typeof x !== 'string' || x.length);
       if (S.pros === 0) { cleaned = cleaned.map(x => typeof x === 'string' ? honest(x) : x); if (cleaned.includes(SINPRO) && cleaned.some(x => typeof x === 'string' && x !== SINPRO && /quedó registrado/.test(x))) cleaned = cleaned.map(x => x === SINPRO ? SINPRO_CORTO : x); }
       // no repetir afirmaciones largas dichas hace poco
       const recent = S.recent || [];
-      const dedup = cleaned.filter(x => typeof x !== 'string' || /\?\s*$/.test(x) || x.length < 45 || !recent.includes(x));
+      const dedup = cleaned.filter(x => typeof x !== 'string' || /\?\s*$/.test(x) || x.length < 25 || /^(Mira a tu alrededor|Escríbeme 5|Bien\. Ahora dime 4|Muy bien\. Ahora 3|Vas bien\. Ahora 2|Último: 1|Ahora dime 4|Ahora 3|Ahora 2)/.test(x) || !recent.includes(x));
       if (!dedup.length && cleaned.length) cleaned = [pick(['Sí, te leí. Sigo aquí.','Entendido.','Te sigo leyendo.','Aquí sigo, te leo.'],'rep')];
-      else if (dedup.some(x => typeof x !== 'string' || x.length)) { if (dedup.length < cleaned.length && dedup.every(x => typeof x === 'string' && /\?\s*$/.test(x)) && a.toks.length > 2) dedup.unshift(pick(R.ackShort,'ackS')); cleaned = dedup; }
+      else if (dedup.some(x => typeof x !== 'string' || x.length)) { if (dedup.length < cleaned.length && dedup.every(x => typeof x === 'string' && /\?\s*$/.test(x)) ) dedup.unshift(pick(['Te leo.','Aquí sigo contigo.','Te sigo leyendo.'],'ackDedup')); cleaned = dedup; }
       cleaned = cleaned.filter((x, i) => typeof x !== 'string' || cleaned.indexOf(x) === i);
       // máximo 4 burbujas: se juntan las afirmaciones cortas contiguas
       while (cleaned.filter(x => typeof x === 'string').length > 4) {
@@ -2422,8 +3104,14 @@ function create(saved){
 }
 const SINPRO = 'Ahora mismo no hay especialistas conectados. Tu caso quedó registrado y te van a escribir por aquí apenas alguien se conecte.';
 const SINPRO_CORTO = 'Ahora mismo no hay especialistas conectados; te van a escribir por aquí apenas alguien se conecte.';
+const SINPRO_ALTO = 'Ahora mismo no hay especialistas conectados; te van a escribir por aquí apenas alguien se conecte. Si no puedes esperar, el *4141 atiende ahora mismo, las 24 horas.';
+const SINPRO_SUAVE = 'Dejé anotado tu caso para que te escriba alguien del equipo. Ahora no hay especialistas conectados, así que puede tardar; mientras, sigo aquí contigo.';
 const HONEST = [
   [/Ya estoy buscando un especialista para que te atienda hoy o mañana\. Mientras tanto, sigo aquí contigo\./, SINPRO + ' Mientras tanto, sigo aquí contigo.'],
+  [/Seguimos por aquí: el especialista te va a escribir por este chat\./, 'Seguimos por aquí, por escrito.'],
+  [/ El especialista también te va a escribir por este chat\./, ' Y apenas alguien del equipo se conecte, te va a escribir por aquí.'],
+  [/^Mientras llega, /, 'Mientras tanto, '],
+  [/Por ahora el contacto es por este chat: aquí mismo te va a escribir el especialista\./, 'Por ahora el contacto es por este chat: aquí mismo te van a escribir apenas alguien del equipo se conecte.'],
   [/Ya avisé a un especialista para que te atienda\. Mientras llega, aquí estoy\./, SINPRO + ' Mientras tanto, aquí estoy.'],
   [/Ya estoy buscando un especialista humano para que te atienda\./, SINPRO],
   [/Ya hay un especialista humano avisado; te va a escribir por aquí\./, SINPRO],
@@ -2454,8 +3142,10 @@ const HONEST = [
   [/Se lo dejo anotado al especialista( también)?\./, (m, t) => 'Lo dejo anotado en tu caso' + (t || '') + '.']
 ];
 function honest(x){ for (const [re, to] of HONEST) x = x.replace(re, to); return x; }
-function tildes(x){ return x.replace(/\bmama\b/,'mamá').replace(/\bpapa\b/,'papá').replace(/\btia\b/,'tía').replace(/\btio\b/,'tío'); }
-function personIn(t){ const m = t.match(/\b(mi|mis) (mama|papa|hermano|hermana|hermanos|amigo|amiga|amigos|pareja|polola|pololo|abuela|abuelo|tia|tio|prima|primo|esposa|esposo|hijo|hija|vecino|vecina|madrina|padrino|profe|jefe|jefa|pololo)\b/); return m ? tildes(m[0].replace(/^mi /,'tu ').replace(/^mis /,'tus ')) : null; }
+const ONCE = ['Me alegra que hayas escrito.', 'Aquí puedes decirlo sin filtro.', 'Que lo hayas aguantado habla de tu fuerza, pero no tienes por qué seguir sin apoyo.', 'No te voy a juzgar.', 'Gracias a ti por confiar.'];
+function tildes(x){ return x.replace(/\bmama(s?)\b/,'mamá$1').replace(/\bpapa(s?)\b/,'papá$1').replace(/\btia(s?)\b/,'tía$1').replace(/\btio(s?)\b/,'tío$1').replace(/\bcunad([oa]s?)\b/,'cuñad$1'); }
+function personIn(t){ const m = t.match(/\b(mi|mis) (mama|papa|mami|papi|papas|viejos|vieja|viejo|familia|hermano|hermana|hermanos|hermanas|amigo|amiga|amigos|amigas|pareja|polola|pololo|novio|novia|abuela|abuelo|abuelos|tia|tio|prima|primo|primos|esposa|esposo|marido|hijo|hija|hijos|hijas|vecino|vecina|madrina|padrino|profe|jefe|jefa|suegra|suegro|cunado|cunada|nieto|nieta|sobrino|sobrina)\b/); return m ? tildes(m[0].replace(/^mi /,'tu ').replace(/^mis /,'tus ')) : null; }
+const ARTLOC = { pieza:'tu pieza', casa:'tu casa', bano:'el baño', cama:'tu cama', trabajo:'el trabajo', pega:'la pega', colegio:'el colegio', liceo:'el liceo', universidad:'la universidad', calle:'la calle', auto:'el auto', micro:'la micro', metro:'el metro', plaza:'una plaza', parque:'un parque', departamento:'tu departamento', depto:'tu depto', hospital:'el hospital', living:'el living', cocina:'la cocina', patio:'el patio' };
 function RISKY_OWN(S){ return ['IDEACION','PLAN','EMERGENCIA','METODO','AUTOLESION','PASIVA','INTENTO_PREVIO','IDEACION_NEGADA','DUELO_SUICIDIO','NOTICIA_SUICIDIO'].some(f=>S.flags.has(f)) || S.themes.has('animo'); }
 
 const API = { create, analyze, normalize, FLAG_LABEL, THEMES, RES, URGENT, PROMESA: /(?:avisé|alerté|pedí)(?: con prioridad(?: máxima)?)? (?:a un|al|a los|un) especialista|especialista (?:humano )?(?:ya|también) (?:está avisado|fue|tiene)|especialista tiene tu caso|ya está avisado|especialista (?:humano )?avisado|queda avisado|viene en camino|especialista ya viene|llega el especialista|especialista que viene|viene el especialista|ya lo pedí|buscando un especialista|contestan en pocos minutos|suelen contestar|guardia (?:ya tiene|toma) tu caso/i, LEX: { L, THEMES } };

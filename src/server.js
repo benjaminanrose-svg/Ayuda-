@@ -14,8 +14,8 @@ function modoConfiguracion(lista) {
   const esc = s => String(s).replace(/[<&>]/g, c => ({ '<': '&lt;', '&': '&amp;', '>': '&gt;' })[c]);
   app.get('/salud', (req, res) => res.json({ ok: false, faltan: lista.map(x => x.variable) }));
   app.use('/demo', express.static(path.join(__dirname, '..', 'public', 'demo')));
-  app.use((req, res) => res.type('html').send(`<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Red Acompaña · configuración</title>
-<body style="font:16px/1.5 system-ui,sans-serif;max-width:640px;margin:40px auto;padding:0 16px;color:#18202E"><h1 style="color:#1B3768">Falta configurar Red Acompaña</h1>
+  app.use((req, res) => res.type('html').send(`<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ConténMente · configuración</title>
+<body style="font:16px/1.5 system-ui,sans-serif;max-width:640px;margin:40px auto;padding:0 16px;color:#222B3B"><h1 style="color:#30486C">Falta configurar ConténMente</h1>
 <p>Agrega estas variables en Railway (servicio de la app → <b>Variables</b>) y vuelve a desplegar:</p><ul>${lista.map(x => `<li><b>${esc(x.variable)}</b>: ${esc(x.que)}.</li>`).join('')}</ul>
 <p>Mientras tanto puedes ver la <a href="/demo/">demo</a>.</p></body></html>`));
   app.listen(cfg.puerto, '0.0.0.0', () => console.log(`[inicio] modo configuración en el puerto ${cfg.puerto}. Faltan: ${lista.map(x => x.variable).join(', ')}`));
@@ -34,7 +34,7 @@ async function iniciar() {
   await avisos.iniciar();
   if (!(await ses.adminInicial(cfg))) console.warn('[inicio] aún no hay cuentas: agrega ADMIN_CORREO y ADMIN_CLAVE en Railway para crear la primera.');
 
-  const srv = crearApp().listen(cfg.puerto, '0.0.0.0', () => console.log(`[inicio] Red Acompaña lista en el puerto ${cfg.puerto}`));
+  const srv = crearApp().listen(cfg.puerto, '0.0.0.0', () => console.log(`[inicio] ConténMente lista en el puerto ${cfg.puerto}`));
 
   let ocupado = false, ultimaLimpieza = 0;
   const ciclo = async () => {

@@ -1,35 +1,35 @@
 <meta charset="utf-8">
-<title>Red Acompaña</title>
+<title>ConténMente · demo</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=Atkinson+Hyperlegible+Next:ital,wght@0,400..700;1,400&display=swap">
 <style>
-/* Layout: banda de encabezado de formulario (título y campos de cabecera); debajo, dos copias del mismo juego autocopiativo lado a lado (persona en canario, especialista en rosa) y el original blanco del laboratorio al final. Tema claro único: se presenta proyectado en salas con luz. */
+/* Layout: banda de encabezado de formulario (título y campos de cabecera); debajo, dos copias del mismo juego autocopiativo lado a lado (persona en menta, especialista en lavanda) y el original blanco del laboratorio al final. Tema claro único: se presenta proyectado en salas con luz. */
 :root{
-  --mesa:#E7EBF2;      /* escritorio de oficina */
+  --mesa:#F2F0F8;      /* fondo lavanda claro de la marca */
   --papel:#FFFFFF;     /* original blanco */
-  --amarilla:#FAE89A;  /* copia canario de la persona */
-  --amarilla-2:#D9BF55;
-  --rosa:#F7CAD6;      /* copia rosa del especialista */
-  --rosa-2:#DC97AB;
-  --tinta:#1B3768;     /* azul formulario: banda, títulos, reglas */
-  --texto:#18202E;
-  --suave:#4D5A70;
-  --suave-a:#594813;   /* texto secundario sobre la copia canario */
-  --suave-r:#66303F;   /* texto secundario sobre la copia rosa */
-  --regla:#B7C3D8;     /* reglas sobre papel blanco */
-  --regla-2:#DCE2ED;
-  --regla-c:rgba(27,55,104,.3);   /* reglas impresas sobre las copias de color */
-  --caja:rgba(27,55,104,.5);      /* casillas impresas */
-  --nube:#EEF2F8;
-  --pasta:#2142A8;     /* azul lápiz pasta: lo que escribe la persona */
+  --amarilla:#E3F1EE;  /* copia menta de la persona */
+  --amarilla-2:#8CC8BC;
+  --rosa:#EEEAF6;      /* copia lavanda del especialista */
+  --rosa-2:#B8A2DA;
+  --tinta:#30486C;     /* azul pizarra de la marca: banda, títulos, reglas */
+  --texto:#222B3B;
+  --suave:#556076;
+  --suave-a:#2F5F57;   /* texto secundario sobre la copia menta */
+  --suave-r:#4B3C70;   /* texto secundario sobre la copia lavanda */
+  --regla:#C9C6DA;     /* reglas sobre papel blanco */
+  --regla-2:#E4E2EE;
+  --regla-c:rgba(48,72,108,.3);   /* reglas impresas sobre las copias de color */
+  --caja:rgba(48,72,108,.5);      /* casillas impresas */
+  --nube:#F3F1F8;
+  --pasta:#486C90;     /* azul lápiz pasta: lo que escribe la persona */
   --folio:#AD1F2B;     /* folio rojo y riesgo alto */
   --folio-2:#FBE9EA;
-  --timbre:#5B3A99;    /* tinta violeta: lo que hace el especialista */
+  --timbre:#6A54A8;    /* tinta violeta: lo que hace el especialista */
   --media:#8A5A00; --media-2:#FBF1DC;
-  --baja:#2E6B4F;  --baja-2:#E5F2EB;
+  --baja:#2F6E63;  --baja-2:#E3F1EE;
   --display:"Archivo","Helvetica Neue",Arial,sans-serif;
   --body:"Atkinson Hyperlegible Next","Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
   --r:4px;
-  --sombra:0 1px 0 rgba(27,55,104,.12);
+  --sombra:0 1px 0 rgba(48,72,108,.12);
   color-scheme:light;
 }
 html{font-size:clamp(16px,.55vw + 10px,18px)}
@@ -52,7 +52,7 @@ h1,h2,h3{font-family:var(--display);color:var(--tinta);margin:0;text-wrap:balanc
 .brand{display:flex;gap:10px;align-items:center}
 .mark{width:34px;height:34px;flex:none}
 .brand-name{font:800 1.12rem/1.1 var(--display);font-stretch:116%;color:#fff}
-.brand-sub{font:500 .78rem/1.3 var(--display);font-stretch:92%;color:#C9D4EA;margin-top:2px;max-width:24ch}
+.brand-sub{font:500 .78rem/1.3 var(--display);font-stretch:92%;color:#D6D0EA;margin-top:2px;max-width:24ch}
 .titulo{padding-left:28px;border-left:1px solid rgba(255,255,255,.28)}
 .titulo h1{color:#fff;font-size:clamp(1.5rem,2.1vw,1.95rem);font-weight:800;font-stretch:112%;line-height:1.1;letter-spacing:-.015em}
 .instr{margin:5px 0 0;font-size:.98rem;line-height:1.35;color:#DCE4F3}
@@ -117,7 +117,7 @@ main{display:grid;gap:22px}
 .nums a{display:inline-flex;gap:7px;align-items:baseline;font-size:.84rem;color:var(--texto);text-decoration:none;background:var(--folio-2);border:1px solid rgba(173,31,43,.35);padding:4px 9px;border-radius:2px}
 .nums a b{font:800 1rem/1 var(--display);color:var(--folio);font-variant-numeric:tabular-nums}
 
-/* conversación de la persona, impresa sobre la copia canario */
+/* conversación de la persona, impresa sobre la copia menta */
 .log{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
 .msg{max-width:86%;padding:8px 12px;border-radius:4px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:1.02rem;line-height:1.45}
 .msg.bot{background:var(--papel);color:var(--texto);border:1px solid var(--amarilla-2);border-bottom-left-radius:1px;align-self:flex-start}
@@ -323,12 +323,12 @@ footer strong{color:var(--tinta);font-family:var(--display)}
 <header class="formhead">
   <div class="formhead-in">
     <div class="brand">
-      <svg class="mark" viewBox="0 0 36 36" aria-hidden="true"><circle cx="14" cy="18" r="9.5" fill="none" stroke="#fff" stroke-width="2.6"/><circle cx="22" cy="18" r="9.5" fill="none" stroke="#FAE89A" stroke-width="2.6"/></svg>
-      <div><div class="brand-name">Red Acompaña</div><div class="brand-sub">Acompañamiento y derivación en salud mental</div></div>
+      <img class="mark" src="/img/logo-128.png" alt="" width="36" height="36" style="background:#fff;border-radius:9px;padding:2px;object-fit:contain">
+      <div><div class="brand-name">Contén<b style="font-weight:inherit;color:#9AD0C4">Mente</b></div><div class="brand-sub">Acompañamiento y derivación en salud mental</div></div>
     </div>
     <div class="titulo">
       <h1>Del primer mensaje a un especialista.</h1>
-      <p class="instr">Escribe en la <mark class="m-a">copia amarilla</mark> y mira cómo llega la ficha a la <mark class="m-r">copia rosa</mark>.</p>
+      <p class="instr">Escribe en la <mark class="m-a">copia menta</mark> y mira cómo llega la ficha a la <mark class="m-r">copia lavanda</mark>.</p>
     </div>
     <p class="demo">Demo con datos de ejemplo. No usar con personas reales.</p>
   </div>
@@ -350,7 +350,7 @@ footer strong{color:var(--tinta);font-family:var(--display)}
 <main>
   <section class="pane" id="p-user" aria-label="Copia de la persona">
     <div class="pane-head">
-      <div><h2>Acompaña</h2><div class="sub" id="presence">En línea</div></div>
+      <div><h2>Nexo</h2><div class="sub" id="presence">En línea</div></div>
       <div class="head-r"><span class="folio">N.º 004127</span><button class="icon-btn" id="reset" type="button">Reiniciar</button></div>
     </div>
     <div class="steps" aria-label="Estado del caso">
@@ -368,7 +368,7 @@ footer strong{color:var(--tinta);font-family:var(--display)}
       <input id="input" autocomplete="off" placeholder="Escribe cómo te sientes…" aria-label="Mensaje">
       <button class="send" type="submit" aria-label="Enviar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
     </form>
-    <div class="copia">Copia amarilla para la persona</div>
+    <div class="copia">Copia menta para la persona</div>
   </section>
 
   <section class="pane" id="p-pro" hidden aria-label="Copia del especialista">
@@ -406,7 +406,7 @@ footer strong{color:var(--tinta);font-family:var(--display)}
         </ul>
       </div>
     </div>
-    <div class="copia">Copia rosa para el especialista</div>
+    <div class="copia">Copia lavanda para el especialista</div>
   </section>
 
   <section class="pane" id="p-lab" hidden aria-label="Laboratorio de pruebas">
@@ -450,7 +450,7 @@ let bot,Q=[],busy=false,timers=[],C,CUR=null;
 function later(fn,ms){const t=setTimeout(fn,ms);timers.push(t);return t}
 function scroll(){const l=$('#log');l.scrollTop=l.scrollHeight}
 function node(cls,text,who){const d=document.createElement('div');d.className='msg '+cls;if(who){const w=document.createElement('span');w.className='who';w.textContent=who;d.append(w)}d.append(document.createTextNode(text));$('#log').append(d);scroll();return d}
-function say(item,who='Acompaña',cls='bot'){Q.push({item,who,cls});pump()}
+function say(item,who='Nexo',cls='bot'){Q.push({item,who,cls});pump()}
 function queueChips(list){Q.push({chips:list||[]});pump()}
 function flush(){timers.forEach(clearTimeout);timers=[];document.querySelectorAll('.typing').forEach(t=>t.remove());const rest=(CUR?[CUR]:[]).concat(Q.splice(0));CUR=null;busy=false;rest.forEach(m=>{if(m.chips)return;if(typeof m.item==='string')node(m.cls,m.item,m.who);else if(m.item&&m.item.type==='breath')breathe()});$('#presence').textContent=presence();if(C&&C.planBPending)armPlanB()}
 function presence(){return C&&C.pro?C.pro.short+' está contigo':'En línea'}
@@ -555,7 +555,7 @@ function accept(act){
   const P=PROS[act];C.pro=P;C.mode='humano';bot.event(act==='now'?'accepted':'refer');
   C.accepted=act==='now'?'En atención':'Derivado a guardia';
   sys(act==='now'?P.name+' tomó tu caso y se une ahora':'Caso derivado a '+P.name+' (guardia)');
-  proSay(act==='now'?'Hola, soy Camila, psicóloga. Ya leí lo que conversaste con Acompaña, así que no tienes que repetir todo. Estoy aquí contigo. ¿Cómo estás en este momento?':'Hola, soy Daniela, psicóloga de guardia. Ya tengo tu caso y estoy contigo. ¿Cómo estás en este momento?');
+  proSay(act==='now'?'Hola, soy Camila, psicóloga. Ya leí lo que conversaste con Nexo, así que no tienes que repetir todo. Estoy aquí contigo. ¿Cómo estás en este momento?':'Hola, soy Daniela, psicóloga de guardia. Ya tengo tu caso y estoy contigo. ¿Cómo estás en este momento?');
   chips([]);$('#pro-chat').hidden=false;$('#presence').textContent=presence();renderReq();
 }
 function armPlanB(){clearTimeout(C.planB);C.planBPending=true;C.planB=setTimeout(()=>{C.planBPending=false;C.planB=null;if(C.accepted)return;C.planBDone=true;sys('Nadie tomó el caso en 30 segundos. Se alertó a la especialista de guardia.',true);bot.event('planB').replies.forEach(x=>say(x))},Math.max(0,C.planBAt-Date.now()))}

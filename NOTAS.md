@@ -1,4 +1,6 @@
-# NOTAS · Red Acompaña
+# NOTAS · ConténMente (bot: Nexo)
+
+Antes se llamaba «Red Acompaña» (bot «Acompaña»). Marca nueva desde 2026-10-20: logo cerebro + corazón + manos; colores menta #8CC8BC, lavanda #B8A2DA, azul pizarra #30486C, azul mano #486C90, chispa amarilla #F0C090.
 
 Leer esto primero. Ir directo al archivo y la línea indicados, sin buscar.
 
@@ -10,7 +12,7 @@ Leer esto primero. Ir directo al archivo y la línea indicados, sin buscar.
 ## Mapa de archivos (líneas clave)
 - `package.json` — comandos: `start`, `local` (con Postgres incluido), `test`, `build:demo`.
 - `railway.json` — arranque `npm start`, salud `/salud`. `.node-version` — Node 22.
-- `migraciones/001_inicial.sql` — tablas: organizaciones, usuarios, sesiones, conversaciones, casos, mensajes, suscripciones, auditoria, ajustes.
+- `migraciones/001_inicial.sql` — tablas: organizaciones, usuarios, sesiones, conversaciones, casos, mensajes, suscripciones, auditoria, ajustes · `002_marca.sql` renombra la organización por defecto a ConténMente.
 - `src/server.js` — L12 modo configuración (faltan variables) · L24 arranque (migra, avisos, admin inicial) · L40 trabajos cada 5 s.
 - `src/config.js` — todas las variables de entorno y sus valores por defecto · L21 `videoBase` (salas Jitsi; variable opcional `VIDEO_BASE_URL`).
 - `src/app.js` — L13 rutas y páginas · L23 `/api` (JSON + mismo origen) · manejo de errores al final.
@@ -22,13 +24,13 @@ Leer esto primero. Ir directo al archivo y la línea indicados, sin buscar.
 - `src/rutas-equipo.js` — L18 ingresar · L23 estado · L30 yo · L31 clave · L34 disponible · L40–L46 casos y acciones · L48 videollamada · L50 stream · L51 push.
 - `src/rutas-admin.js` — L21/L25/L39 usuarios · L58 nueva clave · L67/L72/L82 organizaciones · L91 métricas.
 - `src/tiempo-real.js` — conexiones SSE en memoria (una sola instancia). `src/avisos.js` — Web Push y llaves VAPID.
-- `public/index.html` + `public/js/persona.js` + `public/css/persona.css` — chat. persona.js: L15 `nodo` (dibuja cada mensaje; L25 tarjeta de videollamada) · L50 ritmo de mensajes · L92 estado/pasos · L105 líneas de ayuda · L120 tiempo real · L135 enviar · L168 inicio.
+- `public/index.html` + `public/js/persona.js` + `public/css/persona.css` — chat. persona.js: L9 `ultimo` (id más alto recibido: al reconectar no repite la bienvenida) · L19 `nodo` (dibuja cada mensaje; nombre del bot «Nexo»; tarjeta de videollamada) · L132 `sincronizar` · L50 ritmo de mensajes · L92 estado/pasos · L105 líneas de ayuda · L120 tiempo real · L135 enviar · L168 inicio.
 - `public/equipo.html` + `public/js/equipo.js` + `public/css/equipo.css` — panel. equipo.js: L51 lista · L75 ficha · L111 botones de acción · L117 registro · L128 abrir caso · L156 actualizar en vivo · L193 tiempo real · L229 botón videollamada · L283 fila de usuario · L300 editar nombre/título · L311 administración · L399 inicio.
 - `public/ingresar.html` + `public/js/ingresar.js` — ingreso y cambio de clave. `public/privacidad.html` — borrador legal.
-- `public/css/base.css` — sistema visual compartido. `public/css/fuentes.css` + `public/fuentes/` — fuentes propias (licencia OFL).
+- `public/css/base.css` — sistema visual compartido; L1–L14 colores de la marca (tokens). `public/img/` — logo (`logo-64/128/256.png`), favicon (`favicon-32.png`), íconos (`icono-180/192/512.png`), insignia de avisos (`insignia.png`). `public/css/fuentes.css` + `public/fuentes/` — fuentes propias (licencia OFL).
 - `public/sw.js` — avisos del navegador. `public/js/comun.js` — llamadas a la API y activar avisos.
-- `motor/engine.js` — L823 `create(saved)` · L828 `S.pros` · L834 `exportState()` · L842 `event(name, o)` · `finish()` aviso honesto · `SINPRO`/`HONEST` · `API` (incluye `PROMESA`).
-- `motor/` pruebas: `run.js` (303 frases), `sim.js` (conversaciones), `fuzz.js`, `prueba-servidor.js` (estado y honestidad).
+- `motor/engine.js` — L186 `L` léxico (EMERGENCIA, IDEACION…) · L76 `BRAND_W` (nombres de marca sin corregir) · L567 `analyze` · L679 `R` textos (L680 saludo de Nexo) · L846 `REFLECT_P` (reflejos específicos) · L933 `GROUND_EX` (ejemplos 5-4-3-2-1) · L955 `create(saved)` · L966 `exportState()` · L976 `event(name, o)` · L1313 reinterpretaciones · L1390 ejercicio 5-4-3-2-1 (lee el contenido antes de avanzar) · L1467 `handleAnswer` · L1727 `crisisNext` · L1785 `act` · L2985 `fallback` · L3062 `finish()` aviso honesto · `SINPRO`/`HONEST` · `API` (incluye `PROMESA`).
+- `motor/` pruebas: `run.js` (313 frases de `cases.js`), `sim.js` (conversaciones; `SC=scenarios3.js node sim.js`, `PROS=0` sin especialistas), `scenarios.js`…`scenarios4.js` (≈150 conversaciones reales), `fuzz.js`, `prueba-servidor.js` (estado y honestidad).
 - `test/api.test.js` — 7 pruebas (la 4 incluye videollamada y editar nombre) de la API con Postgres real · `test/e2e.js` — navegador (requiere Playwright).
 - `scripts/local.js` — correr en tu computador. `demo/` — fuente de la demo (`npm run build:demo` → `public/demo/`).
 - `docs/DESIGN.md` (sistema visual) · `docs/PRODUCT.md` (producto). `README.md` — guía de Railway.
@@ -49,3 +51,7 @@ Leer esto primero. Ir directo al archivo y la línea indicados, sin buscar.
 - 2026-10-20 · Railway: auto deploy activado (rama main); cada push a GitHub se publica solo.
 - 2026-10-20 · Botón «Videollamada»: crea sala privada (Jitsi) y envía el enlace a la persona · `src/servicio.js` L337, `src/rutas-equipo.js` L48, `public/js/equipo.js` L229, `public/js/persona.js` L25, `public/css/persona.css` (.msg.video).
 - 2026-10-20 · Administración: editar título, nombre y especialidad de cada usuario · `public/js/equipo.js` L300 y envío del formulario (`data-editar`).
+- 2026-10-20 · Bot pulido con ~90 conversaciones nuevas: detecta sobredosis, «no es broma», «esta noche me mato», metro/puente, despedidas en redes; menos falsas alarmas; reflejos específicos; respuestas cortas y «no sé» repetido · `motor/engine.js` (L1313 reinterpretaciones, L846 `REFLECT_P`, L1467 `handleAnswer`), `motor/cases.js`, `motor/scenarios3.js`, `motor/scenarios4.js`.
+- 2026-10-20 · Arreglo: al volver tras mucho rato la conversación ya no se reinicia ni repite la bienvenida · `public/js/persona.js` L9 `ultimo`, `sincronizar`.
+- 2026-10-20 · Ejercicio 5-4-3-2-1 (aviso de Feña): solo avanza cuando la persona nombra cosas; si pregunta, explica con ejemplos; si escribe cómo se siente, lo acoge · `motor/engine.js` L1390, L933.
+- 2026-10-20 · Nueva marca: ConténMente (plataforma) y Nexo (bot); logo, favicon, íconos y colores · `public/css/base.css` L1–L14, `public/*.html`, `public/img/`, `public/js/persona.js`, `public/js/equipo.js`, `src/servicio.js` (avisos y sala `ContenMente-`), `src/server.js`, `public/sw.js`, `motor/engine.js` (saludo, FAQ), `migraciones/002_marca.sql`, `demo/index.src.html`.

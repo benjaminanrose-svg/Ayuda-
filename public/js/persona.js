@@ -5,6 +5,10 @@
   const slug = (location.pathname.match(/^\/o\/([a-z0-9-]{2,40})\/?$/) || [])[1] || '';
   const log = $('#log');
   const vistos = new Set();
+  // id más alto ya recibido: al reconectar solo se agregan mensajes nuevos (no se repite la bienvenida)
+  let ultimo = 0;
+  const numId = id => (/^\d+$/.test(String(id)) ? Number(id) : 0);
+  const marcar = id => { const n = numId(id); if (n > ultimo) ultimo = n; };
   let cola = [], actual = null, reloj = null, fuente = null, paso = 'escuchando', especialista = null, enviando = false;
 
   const abajo = () => { log.scrollTop = log.scrollHeight; };
@@ -13,7 +17,7 @@
   }
 
   function nodo(m) {
-    if (m.id) { if (vistos.has(m.id)) return; vistos.add(m.id); }
+    if (m.id) { if (vistos.has(m.id)) return; vistos.add(m.id); marcar(m.id); }
     if (m.tipo === 'respiracion') return respirar();
     const d = document.createElement('div');
     if (m.autor === 'sistema') {
@@ -21,7 +25,7 @@
       d.textContent = m.texto;
     } else {
       d.className = 'msg ' + ({ persona: 'user', bot: 'bot', especialista: 'pro' })[m.autor];
-      if (m.autor !== 'persona') { const w = document.createElement('span'); w.className = 'who'; w.textContent = m.autor === 'especialista' ? m.nombre || 'Especialista' : 'Acompaña'; d.append(w); }
+      if (m.autor !== 'persona') { const w = document.createElement('span'); w.className = 'who'; w.textContent = m.autor === 'especialista' ? m.nombre || 'Especialista' : 'Nexo'; d.append(w); }
       if (m.tipo === 'videollamada' && /^https:\/\//.test(m.texto)) {
         d.classList.add('video');
         d.append(document.createTextNode('Te invito a una videollamada privada. Se abre en otra pestaña y no necesitas instalar nada.'));
@@ -46,7 +50,7 @@
   }
 
   /* cola con ritmo: los mensajes del bot aparecen de a uno, con "escribiendo…" */
-  function decir(m) { cola.push(m); bombear(); }
+  function decir(m) { if (m.id) marcar(m.id); cola.push(m); bombear(); }
   function bombear() {
     if (actual || !cola.length) return;
     const m = cola.shift();
@@ -128,7 +132,7 @@
   async function sincronizar() {
     try {
       const d = await api('GET', '/api/persona/inicio');
-      if (d.conversacion) { d.mensajes.forEach(m => { if (!vistos.has(m.id)) decir(m); }); estado(d.caso); }
+      if (d.conversacion) { d.mensajes.forEach(m => { if (!vistos.has(m.id) && numId(m.id) > ultimo) decir(m); }); estado(d.caso); }
     } catch { /* reintenta en la próxima reconexión */ }
   }
 
@@ -149,7 +153,7 @@
         await new Promise(r => setTimeout(r, 4000)); // reintento único si el servidor se estaba reiniciando
         d = await api('POST', '/api/persona/mensajes', { texto: t, org: slug });
       }
-      if (d.miMensaje) vistos.add(d.miMensaje);
+      if (d.miMensaje) { vistos.add(d.miMensaje); marcar(d.miMensaje); }
       d.mensajes.forEach(decir);
       if (d.chips && d.chips.length) cola.push({ chips: d.chips });
       bombear();

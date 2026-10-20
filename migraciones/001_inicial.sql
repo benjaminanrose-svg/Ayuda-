@@ -1,4 +1,4 @@
--- Esquema inicial de Red Acompaña. Los textos libres (mensajes, estado del bot, notas) se guardan cifrados.
+-- Esquema inicial de ConténMente (antes Red Acompaña). Los textos libres (mensajes, estado del bot, notas) se guardan cifrados.
 
 create table organizaciones (
   id serial primary key,

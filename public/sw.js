@@ -1,13 +1,13 @@
-/* Avisos del navegador de Red Acompaña. Nunca muestran el contenido de la conversación. */
+/* Avisos del navegador de ConténMente. Nunca muestran el contenido de la conversación. */
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 
 self.addEventListener('push', e => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch { /* aviso sin datos */ }
-  e.waitUntil(self.registration.showNotification(d.titulo || 'Red Acompaña', {
+  e.waitUntil(self.registration.showNotification(d.titulo || 'ConténMente', {
     body: d.cuerpo || '',
-    tag: d.etiqueta || 'red-acompana',
+    tag: d.etiqueta || 'contenmente',
     renotify: true,
     requireInteraction: !!d.urgente,
     icon: '/img/icono-192.png',
