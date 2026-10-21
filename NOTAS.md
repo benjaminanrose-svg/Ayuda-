@@ -11,7 +11,7 @@ Leer esto primero. Ir directo al archivo y la línea indicados, sin buscar.
 
 ## Mapa de archivos (líneas clave)
 - `package.json` — comandos: `start`, `local` (con Postgres incluido), `test`, `build:demo`.
-- Producción: https://departamentobienestar.up.railway.app (Railway, proyecto «sweet-trust», servicio «Ayuda-», rama `main`). Repo: github.com/benjaminanrose-svg/Ayuda-. Si un push no se publica: en Railway, Ctrl+K → «Deploy latest commit» («Redeploy» repite la versión vieja).
+- Producción: https://departamentobienestar.up.railway.app (Railway, proyecto «sweet-trust», servicio «Ayuda-», rama `main`). Repo: github.com/benjaminanrose-svg/Ayuda-. Subir SIEMPRE a `https://github.com/benjaminanrose-svg/Ayuda-` (A mayúscula): si se sube por la dirección antigua (`ayuda-`), GitHub lo acepta pero Railway no se entera. Revisar con `git remote get-url origin`. Si un push no se publica: en Railway, Ctrl+K → «Deploy latest commit» («Redeploy» repite la versión vieja).
 - `railway.json` — arranque `npm start`, salud `/salud`. `.node-version` — Node 22.
 - `migraciones/001_inicial.sql` — tablas: organizaciones, usuarios, sesiones, conversaciones, casos, mensajes, suscripciones, auditoria, ajustes · `002_marca.sql` renombra la organización por defecto a ConténMente.
 - `src/server.js` — L12 modo configuración (faltan variables) · L24 arranque (migra, avisos, admin inicial) · L40 trabajos cada 5 s.
@@ -58,3 +58,4 @@ Leer esto primero. Ir directo al archivo y la línea indicados, sin buscar.
 - 2026-10-20 · Nueva marca: ConténMente (plataforma) y Nexo (bot); logo, favicon, íconos y colores · `public/css/base.css` L1–L14, `public/*.html`, `public/img/`, `public/js/persona.js`, `public/js/equipo.js`, `src/servicio.js` (avisos y sala `ContenMente-`), `src/server.js`, `public/sw.js`, `motor/engine.js` (saludo, FAQ), `migraciones/002_marca.sql`, `demo/index.src.html`.
 - 2026-10-20 · Railway no tomó solo el push 82a8c2f; publicado con «Deploy latest commit». Remoto git actualizado a la dirección nueva del repo · `NOTAS.md` (Producción).
 - 2026-10-21 · Panel más simple: tarjetas con gravedad en color, de qué se trata y espera en palabras; ficha sin casillas/firma/copia; menú en el teléfono; lista y caso por separado en el teléfono; Administración con 4 cifras, formularios plegados y tarjetas · `public/js/equipo.js` (L20–L135, L293, L307–L419), `public/css/equipo.css`, `public/equipo.html` (menú), `test/e2e.js` (capturas de teléfono).
+- 2026-10-21 · Causa de los push que no se publicaban: el remoto apuntaba a la dirección antigua `ayuda-`; corregido a `Ayuda-` · `NOTAS.md` (Producción).
