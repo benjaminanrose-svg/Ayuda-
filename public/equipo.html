@@ -23,10 +23,13 @@
     </a>
     <nav class="banda-acc" aria-label="Cuenta">
       <label class="casilla casilla-clara"><input type="checkbox" id="disponible"><i aria-hidden="true"></i>Disponible</label>
-      <button class="btn-banda" id="avisos" type="button" hidden>Activar avisos</button>
-      <a class="btn-banda" id="ir-admin" href="#admin" hidden>Administración</a>
-      <span class="yo" id="yo"></span>
-      <button class="btn-banda" id="salir" type="button">Salir</button>
+      <button class="btn-banda menu-btn" id="menu-btn" type="button" aria-expanded="false" aria-controls="menu">Menú</button>
+      <div class="menu" id="menu">
+        <span class="yo" id="yo"></span>
+        <button class="btn-banda" id="avisos" type="button" hidden>Activar avisos</button>
+        <a class="btn-banda" id="ir-admin" href="#admin" hidden>Administración</a>
+        <button class="btn-banda" id="salir" type="button">Salir</button>
+      </div>
     </nav>
   </div>
 </header>
