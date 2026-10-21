@@ -11,6 +11,7 @@ Leer esto primero. Ir directo al archivo y la línea indicados, sin buscar.
 
 ## Mapa de archivos (líneas clave)
 - `package.json` — comandos: `start`, `local` (con Postgres incluido), `test`, `build:demo`.
+- Producción: https://departamentobienestar.up.railway.app (Railway, proyecto «sweet-trust», servicio «Ayuda-», rama `main`). Repo: github.com/benjaminanrose-svg/Ayuda-. Si un push no se publica: en Railway, Ctrl+K → «Deploy latest commit» («Redeploy» repite la versión vieja).
 - `railway.json` — arranque `npm start`, salud `/salud`. `.node-version` — Node 22.
 - `migraciones/001_inicial.sql` — tablas: organizaciones, usuarios, sesiones, conversaciones, casos, mensajes, suscripciones, auditoria, ajustes · `002_marca.sql` renombra la organización por defecto a ConténMente.
 - `src/server.js` — L12 modo configuración (faltan variables) · L24 arranque (migra, avisos, admin inicial) · L40 trabajos cada 5 s.
@@ -55,3 +56,4 @@ Leer esto primero. Ir directo al archivo y la línea indicados, sin buscar.
 - 2026-10-20 · Arreglo: al volver tras mucho rato la conversación ya no se reinicia ni repite la bienvenida · `public/js/persona.js` L9 `ultimo`, `sincronizar`.
 - 2026-10-20 · Ejercicio 5-4-3-2-1 (aviso de Feña): solo avanza cuando la persona nombra cosas; si pregunta, explica con ejemplos; si escribe cómo se siente, lo acoge · `motor/engine.js` L1390, L933.
 - 2026-10-20 · Nueva marca: ConténMente (plataforma) y Nexo (bot); logo, favicon, íconos y colores · `public/css/base.css` L1–L14, `public/*.html`, `public/img/`, `public/js/persona.js`, `public/js/equipo.js`, `src/servicio.js` (avisos y sala `ContenMente-`), `src/server.js`, `public/sw.js`, `motor/engine.js` (saludo, FAQ), `migraciones/002_marca.sql`, `demo/index.src.html`.
+- 2026-10-20 · Railway no tomó solo el push 82a8c2f; publicado con «Deploy latest commit». Remoto git actualizado a la dirección nueva del repo · `NOTAS.md` (Producción).
