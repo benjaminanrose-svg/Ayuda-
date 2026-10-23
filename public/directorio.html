@@ -22,27 +22,57 @@
       <img class="mark" src="/img/logo-128.png" alt="" width="36" height="36">
       <div><div class="marca-nombre">Contén<b>Mente</b></div><div class="marca-sub">Psicólogos con perfil revisado</div></div>
     </a>
-    <nav class="banda-acc" aria-label="Cuenta"><a class="btn-banda" href="/mi-perfil" id="cuenta">Soy psicólogo</a></nav>
+    <nav class="banda-acc" aria-label="Principal"><a class="nav-link" href="/#psicologos">Psicólogos</a><a class="nav-link" href="/#como-funciona">Cómo funciona</a><a class="btn-banda" href="/mi-perfil" id="cuenta">Soy psicólogo</a></nav>
   </div>
 </header>
 <main class="dir">
   <section class="hero">
-    <h1>Encuentra a tu psicólogo</h1>
-    <p>Profesionales con perfil revisado por ConténMente. Mira sus estudios y especialidades, y pide hora aquí mismo.</p>
-    <form class="buscador" id="buscar" role="search">
-      <label class="sr" for="q">Buscar</label><input id="q" type="search" placeholder="Busca por nombre, tema o comuna…" autocomplete="off">
-      <label class="sr" for="f-esp">Especialidad</label><select id="f-esp"><option value="">Especialidad</option></select>
-      <label class="sr" for="f-mod">Modalidad</label><select id="f-mod"><option value="">Modalidad</option><option value="online">Online</option><option value="presencial">Presencial</option></select>
-    </form>
+    <div class="hero-txt">
+      <h1>Encuentra a alguien con quien hablar</h1>
+      <p class="hero-sub">Psicólogos y psicólogas con perfil revisado por ConténMente. Conoce su formación, elige una hora que te acomode y conversa online o en persona.</p>
+      <form class="buscador" id="buscar" role="search">
+        <label class="sr" for="q">Buscar</label><input id="q" type="search" placeholder="¿Qué te gustaría trabajar? Ej: ansiedad, duelo, pareja…" autocomplete="off">
+        <label class="sr" for="f-esp">Especialidad</label><select id="f-esp"><option value="">Todas las especialidades</option></select>
+        <label class="sr" for="f-mod">Modalidad</label><select id="f-mod"><option value="">Online y presencial</option><option value="online">Online</option><option value="presencial">Presencial</option></select>
+        <button class="btn buscar-btn" type="submit">Buscar</button>
+      </form>
+      <ul class="confianza">
+        <li><span class="ico" aria-hidden="true">✓</span>Perfiles y títulos revisados uno a uno</li>
+        <li><span class="ico" aria-hidden="true">◷</span>Reserva tu hora en minutos</li>
+        <li><span class="ico" aria-hidden="true">♡</span>Ayuda inmediata con el botón SOS</li>
+      </ul>
+    </div>
+    <div class="hero-img" aria-hidden="true"><img src="/img/ilustraciones/conversation.svg" alt="" width="520" height="400"></div>
   </section>
-  <p class="contador" id="contador" aria-live="polite"></p>
-  <ul class="tarjetas" id="lista"></ul>
+
+  <section class="bloque" id="psicologos">
+    <div class="bloque-cab"><h2>Psicólogos disponibles</h2><p class="contador" id="contador" aria-live="polite"></p></div>
+    <ul class="tarjetas" id="lista"></ul>
+  </section>
+
+  <section class="bloque" id="como-funciona">
+    <h2>Cómo funciona</h2>
+    <ol class="pasos">
+      <li><img src="/img/ilustraciones/profile.svg" alt="" loading="lazy"><h3>Elige a tu psicólogo</h3><p>Revisa su experiencia, estudios y diplomas. Todos los perfiles pasan por una revisión antes de publicarse.</p></li>
+      <li><img src="/img/ilustraciones/booking.svg" alt="" loading="lazy"><h3>Reserva una hora</h3><p>Ves sus horas libres y reservas en minutos. Recibes un enlace para ver, agregar al calendario o cancelar tu cita.</p></li>
+      <li><img src="/img/ilustraciones/video-call.svg" alt="" loading="lazy"><h3>Conversa a tu ritmo</h3><p>Online por videollamada, sin instalar nada, o de forma presencial en su consulta.</p></li>
+    </ol>
+  </section>
+
+  <section class="nexo-banda">
+    <img src="/img/ilustraciones/meditation.svg" alt="" loading="lazy">
+    <div><h2>¿Lo estás pasando muy mal ahora?</h2>
+      <p>No tienes que esperar una hora. Nexo, nuestro asistente, te acompaña en este momento y, si lo necesitas, avisa a un especialista. También puedes llamar gratis al *4141 o al 131.</p>
+      <div class="fila-btn"><a class="btn" href="/conversar">Hablar ahora con Nexo</a><a class="btn ghost" href="tel:*4141">Llamar al *4141</a></div></div>
+  </section>
+
   <section class="cta-psi">
-    <h2>¿Eres psicólogo o psicóloga?</h2>
-    <p>Crea tu perfil con tu formación, especialidades y experiencia. Lo revisamos y lo publicamos para que nuevos pacientes te encuentren.</p>
-    <a class="btn" href="/registro">Crear mi perfil</a>
+    <div><h2>¿Eres psicólogo o psicóloga?</h2>
+      <p>Crea tu perfil profesional gratis, muestra tu formación y recibe reservas de nuevos pacientes con tu propia agenda en línea.</p>
+      <a class="btn" href="/registro">Crear mi perfil</a></div>
+    <img src="/img/ilustraciones/doctors.svg" alt="" loading="lazy">
   </section>
 </main>
-<footer class="pie-dir"><a href="/">Psicólogos</a><a href="/conversar">Hablar con Nexo</a><a href="/privacidad">Aviso de privacidad</a><a href="/ingresar">Ingresar</a></footer>
+<footer class="pie-dir pie-grande"><div class="pie-marca"><img src="/img/logo-64.png" alt="" width="36" height="36"><span><b>ConténMente</b><br>Psicólogos con perfil revisado</span></div><nav><a href="/">Psicólogos</a><a href="/conversar">Hablar con Nexo</a><a href="/privacidad">Aviso de privacidad</a><a href="/ingresar">Ingresar</a></nav><p class="pie-ayuda">En una emergencia llama al <a href="tel:*4141">*4141</a> (prevención del suicidio) o al <a href="tel:131">131</a> (SAMU).</p></footer>
 </body>
 </html>

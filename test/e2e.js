@@ -119,7 +119,7 @@ const espera = ms => new Promise(r => setTimeout(r, ms));
     await pub.click('.sos-btn'); await espera(200);
     await pub.screenshot({ path: path.join(OUT, 'sos-movil.png') });
     const dsk = await b.newPage({ viewport: { width: 1366, height: 768 } }); vigilar(dsk, 'publico-escritorio');
-    await dsk.goto(BASE + '/'); await dsk.waitForSelector('.tarjeta'); await dsk.screenshot({ path: path.join(OUT, 'directorio.png') });
+    await dsk.goto(BASE + '/'); await dsk.waitForSelector('.tarjeta'); await dsk.screenshot({ path: path.join(OUT, 'directorio.png'), fullPage: true });
     await dsk.click('.tarjeta'); await dsk.waitForSelector('.credencial'); await espera(400); await dsk.screenshot({ path: path.join(OUT, 'perfil.png'), fullPage: true });
     await psi.goto(BASE + '/mi-perfil#agenda'); await psi.waitForSelector('.cita-ed'); await psi.screenshot({ path: path.join(OUT, 'mi-agenda-cita.png') });
     const sinDesborde = await Promise.all([per, esp, adm, psi, pub].map(p => p.evaluate(() => document.documentElement.scrollWidth - innerWidth)));

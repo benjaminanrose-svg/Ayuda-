@@ -22,7 +22,7 @@
     const r = todos.filter(p => (!esp || p.especialidades.includes(esp))
       && (!mod || p.modalidad === mod || p.modalidad === 'ambas')
       && (!q || sinTilde([p.nombre, p.comuna, p.resumen, ...p.especialidades].join(' ')).includes(q)));
-    $('#lista').innerHTML = r.map(tarjeta).join('') || `<li class="vacio-dir">${todos.length ? 'No encontramos psicólogos con esos filtros. Prueba quitando alguno.' : 'Muy pronto verás aquí a los primeros psicólogos. Si eres psicólogo, crea tu perfil más abajo.'}</li>`;
+    $('#lista').innerHTML = r.map(tarjeta).join('') || `<li class="vacio-dir"><img src="/img/ilustraciones/relaxing-at-home.svg" alt=""><b>${todos.length ? 'No encontramos psicólogos con esos filtros' : 'Muy pronto verás aquí a los primeros psicólogos'}</b><span>${todos.length ? 'Prueba con otra palabra o quita algún filtro.' : 'Estamos revisando los primeros perfiles. Si eres psicólogo, puedes crear el tuyo hoy.'}</span></li>`;
     $('#contador').textContent = todos.length ? (r.length === 1 ? '1 psicólogo' : r.length + ' psicólogos') : '';
   }
   (async () => {
@@ -32,5 +32,5 @@
     pintar();
   })();
   ['#q', '#f-esp', '#f-mod'].forEach(s => $(s).addEventListener('input', pintar));
-  $('#buscar').addEventListener('submit', e => e.preventDefault());
+  $('#buscar').addEventListener('submit', e => { e.preventDefault(); pintar(); $('#psicologos').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); });
 })();
