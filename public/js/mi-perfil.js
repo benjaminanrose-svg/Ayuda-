@@ -38,7 +38,9 @@
         <div class="fila-btn">${panel}<button class="btn plain" type="button" id="salir">Salir</button></div></header>
       <div class="estado-perfil ${p.estado}"><span>${ESTADO[p.estado]}</span>${p.notaRevision ? `<span>Comentario de revisión: ${esc(p.notaRevision)}</span>` : ''}
         <span class="fila-btn">${p.estado === 'publicado' ? `<a class="btn ghost" href="/psicologos/${esc(p.slug)}" target="_blank">Ver mi perfil público</a>` : `<a class="btn ghost" href="/psicologos/${esc(p.slug)}" target="_blank">Vista previa</a>${p.estado === 'pendiente' ? '' : '<button class="btn" type="button" id="enviar">Enviar a revisión</button>'}`}</span></div>
-      <section class="caja" id="sec-sol"><h2 class="rotulo">Solicitudes de hora${nuevas ? ` <span class="nivel urgente">${nuevas} nuevas</span>` : ''}</h2><div id="solicitudes" class="filas"><p class="nota-suave">Cargando…</p></div>
+      <nav class="pestanas" aria-label="Secciones"><a href="#perfil" id="p-perfil">Mi perfil</a><a href="#agenda" id="p-agenda">Agenda y citas</a></nav>
+      <div id="tab-perfil">
+      <section class="caja" id="sec-sol"><h2 class="rotulo">Mensajes de pacientes${nuevas ? ` <span class="nivel urgente">${nuevas} nuevas</span>` : ''}</h2><div id="solicitudes" class="filas"><p class="nota-suave">Cargando…</p></div>
         ${soportaAvisos() ? '<button class="btn plain" type="button" id="avisos">Avisarme en este navegador cuando llegue una</button>' : ''}</section>
       <form class="caja" id="f-perfil">
         <h2 class="rotulo">Cómo se ve tu perfil</h2>
@@ -85,8 +87,10 @@
         <h2 class="rotulo">LinkedIn (opcional)</h2>
         <div class="campo-form"><label for="m-linkedin">Enlace a tu perfil</label><input id="m-linkedin" maxlength="200" value="${esc(p.linkedin)}" placeholder="https://www.linkedin.com/in/…"></div>
         <div class="barra-guardar"><button class="btn" type="submit">Guardar cambios</button><span class="nota-suave" id="guardado"></span></div>
-      </form>`;
+      </form></div>
+      <div id="tab-agenda" hidden></div>`;
     cargarSolicitudes();
+    pestana();
   }
 
   const datos = () => ({
@@ -108,7 +112,7 @@
       const { solicitudes } = await api('GET', '/api/directorio/mio/solicitudes');
       $('#solicitudes').innerHTML = solicitudes.map(s => `<div class="solicitud${s.leida ? '' : ' nueva'}"><b>${esc(s.nombre)}</b><span class="t-meta">${esc(s.contacto)} · ${esc(fecha(s.creadaEn))}</span>${s.mensaje ? `<p>${esc(s.mensaje)}</p>` : ''}
         ${s.leida ? '' : `<button class="btn plain" type="button" data-leida="${s.id}">Marcar como vista</button>`}</div>`).join('')
-        || `<p class="nota-suave">${p.estado === 'publicado' ? 'Aún no tienes solicitudes.' : 'Cuando tu perfil esté publicado, aquí verás las solicitudes de hora de los pacientes.'}</p>`;
+        || `<p class="nota-suave">${p.estado === 'publicado' ? 'Aún no tienes mensajes.' : 'Cuando tu perfil esté publicado, aquí verás los mensajes de pacientes que te escriban sin reservar hora.'}</p>`;
     } catch (e) { $('#solicitudes').innerHTML = `<p class="error">${esc(e.message)}</p>`; }
   }
 
@@ -182,10 +186,21 @@
     } catch (x) { aviso(x.message); }
   });
   $('#mp').addEventListener('submit', async e => {
+    if (e.target.id !== 'f-perfil') return;
     e.preventDefault();
     const b = e.submitter; if (b) b.disabled = true;
     try { await guardar(false); } catch (x) { aviso(x.message); } finally { if (b) b.disabled = false; }
   });
+
+  // pestañas: #perfil (por defecto) y #agenda
+  function pestana() {
+    const ag = location.hash === '#agenda';
+    if (!$('#tab-agenda')) return;
+    $('#tab-perfil').hidden = ag; $('#tab-agenda').hidden = !ag;
+    $('#p-perfil').setAttribute('aria-current', String(!ag)); $('#p-agenda').setAttribute('aria-current', String(ag));
+    if (ag) window.MiAgenda.cargar($('#tab-agenda'), aviso);
+  }
+  window.addEventListener('hashchange', pestana);
 
   async function iniciar() {
     try { const d = await api('GET', '/api/directorio/mio'); p = d.perfil; pintar(d.rol, d.solicitudesNuevas); }

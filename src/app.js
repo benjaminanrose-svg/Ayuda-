@@ -36,6 +36,7 @@ function crearApp() {
   app.get('/registro', pagina('registro.html'));
   app.get('/mi-perfil', pagina('mi-perfil.html'));
   app.get('/conversar', pagina('index.html'));
+  app.get('/cita/:token', pagina('cita.html'));
   app.get('/o/:slug', pagina('index.html'));
   app.get('/equipo', pagina('equipo.html'));
   app.get('/ingresar', pagina('ingresar.html'));

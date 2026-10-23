@@ -166,3 +166,54 @@ dialog.recorte h2{font-size:1.1rem;font-weight:800}
   .ficha-psi .p-nombre,.vista-ed .p-nombre{padding-top:0}
 }
 .t-top{align-items:flex-start}.t-top>span:last-child{padding-top:40px}
+
+/* ── agenda: elegir día y hora ── */
+.dias{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+.dias button{flex:none;display:grid;gap:2px;justify-items:center;padding:8px 10px;min-width:72px;border-radius:10px;border:1px solid var(--regla);background:var(--papel);color:var(--tinta);cursor:pointer;font:700 .86rem/1.1 var(--display);text-transform:capitalize}
+.dias button small{font:500 .72rem/1 var(--display);color:var(--suave);text-transform:none}
+.dias button[aria-selected="true"]{background:var(--tinta);border-color:var(--tinta);color:#fff}
+.dias button[aria-selected="true"] small{color:#D6D0EA}
+.horas{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px}
+.horas button{padding:9px 6px;border-radius:8px;border:1px solid var(--amarilla-2);background:var(--amarilla);color:var(--suave-a);font:700 .9rem/1 var(--display);cursor:pointer;font-variant-numeric:tabular-nums}
+.horas button[aria-pressed="true"]{background:var(--suave-a);border-color:var(--suave-a);color:#fff}
+.resumen-cita{margin:0;padding:8px 10px;border-radius:8px;background:var(--rosa);color:var(--suave-r);font:700 .92rem/1.35 var(--display)}
+.resumen-cita::first-letter{text-transform:uppercase}
+.modalidad{border:0;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:8px 16px}
+.modalidad legend{font:600 .8rem/1.3 var(--display);color:var(--tinta);margin-bottom:6px}
+.cita-ok{display:grid;gap:10px;justify-items:start}
+.cita-ok b{font:800 1.1rem/1.2 var(--display);color:var(--baja)}
+.cita-ok p{margin:0}
+.cita-caja .t-top{margin-top:0;padding:0;align-items:center}
+.cita-caja .t-top>span:last-child{padding-top:0}
+.cita-fecha{margin:0;font-size:1.05rem;line-height:1.5;text-transform:none}
+.cita-fecha::first-letter{text-transform:uppercase}
+.cita-fecha b{font:800 1.4rem/1.3 var(--display);color:var(--tinta)}
+
+/* ── mi agenda ── */
+.pestanas{display:flex;gap:4px;border-bottom:1px solid var(--regla)}
+.pestanas a{padding:10px 14px;font:700 .95rem/1 var(--display);color:var(--suave);text-decoration:none;border-bottom:3px solid transparent;margin-bottom:-1px}
+.pestanas a[aria-current="true"]{color:var(--tinta);border-bottom-color:var(--amarilla-2)}
+.semana{display:grid;gap:6px}
+.dia-ed{display:grid;grid-template-columns:100px minmax(0,1fr) auto;gap:8px;align-items:center;padding:8px 10px;border-radius:8px;background:var(--nube)}
+.dia-ed b{font:700 .92rem/1.2 var(--display);color:var(--tinta)}
+.rangos{display:flex;flex-wrap:wrap;gap:6px}
+.rango{display:inline-flex;gap:6px;align-items:center;font-size:.88rem;color:var(--suave);background:var(--papel);border:1px solid var(--regla);border-radius:8px;padding:4px 4px 4px 8px}
+.rango input{font:600 .92rem var(--body);border:0;background:none;color:var(--texto);padding:4px 0}
+.rango .quitar{font-size:1.05rem;padding:4px 6px}
+.bloqueos{display:flex;flex-wrap:wrap;gap:6px}
+.bloqueo{display:inline-flex;gap:4px;align-items:center;padding:4px 4px 4px 10px;border-radius:999px;background:var(--media-2);color:var(--media);font:700 .82rem/1 var(--display)}
+.bloqueo button{border:0;background:none;color:inherit;font:700 1rem/1 var(--display);cursor:pointer;padding:2px 6px}
+.cita-ed{display:grid;grid-template-columns:120px minmax(0,1fr);gap:12px;padding:10px 12px;border-radius:10px;border:1px solid var(--regla-2);border-left:4px solid var(--amarilla-2);background:var(--papel)}
+.cita-ed.cancelada{opacity:.6;border-left-color:var(--regla)}
+.cita-ed.realizada{border-left-color:var(--rosa-2)}
+.cita-hora{display:grid;gap:2px;align-content:start}
+.cita-hora b{font:800 1.3rem/1 var(--display);color:var(--tinta);font-variant-numeric:tabular-nums}
+.cita-hora span{font-size:.8rem;color:var(--suave)}
+.cita-ed>div:last-child{display:grid;gap:4px;min-width:0}
+.cita-ed p{margin:0;font-size:.92rem;white-space:pre-wrap;overflow-wrap:anywhere}
+@media (max-width:820px){
+  .dia-ed{grid-template-columns:1fr auto}
+  .dia-ed .rangos{grid-column:1/-1;grid-row:2}
+  .cita-ed{grid-template-columns:1fr}
+}
+.perfil>*,.caja>*,#agendar{min-width:0}

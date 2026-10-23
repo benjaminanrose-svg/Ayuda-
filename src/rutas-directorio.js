@@ -6,6 +6,8 @@ const ses = require('./sesion');
 const avisos = require('./avisos');
 const { cifrar, descifrar, hashClave, token, hashToken } = require('./cifrado');
 const { falla, limitador, ponerCookie } = require('./http');
+const cfg = require('./config');
+const ag = require('./agenda');
 
 const r = express.Router();
 const CORREO = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,20}$/;
@@ -263,6 +265,101 @@ r.get('/mio/solicitudes', async (req, res) => {
 });
 r.post('/mio/solicitudes/:id/leida', async (req, res) => {
   await q('update solicitudes set leida = true where id = $1 and usuario_id = $2', [Number.parseInt(req.params.id, 10) || 0, req.usuario.id]);
+  res.json({ ok: true });
+});
+
+/* ───────── agenda y citas ───────── */
+const FECHA = /^\d{4}-\d{2}-\d{2}$/;
+const fmt = d => new Date(d).toLocaleString('es-CL', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', hour12: false });
+async function libresDe(usuarioId, agenda) {
+  const bloq = new Set((await q("select to_char(fecha, 'YYYY-MM-DD') f from bloqueos where usuario_id = $1 and fecha >= current_date", [usuarioId])).rows.map(x => x.f));
+  const ocup = (await q("select inicio, fin from citas where usuario_id = $1 and estado <> 'cancelada' and fin > now()", [usuarioId])).rows.map(c => [+c.inicio, +c.fin]);
+  return ag.horasLibres(agenda, bloq, ocup);
+}
+const citaPublica = (c, p) => ({
+  inicio: c.inicio, fin: c.fin, modalidad: c.modalidad, estado: c.estado, canceladaPor: c.cancelada_por, motivoCancelacion: c.motivo_cancelacion,
+  sala: c.modalidad === 'online' && c.estado === 'confirmada' ? c.sala : null,
+  profesional: { nombre: nombreDe(p), slug: p.slug, comuna: p.comuna, foto: p.foto ? `/api/directorio/perfiles/${p.slug}/foto` : null }
+});
+async function citaPorToken(t) {
+  return (await q(`select c.*, p.slug, p.comuna, p.foto is not null foto, u.nombre, u.titulo from citas c join perfiles p on p.usuario_id = c.usuario_id
+    join usuarios u on u.id = c.usuario_id where c.token_hash = $1`, [hashToken(String(t).slice(0, 100))])).rows[0];
+}
+
+r.get('/perfiles/:slug/horas', async (req, res) => {
+  const p = await publicoPorSlug(req.params.slug);
+  if (!p || p.estado !== 'publicado' || !p.activo) throw falla(404, 'Este perfil no está disponible.');
+  const a = ag.normalizar(p.agenda);
+  res.json({ horas: await libresDe(p.usuario_id, a), duracion: a.duracion, modalidad: p.modalidad });
+});
+
+r.post('/perfiles/:slug/citas', limitador(6, 3600e3, req => 'cita|' + req.ip), async (req, res) => {
+  const p = await publicoPorSlug(req.params.slug);
+  if (!p || p.estado !== 'publicado' || !p.activo) throw falla(404, 'Este perfil no está disponible.');
+  const b = req.body || {}, a = ag.normalizar(p.agenda);
+  const inicio = new Date(b.inicio).getTime();
+  const d = { nombre: linea(b.nombre, 80), contacto: linea(b.contacto, 120), motivo: texto(b.motivo, 1000) };
+  if (!d.nombre || !d.contacto) throw falla(400, 'Escribe tu nombre y un teléfono o correo para que te puedan contactar.');
+  const modalidad = p.modalidad === 'ambas' ? (b.modalidad === 'presencial' ? 'presencial' : 'online') : p.modalidad;
+  if (!(await libresDe(p.usuario_id, a)).includes(inicio)) throw falla(409, 'Esa hora ya no está disponible. Elige otra.');
+  const t = token();
+  const sala = modalidad === 'online' ? `${cfg.videoBase}/ContenMente-${require('crypto').randomBytes(10).toString('hex')}` : null;
+  try {
+    await q('insert into citas (usuario_id, inicio, fin, modalidad, datos, token_hash, sala) values ($1, $2, $3, $4, $5, $6, $7)',
+      [p.usuario_id, new Date(inicio), new Date(inicio + a.duracion * 60e3), modalidad, cifrar(JSON.stringify(d)), hashToken(t), sala]);
+  } catch (e) { if (e.code === '23505') throw falla(409, 'Alguien acaba de tomar esa hora. Elige otra.'); throw e; }
+  avisos.aUsuarios([p.usuario_id], { titulo: 'ConténMente', cuerpo: 'Nueva cita: ' + fmt(inicio), url: '/mi-perfil#agenda', etiqueta: 'cita' }).catch(() => {});
+  res.json({ enlace: '/cita/' + t });
+});
+
+r.get('/citas/:token', async (req, res) => {
+  const c = await citaPorToken(req.params.token);
+  if (!c) throw falla(404, 'No encontramos esta cita. Revisa el enlace.');
+  res.json({ cita: citaPublica(c, c) });
+});
+r.get('/citas/:token/calendario.ics', async (req, res) => {
+  const c = await citaPorToken(req.params.token);
+  if (!c) return res.status(404).end();
+  res.set({ 'Content-Type': 'text/calendar; charset=utf-8', 'Content-Disposition': 'attachment; filename="cita-contenmente.ics"' })
+    .send(ag.ics({ id: c.id, inicio: c.inicio, fin: c.fin, titulo: 'Sesión con ' + nombreDe(c),
+      descripcion: (c.sala ? 'Videollamada: ' + c.sala + '\n' : '') + 'Para ver o cancelar tu cita: ' + cfg.urlApp + '/cita/' + req.params.token,
+      lugar: c.modalidad === 'online' ? 'Online' : c.comuna }));
+});
+r.post('/citas/:token/cancelar', async (req, res) => {
+  const c = await citaPorToken(req.params.token);
+  if (!c) throw falla(404, 'No encontramos esta cita.');
+  if (c.estado !== 'confirmada' || new Date(c.inicio) < new Date()) throw falla(409, 'Esta cita ya no se puede cancelar.');
+  await q("update citas set estado = 'cancelada', cancelada_por = 'paciente', motivo_cancelacion = $2 where id = $1", [c.id, texto(req.body && req.body.motivo, 300)]);
+  avisos.aUsuarios([c.usuario_id], { titulo: 'ConténMente', cuerpo: 'Se canceló la cita del ' + fmt(c.inicio), url: '/mi-perfil#agenda', etiqueta: 'cita' }).catch(() => {});
+  res.json({ ok: true });
+});
+
+/* agenda propia del psicólogo */
+r.get('/mio/agenda', async (req, res) => {
+  const p = await perfilDe(req.usuario);
+  const bloqueos = (await q("select to_char(fecha, 'YYYY-MM-DD') f from bloqueos where usuario_id = $1 and fecha >= current_date order by fecha", [req.usuario.id])).rows.map(x => x.f);
+  const citas = (await q(`select id, inicio, fin, modalidad, datos, estado, cancelada_por, motivo_cancelacion, sala from citas
+    where usuario_id = $1 and inicio > now() - interval '7 days' order by inicio limit 200`, [req.usuario.id])).rows
+    .map(c => ({ id: c.id, inicio: c.inicio, fin: c.fin, modalidad: c.modalidad, estado: c.estado, canceladaPor: c.cancelada_por, motivoCancelacion: c.motivo_cancelacion, sala: c.sala, ...JSON.parse(descifrar(c.datos)) }));
+  res.json({ agenda: ag.normalizar(p.agenda), bloqueos, citas, modalidad: p.modalidad, publicado: p.estado === 'publicado', libres: (await libresDe(req.usuario.id, p.agenda)).length });
+});
+r.put('/mio/agenda', async (req, res) => {
+  const b = req.body || {};
+  await perfilDe(req.usuario);
+  const a = ag.normalizar(b.agenda);
+  await q('update perfiles set agenda = $2::jsonb where usuario_id = $1', [req.usuario.id, JSON.stringify(a)]);
+  const fechas = [...new Set((Array.isArray(b.bloqueos) ? b.bloqueos : []).filter(f => FECHA.test(f)))].slice(0, 120);
+  await q('delete from bloqueos where usuario_id = $1', [req.usuario.id]);
+  if (fechas.length) await q('insert into bloqueos (usuario_id, fecha) select $1, unnest($2::date[]) on conflict do nothing', [req.usuario.id, fechas]);
+  res.json({ agenda: a, libres: (await libresDe(req.usuario.id, a)).length });
+});
+r.post('/mio/citas/:id/:accion', async (req, res) => {
+  const acc = req.params.accion, id = Number.parseInt(req.params.id, 10) || 0;
+  if (!['cancelar', 'realizada'].includes(acc)) throw falla(404, 'Acción desconocida.');
+  const x = acc === 'cancelar'
+    ? await q("update citas set estado = 'cancelada', cancelada_por = 'psicologo', motivo_cancelacion = $3 where id = $1 and usuario_id = $2 and estado = 'confirmada' returning id", [id, req.usuario.id, texto(req.body && req.body.motivo, 300)])
+    : await q("update citas set estado = 'realizada' where id = $1 and usuario_id = $2 and estado = 'confirmada' and inicio < now() returning id", [id, req.usuario.id]);
+  if (!x.rows[0]) throw falla(409, acc === 'cancelar' ? 'Esta cita ya no se puede cancelar.' : 'Solo puedes marcar como realizada una cita que ya empezó.');
   res.json({ ok: true });
 });
 

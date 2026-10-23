@@ -214,6 +214,42 @@ test('directorio: un psicólogo se registra, completa su perfil, se aprueba y re
   assert.equal(r.datos.volvioARevision, true, 'cambiar el nombre vuelve a revisión');
 });
 
+test('agenda: el psicólogo publica su horario, un paciente reserva, no hay doble reserva y puede cancelar', async () => {
+  const todos = [1, 2, 3, 4, 5, 6, 7].map(dia => ({ dia, desde: '00:00', hasta: '23:45' }));
+  const pf = (await pedir('a', 'GET', '/api/admin/perfiles')).datos.perfiles.find(x => x.slug === 'javiera-soto');
+  await pedir('a', 'POST', `/api/admin/perfiles/${pf.id}/aprobar`, {});
+  let r = await pedir('ps', 'PUT', '/api/directorio/mio/agenda', { agenda: { bloques: todos, duracion: 50, descanso: 10, anticipacion: 0, dias: 3 }, bloqueos: [] });
+  assert.ok(r.datos.libres > 10);
+  r = await pedir('nadie', 'GET', '/api/directorio/perfiles/javiera-soto/horas');
+  const hora = r.datos.horas[0];
+  assert.ok(hora > Date.now());
+  const datos = { inicio: new Date(hora).toISOString(), modalidad: 'online', nombre: 'Pedro', contacto: 'pedro@ejemplo.cl', motivo: 'Ansiedad en el trabajo' };
+  r = await pedir('z', 'POST', '/api/directorio/perfiles/javiera-soto/citas', datos);
+  assert.equal(r.estado, 200); assert.match(r.datos.enlace, /^\/cita\/[\w-]{20,}$/);
+  const tok = r.datos.enlace.split('/').pop();
+  assert.equal((await pedir('x', 'POST', '/api/directorio/perfiles/javiera-soto/citas', datos)).estado, 409, 'no se puede reservar la misma hora dos veces');
+  r = await pedir('nadie', 'GET', '/api/directorio/perfiles/javiera-soto/horas');
+  assert.ok(!r.datos.horas.includes(hora), 'la hora reservada desaparece');
+  r = await pedir('nadie', 'GET', '/api/directorio/citas/' + tok);
+  assert.equal(r.datos.cita.estado, 'confirmada'); assert.match(r.datos.cita.sala, /^https:\/\/meet\.jit\.si\/ContenMente-/);
+  assert.equal(r.datos.cita.nombre, undefined, 'el enlace no expone datos del paciente');
+  r = await pedir('nadie', 'GET', '/api/directorio/citas/' + tok + '/calendario.ics');
+  assert.match(r.datos, /BEGIN:VEVENT[\s\S]*SUMMARY:Sesión con Ps\. Javiera/);
+  r = await pedir('ps', 'GET', '/api/directorio/mio/agenda');
+  const c = r.datos.citas.find(x => +new Date(x.inicio) === hora);
+  assert.equal(c.contacto, 'pedro@ejemplo.cl');
+  const fila = (await db.q('select datos from citas where id = $1', [c.id])).rows[0];
+  assert.ok(!fila.datos.toString('latin1').includes('Pedro'), 'los datos del paciente van cifrados');
+  assert.equal((await pedir('nadie', 'GET', '/api/directorio/citas/token-inventado')).estado, 404);
+  assert.equal((await pedir('nadie', 'POST', '/api/directorio/citas/' + tok + '/cancelar', { motivo: 'Me enfermé' })).estado, 200);
+  r = await pedir('nadie', 'GET', '/api/directorio/perfiles/javiera-soto/horas');
+  assert.ok(r.datos.horas.includes(hora), 'al cancelar, la hora vuelve a quedar libre');
+  const manana = new Date(hora); const f = `${manana.getFullYear()}-${String(manana.getMonth() + 1).padStart(2, '0')}-${String(manana.getDate()).padStart(2, '0')}`;
+  await pedir('ps', 'PUT', '/api/directorio/mio/agenda', { agenda: { bloques: todos, duracion: 50, descanso: 10, anticipacion: 0, dias: 3 }, bloqueos: [f] });
+  r = await pedir('nadie', 'GET', '/api/directorio/perfiles/javiera-soto/horas');
+  assert.ok(!r.datos.horas.includes(hora), 'un día bloqueado no muestra horas');
+});
+
 test('límite de intentos de ingreso', async () => {
   let ultimo;
   for (let i = 0; i < 9; i++) ultimo = await pedir('z', 'POST', '/api/equipo/ingresar', { correo: 'nadie@ejemplo.cl', clave: 'x' + i });
