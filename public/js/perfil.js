@@ -1,28 +1,32 @@
 'use strict';
 /* Perfil público de un psicólogo y formulario para pedir hora. */
 (() => {
-  const { $, api, esc } = window.RA;
+  const { $, api, esc, TIPO_DOC, vistaDoc } = window.RA;
   const MOD = { online: 'Atiende online', presencial: 'Atiende presencial', ambas: 'Atiende online y presencial' };
   const TIPO = { titulo: 'Título profesional', magister: 'Magíster', doctorado: 'Doctorado', diplomado: 'Diplomado', curso: 'Curso' };
   const slug = decodeURIComponent(location.pathname.split('/')[2] || '');
   const iniciales = n => n.replace(/^(Ps|Dr|Dra)\.?\s+/i, '').split(/\s+/).slice(0, 2).map(x => x[0] || '').join('').toUpperCase();
   const sec = (t, html) => (html ? `<section class="p-sec"><h2>${t}</h2>${html}</section>` : '');
 
-  function pintar(p, previa) {
+  function pintar(p, previa, revisor) {
     document.title = p.nombre + ' · ConténMente';
     const est = p.estudios.map(e => `<li><b>${esc(e.titulo)}</b><span>${esc([TIPO[e.tipo], e.institucion, e.anio].filter(Boolean).join(' · '))}</span></li>`).join('');
     const exp = p.experiencia.map(e => `<li><b>${esc(e.cargo)}</b><span>${esc([e.lugar, e.periodo].filter(Boolean).join(' · '))}</span></li>`).join('');
+    const docs = p.documentos.map(d => `<li><a class="credencial" href="${esc(d.url)}" target="_blank" rel="noopener">${vistaDoc(d)}<b>${esc(d.nombre)}</b>
+      <span>${TIPO_DOC[d.tipo]}${d.pdf ? ' · PDF' : ''}${revisor && !d.publico ? ' · <span class="privado">solo para revisión</span>' : ''}</span></a></li>`).join('');
     $('#perfil').innerHTML = `${previa ? '<p class="aviso-prev">Vista previa: este perfil todavía no está publicado.</p>' : ''}
       <div class="perfil">
-        <article class="caja">
-          <header class="p-cab"><span class="foto grande">${p.foto ? `<img src="${esc(p.foto)}" alt="Foto de ${esc(p.nombre)}">` : esc(iniciales(p.nombre))}</span>
-            <div><h1>${esc(p.nombre)}</h1><div class="t-meta">${esc([MOD[p.modalidad], p.comuna].filter(Boolean).join(' · '))}</div>
+        <article class="caja ficha-psi">
+          <div class="portada"><img src="${esc(p.fondo)}" alt=""></div>
+          <header class="p-cab"><span class="foto grande anillo">${p.foto ? `<img src="${esc(p.foto)}" alt="Foto de ${esc(p.nombre)}">` : esc(iniciales(p.nombre))}</span>
+            <div class="p-nombre"><h1>${esc(p.nombre)}</h1><div class="t-meta">${esc([MOD[p.modalidad], p.comuna].filter(Boolean).join(' · '))}</div>
             ${p.precio ? `<div class="t-meta">Sesión: $${Number(p.precio).toLocaleString('es-CL')}</div>` : ''}
             ${p.verificado ? '<span class="verif">✓ Perfil revisado por ConténMente</span>' : ''}</div></header>
           <a class="btn pedir-salto" href="#pedir">Pedir hora</a>
           ${p.especialidades.length ? `<div class="chips">${p.especialidades.map(e => `<span>${esc(e)}</span>`).join('')}</div>` : ''}
           ${sec('Sobre mí', p.resumen ? `<p>${esc(p.resumen)}</p>` : '')}
           ${sec('Cómo trabajo', p.enfoque ? `<p>${esc(p.enfoque)}</p>` : '')}
+          ${sec('Diplomas y certificados', docs ? `<ul class="credenciales">${docs}</ul>` : '')}
           ${sec('Formación', est ? `<ul class="lista-f">${est}</ul>` : '')}
           ${sec('Experiencia', exp ? `<ul class="lista-f">${exp}</ul>` : '')}
           ${sec('Registro profesional', p.registroSis ? `<p>N.º de registro en la Superintendencia de Salud: ${esc(p.registroSis)}</p>` : '')}
@@ -53,7 +57,7 @@
     });
   }
   (async () => {
-    try { const d = await api('GET', '/api/directorio/perfiles/' + encodeURIComponent(slug)); pintar(d.perfil, d.vistaPrevia); }
+    try { const d = await api('GET', '/api/directorio/perfiles/' + encodeURIComponent(slug)); pintar(d.perfil, d.vistaPrevia, d.revisor); }
     catch (e) { $('#perfil').innerHTML = `<div class="vacio-dir">${esc(e.message)}<br><a class="volver-dir" href="/">← Ver psicólogos</a></div>`; }
   })();
 })();

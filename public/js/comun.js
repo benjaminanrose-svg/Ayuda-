@@ -35,5 +35,9 @@ window.RA = (() => {
 
   const hora = f => new Date(f).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', hour12: false });
   const fecha = f => new Date(f).toLocaleDateString('es-CL', { weekday: 'short', day: 'numeric', month: 'short' }) + ' ' + hora(f);
-  return { $, esc, api, soportaAvisos, activarAvisos, hora, fecha };
+  // credenciales del directorio: sello para los PDF y nombres de tipos
+  const sello = '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M22 40l-6 20 10-5 6 7 4-18zM42 40l6 20-10-5-6 7-4-18z" fill="#B8A2DA"/><circle cx="32" cy="28" r="20" fill="#8CC8BC"/><circle cx="32" cy="28" r="14" fill="none" stroke="#fff" stroke-width="2.5" stroke-dasharray="3 3"/><path d="M25 28l5 5 9-10" fill="none" stroke="#30486C" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const TIPO_DOC = { titulo: 'Título', diploma: 'Diploma', certificado: 'Certificado', otro: 'Documento' };
+  const vistaDoc = d => `<span class="c-vista">${d.pdf ? sello : `<img src="${esc(d.url)}" alt="" loading="lazy">`}</span>`;
+  return { $, esc, api, soportaAvisos, activarAvisos, hora, fecha, sello, TIPO_DOC, vistaDoc };
 })();

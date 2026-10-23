@@ -10,9 +10,12 @@
 
   const meta = p => [MOD[p.modalidad], p.comuna, precio(p.precio)].filter(Boolean).map(esc).join(' · ');
   const tarjeta = p => `<li><a class="tarjeta" href="/psicologos/${esc(p.slug)}">
-    <span class="foto">${p.foto ? `<img src="${esc(p.foto)}" alt="" loading="lazy">` : esc(iniciales(p.nombre))}</span>
-    <span class="t-cuerpo"><b>${esc(p.nombre)}</b><span class="t-meta">${meta(p)}</span><span class="t-res">${esc(p.resumen)}</span>
-    <span class="chips">${p.especialidades.slice(0, 4).map(e => `<span>${esc(e)}</span>`).join('')}</span></span></a></li>`;
+    <span class="t-fondo"><img src="${esc(p.fondo)}" alt="" loading="lazy"></span>
+    <span class="t-top"><span class="foto">${p.foto ? `<img src="${esc(p.foto)}" alt="" loading="lazy">` : esc(iniciales(p.nombre))}</span>
+      <span><b>${esc(p.nombre)}</b><span class="t-meta">${meta(p)}</span></span></span>
+    <span class="t-res">${esc(p.resumen)}</span>
+    <span class="chips">${p.especialidades.slice(0, 4).map(e => `<span>${esc(e)}</span>`).join('')}</span>
+    ${p.documentos ? `<span class="t-doc">✓ ${p.documentos === 1 ? '1 diploma o certificado' : p.documentos + ' diplomas y certificados'} a la vista</span>` : ''}</a></li>`;
 
   function pintar() {
     const q = sinTilde($('#q').value.trim()), esp = $('#f-esp').value, mod = $('#f-mod').value;

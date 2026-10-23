@@ -196,6 +196,14 @@ test('directorio: un psicólogo se registra, completa su perfil, se aprueba y re
   assert.ok(r.datos.perfiles.some(x => x.slug === 'javiera-soto' && x.especialidades.includes('Duelo')));
   r = await pedir('nadie', 'GET', '/api/directorio/perfiles/javiera-soto');
   assert.equal(r.datos.perfil.verificado, true); assert.equal(r.datos.perfil.estado, undefined, 'el público no ve datos internos');
+  const pdf = 'data:application/pdf;base64,' + Buffer.from('%PDF-1.4 prueba').toString('base64');
+  assert.equal((await pedir('ps', 'POST', '/api/directorio/mio/documentos', { tipo: 'titulo', nombre: 'Título', archivo: 'data:text/html;base64,' + Buffer.from('<script>').toString('base64') })).estado, 400, 'solo PDF o imagen');
+  const doc = (await pedir('ps', 'POST', '/api/directorio/mio/documentos', { tipo: 'titulo', nombre: 'Título de Psicóloga', archivo: pdf, publico: false })).datos.id;
+  assert.equal((await pedir('nadie', 'GET', '/api/directorio/documentos/' + doc)).estado, 404, 'un documento privado no se ve en público');
+  assert.equal((await pedir('a', 'GET', '/api/directorio/documentos/' + doc)).estado, 200, 'administración sí lo ve');
+  await pedir('ps', 'PATCH', '/api/directorio/mio/documentos/' + doc, { publico: true });
+  r = await pedir('nadie', 'GET', '/api/directorio/perfiles/javiera-soto');
+  assert.equal(r.datos.perfil.documentos.length, 1); assert.ok(r.datos.perfil.fondo.startsWith('/img/fondos/'));
   r = await pedir('z', 'POST', '/api/directorio/perfiles/javiera-soto/solicitudes', { nombre: 'Ana', contacto: '+56 9 1234 5678', mensaje: 'Busco hora para mi hija' });
   assert.equal(r.estado, 200);
   r = await pedir('ps', 'GET', '/api/directorio/mio/solicitudes');

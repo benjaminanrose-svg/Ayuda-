@@ -20,7 +20,9 @@ function crearApp() {
     try { await q('select 1'); res.json({ ok: true }); } catch { res.status(503).json({ ok: false, error: 'Sin conexión a la base de datos' }); }
   });
 
-  app.use('/api/directorio/mio/foto', express.json({ limit: '600kb' }));
+  // fotos, fondos y documentos pesan más que un mensaje
+  app.use(['/api/directorio/mio/foto', '/api/directorio/mio/fondo'], express.json({ limit: '1400kb' }));
+  app.use('/api/directorio/mio/documentos', express.json({ limit: '6500kb' }));
   app.use('/api', express.json({ limit: '32kb' }), mismoOrigen);
   app.get('/api/push/clave', (req, res) => res.json({ clave: avisos.clavePublica() }));
   app.use('/api/persona', require('./rutas-persona'));

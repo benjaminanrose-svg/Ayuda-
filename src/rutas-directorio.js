@@ -11,6 +11,9 @@ const r = express.Router();
 const CORREO = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,20}$/;
 const MODALIDAD = ['online', 'presencial', 'ambas'];
 const TIPOS = ['titulo', 'magister', 'doctorado', 'diplomado', 'curso'];
+const DISENOS = ['calma', 'lavanda', 'brotes', 'noche', 'trama', 'aurora'];
+const TIPOS_DOC = ['titulo', 'diploma', 'certificado', 'otro'];
+const MAX_DOCS = 12;
 const texto = (v, max) => String(v == null ? '' : v).replace(/\s+\n/g, '\n').trim().slice(0, max);
 const linea = (v, max) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, max);
 const nombreDe = u => [u.titulo, u.nombre].filter(Boolean).join(' ');
@@ -36,12 +39,33 @@ async function perfilDe(u) {
   return p;
 }
 
+/* tipo real del archivo, por sus primeros bytes (no se confía en lo que dice el navegador) */
+function tipoArchivo(buf) {
+  if (buf.length > 4 && buf.subarray(0, 4).toString('latin1') === '%PDF') return 'application/pdf';
+  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return 'image/jpeg';
+  if (buf.length > 8 && buf.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return 'image/png';
+  return null;
+}
+function jpegDe(dataUrl, max) {
+  const m = String(dataUrl || '').match(/^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/);
+  const buf = m ? Buffer.from(m[1], 'base64') : null;
+  if (!buf || buf.length > max || tipoArchivo(buf) !== 'image/jpeg') throw falla(400, 'La imagen no es válida o es muy grande.');
+  return buf;
+}
+async function documentosDe(usuarioId, todos) {
+  return (await q(`select id, tipo, nombre, tipo_archivo, publico from documentos where usuario_id = $1${todos ? '' : ' and publico'} order by creado_en`, [usuarioId])).rows
+    .map(d => ({ id: d.id, tipo: d.tipo, nombre: d.nombre, pdf: d.tipo_archivo === 'application/pdf', publico: d.publico, url: '/api/directorio/documentos/' + d.id }));
+}
+
 /* forma pública (y la del dueño, que además ve estado y nota de revisión) */
 function vista(p, u, propio) {
+  const v0 = new Date(p.actualizado_en).getTime();
   const v = {
     slug: p.slug, nombre: nombreDe(u), resumen: p.resumen, enfoque: p.enfoque, especialidades: p.especialidades,
     estudios: p.estudios, experiencia: p.experiencia, modalidad: p.modalidad, comuna: p.comuna, registroSis: p.registro_sis,
-    linkedin: p.linkedin, precio: p.precio, foto: p.foto ? `/api/directorio/perfiles/${p.slug}/foto?v=${new Date(p.actualizado_en).getTime()}` : null,
+    linkedin: p.linkedin, precio: p.precio, foto: p.foto ? `/api/directorio/perfiles/${p.slug}/foto?v=${v0}` : null,
+    fondo: p.fondo ? `/api/directorio/perfiles/${p.slug}/fondo?v=${v0}` : `/img/fondos/${DISENOS.includes(p.fondo_diseno) ? p.fondo_diseno : 'calma'}.svg`,
+    fondoPropio: !!p.fondo, fondoDiseno: p.fondo_diseno,
     verificado: p.estado === 'publicado'
   };
   if (propio) Object.assign(v, { estado: p.estado, notaRevision: p.nota_revision, titulo: u.titulo, nombreSolo: u.nombre });
@@ -50,12 +74,15 @@ function vista(p, u, propio) {
 const tarjeta = p => ({
   slug: p.slug, nombre: nombreDe(p), resumen: p.resumen.slice(0, 220), especialidades: p.especialidades.slice(0, 6),
   modalidad: p.modalidad, comuna: p.comuna, precio: p.precio,
-  foto: p.tiene_foto ? `/api/directorio/perfiles/${p.slug}/foto?v=${new Date(p.actualizado_en).getTime()}` : null
+  foto: p.tiene_foto ? `/api/directorio/perfiles/${p.slug}/foto?v=${new Date(p.actualizado_en).getTime()}` : null,
+  fondo: p.tiene_fondo ? `/api/directorio/perfiles/${p.slug}/fondo?v=${new Date(p.actualizado_en).getTime()}` : `/img/fondos/${DISENOS.includes(p.fondo_diseno) ? p.fondo_diseno : 'calma'}.svg`,
+  documentos: p.n_docs
 });
 
 /* ── público ── */
 r.get('/perfiles', async (req, res) => {
-  const filas = (await q(`select p.slug, p.resumen, p.especialidades, p.modalidad, p.comuna, p.precio, p.actualizado_en, p.foto is not null tiene_foto, u.nombre, u.titulo
+  const filas = (await q(`select p.slug, p.resumen, p.especialidades, p.modalidad, p.comuna, p.precio, p.actualizado_en, p.foto is not null tiene_foto, p.fondo is not null tiene_fondo, p.fondo_diseno, u.nombre, u.titulo,
+    (select count(*)::int from documentos d where d.usuario_id = p.usuario_id and d.publico) n_docs
     from perfiles p join usuarios u on u.id = p.usuario_id where p.estado = 'publicado' and u.activo order by p.publicado_en desc nulls last limit 500`)).rows;
   res.json({ perfiles: filas.map(tarjeta) });
 });
@@ -68,16 +95,33 @@ r.get('/perfiles/:slug', async (req, res) => {
   const s = await ses.usuarioDeSesion(req);
   const puedeVer = p && ((p.estado === 'publicado' && p.activo) || (s && (s.r.id === p.usuario_id || s.r.rol === 'admin')));
   if (!puedeVer) throw falla(404, 'Este perfil no existe o aún no está publicado.');
-  res.json({ perfil: vista(p, p, false), vistaPrevia: p.estado !== 'publicado' });
+  const revisor = !!(s && (s.r.id === p.usuario_id || s.r.rol === 'admin'));
+  res.json({ perfil: { ...vista(p, p, false), documentos: await documentosDe(p.usuario_id, revisor) }, vistaPrevia: p.estado !== 'publicado', revisor });
 });
-r.get('/perfiles/:slug/foto', async (req, res) => {
+async function imagenPerfil(req, res, campo) {
   const p = await publicoPorSlug(req.params.slug);
-  if (!p || !p.foto) return res.status(404).end();
+  if (!p || !p[campo]) return res.status(404).end();
   if (p.estado !== 'publicado') {
     const s = await ses.usuarioDeSesion(req);
     if (!s || (s.r.id !== p.usuario_id && s.r.rol !== 'admin')) return res.status(404).end();
   }
-  res.set({ 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=86400' }).send(p.foto);
+  res.set({ 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=86400' }).send(p[campo]);
+}
+r.get('/perfiles/:slug/foto', (req, res) => imagenPerfil(req, res, 'foto'));
+r.get('/perfiles/:slug/fondo', (req, res) => imagenPerfil(req, res, 'fondo'));
+
+/* diplomas y certificados: públicos si el psicólogo lo eligió y su perfil está publicado; siempre para él y administración */
+r.get('/documentos/:id', async (req, res) => {
+  const d = (await q(`select d.*, p.estado, u.activo from documentos d join perfiles p on p.usuario_id = d.usuario_id join usuarios u on u.id = d.usuario_id where d.id = $1`,
+    [Number.parseInt(req.params.id, 10) || 0])).rows[0];
+  if (!d) return res.status(404).end();
+  if (!(d.publico && d.estado === 'publicado' && d.activo)) {
+    const s = await ses.usuarioDeSesion(req);
+    if (!s || (s.r.id !== d.usuario_id && s.r.rol !== 'admin')) return res.status(404).end();
+  }
+  const ext = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png' }[d.tipo_archivo];
+  res.set({ 'Content-Type': d.tipo_archivo, 'Cache-Control': 'private, max-age=3600', 'Content-Disposition': `inline; filename="documento-${d.id}.${ext}"`,
+    'Content-Security-Policy': "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; object-src 'self'; frame-ancestors 'self'" }).send(d.archivo);
 });
 
 r.post('/perfiles/:slug/solicitudes', limitador(5, 3600e3, req => 'sol|' + req.ip), async (req, res) => {
@@ -113,7 +157,7 @@ r.use('/mio', ses.sesion, ses.claveAlDia);
 r.get('/mio', async (req, res) => {
   const p = await perfilDe(req.usuario);
   const n = (await q('select count(*) filter (where not leida)::int n from solicitudes where usuario_id = $1', [req.usuario.id])).rows[0].n;
-  res.json({ perfil: vista(p, req.usuario, true), rol: req.usuario.rol, solicitudesNuevas: n });
+  res.json({ perfil: { ...vista(p, req.usuario, true), documentos: await documentosDe(req.usuario.id, true) }, rol: req.usuario.rol, solicitudesNuevas: n });
 });
 
 function lista(v, campos, max) {
@@ -143,24 +187,58 @@ r.put('/mio', async (req, res) => {
   const estado = antes.estado === 'publicado' && cambiaVerificado ? 'pendiente' : antes.estado;
   await q('update usuarios set nombre = $2, titulo = $3 where id = $1', [u.id, nombre, titulo]);
   await q(`update perfiles set resumen = $2, enfoque = $3, especialidades = $4, estudios = $5::jsonb, experiencia = $6::jsonb, modalidad = $7,
-      comuna = $8, registro_sis = $9, linkedin = $10, precio = $11, estado = $12, actualizado_en = now() where usuario_id = $1`,
+      comuna = $8, registro_sis = $9, linkedin = $10, precio = $11, estado = $12, fondo_diseno = $13, actualizado_en = now() where usuario_id = $1`,
     [u.id, texto(b.resumen, 1500), texto(b.enfoque, 800), especialidades, JSON.stringify(estudios), JSON.stringify(experiencia), modalidad,
-      linea(b.comuna, 60), registro, linkedin, precio, estado]);
+      linea(b.comuna, 60), registro, linkedin, precio, estado, DISENOS.includes(b.fondoDiseno) ? b.fondoDiseno : antes.fondo_diseno]);
   const p = (await q('select * from perfiles where usuario_id = $1', [u.id])).rows[0];
   res.json({ perfil: vista(p, { ...u, nombre, titulo }, true), volvioARevision: estado !== antes.estado });
 });
 
 r.post('/mio/foto', async (req, res) => {
-  const m = String((req.body && req.body.imagen) || '').match(/^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/);
-  if (!m) throw falla(400, 'La foto debe ser una imagen JPG.');
-  const buf = Buffer.from(m[1], 'base64');
-  if (buf.length > 400e3 || buf[0] !== 0xff || buf[1] !== 0xd8) throw falla(400, 'La foto no es válida o es muy grande.');
+  const buf = jpegDe(req.body && req.body.imagen, 500e3);
   await perfilDe(req.usuario);
   await q('update perfiles set foto = $2, actualizado_en = now() where usuario_id = $1', [req.usuario.id, buf]);
   res.json({ ok: true });
 });
 r.delete('/mio/foto', async (req, res) => {
   await q('update perfiles set foto = null, actualizado_en = now() where usuario_id = $1', [req.usuario.id]);
+  res.json({ ok: true });
+});
+r.post('/mio/fondo', async (req, res) => {
+  const buf = jpegDe(req.body && req.body.imagen, 900e3);
+  await perfilDe(req.usuario);
+  await q('update perfiles set fondo = $2, actualizado_en = now() where usuario_id = $1', [req.usuario.id, buf]);
+  res.json({ ok: true });
+});
+r.delete('/mio/fondo', async (req, res) => {
+  await q('update perfiles set fondo = null, actualizado_en = now() where usuario_id = $1', [req.usuario.id]);
+  res.json({ ok: true });
+});
+
+r.post('/mio/documentos', async (req, res) => {
+  const b = req.body || {};
+  const m = String(b.archivo || '').match(/^data:[a-z/+.-]+;base64,([A-Za-z0-9+/=]+)$/);
+  const buf = m ? Buffer.from(m[1], 'base64') : null;
+  const tipo = buf && tipoArchivo(buf);
+  if (!tipo) throw falla(400, 'Sube un PDF o una imagen (JPG o PNG).');
+  if (buf.length > 4.5e6) throw falla(400, 'El archivo pesa más de 4 MB. Prueba con una foto o un PDF más liviano.');
+  const nombre = linea(b.nombre, 120);
+  if (!nombre) throw falla(400, 'Escribe qué documento es (por ejemplo: Título de Psicólogo, Diplomado en Trauma).');
+  if ((await q('select count(*)::int n from documentos where usuario_id = $1', [req.usuario.id])).rows[0].n >= MAX_DOCS) throw falla(400, `Puedes subir hasta ${MAX_DOCS} documentos.`);
+  await perfilDe(req.usuario);
+  const d = (await q('insert into documentos (usuario_id, tipo, nombre, tipo_archivo, archivo, publico) values ($1, $2, $3, $4, $5, $6) returning id',
+    [req.usuario.id, TIPOS_DOC.includes(b.tipo) ? b.tipo : 'otro', nombre, tipo, buf, b.publico !== false])).rows[0];
+  await q('update perfiles set actualizado_en = now() where usuario_id = $1', [req.usuario.id]);
+  res.json({ id: d.id });
+});
+r.patch('/mio/documentos/:id', async (req, res) => {
+  const b = req.body || {};
+  await q('update documentos set publico = coalesce($3, publico), nombre = coalesce(nullif($4, \'\'), nombre) where id = $1 and usuario_id = $2',
+    [Number.parseInt(req.params.id, 10) || 0, req.usuario.id, typeof b.publico === 'boolean' ? b.publico : null, linea(b.nombre, 120)]);
+  res.json({ ok: true });
+});
+r.delete('/mio/documentos/:id', async (req, res) => {
+  await q('delete from documentos where id = $1 and usuario_id = $2', [Number.parseInt(req.params.id, 10) || 0, req.usuario.id]);
   res.json({ ok: true });
 });
 
