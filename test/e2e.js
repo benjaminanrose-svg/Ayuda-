@@ -116,6 +116,7 @@ const espera = ms => new Promise(r => setTimeout(r, ms));
     await pub.screenshot({ path: path.join(OUT, 'agendado-movil.png') });
     await pub.click('.cita-ok .btn'); await pub.waitForSelector('.cita-fecha'); await espera(200);
     await pub.screenshot({ path: path.join(OUT, 'cita-movil.png'), fullPage: true });
+    await pub.goto(BASE + '/privacidad'); await pub.waitForSelector('.legal'); await pub.screenshot({ path: path.join(OUT, 'privacidad-movil.png'), fullPage: true }); await pub.goBack(); await pub.waitForSelector('.cita-fecha');
     await pub.click('.sos-btn'); await espera(200);
     await pub.screenshot({ path: path.join(OUT, 'sos-movil.png') });
     const dsk = await b.newPage({ viewport: { width: 1366, height: 768 } }); vigilar(dsk, 'publico-escritorio');
