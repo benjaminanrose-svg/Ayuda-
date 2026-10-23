@@ -254,7 +254,7 @@ async function tomar(u, id) {
     return { k, ms, resumen: await resumenCaso(c, k.id) };
   });
   difundir(s);
-  avisos.aConversacion(s.k.conversacion_id, { titulo: 'ConténMente', cuerpo: 'Un especialista tomó tu caso y te va a escribir.', url: '/', etiqueta: 'contenmente' }).catch(log);
+  avisos.aConversacion(s.k.conversacion_id, { titulo: 'ConténMente', cuerpo: 'Un especialista tomó tu caso y te va a escribir.', url: '/conversar', etiqueta: 'contenmente' }).catch(log);
   return s.resumen;
 }
 
@@ -275,7 +275,7 @@ async function agendar(u, id, para) {
     return { k, ms, resumen: await resumenCaso(c, k.id) };
   });
   difundir(s);
-  avisos.aConversacion(s.k.conversacion_id, { titulo: 'ConténMente', cuerpo: 'Tu hora con un especialista quedó agendada.', url: '/', etiqueta: 'contenmente' }).catch(log);
+  avisos.aConversacion(s.k.conversacion_id, { titulo: 'ConténMente', cuerpo: 'Tu hora con un especialista quedó agendada.', url: '/conversar', etiqueta: 'contenmente' }).catch(log);
   return s.resumen;
 }
 
@@ -329,7 +329,7 @@ async function mensajeEspecialista(u, id, texto, tipo = 'texto') {
   tr.aPersona(s.k.conversacion_id, 'mensaje', m);
   tr.aPersona(s.k.conversacion_id, 'estado', estadoPersona(s.k, s.resumen));
   tr.aUsuario(u.id, 'mensaje', { casoId: s.k.id, mensaje: m });
-  if (!tr.personaConectada(s.k.conversacion_id)) avisos.aConversacion(s.k.conversacion_id, { titulo: 'ConténMente', cuerpo: 'Tienes un mensaje nuevo.', url: '/', etiqueta: 'contenmente' }).catch(log);
+  if (!tr.personaConectada(s.k.conversacion_id)) avisos.aConversacion(s.k.conversacion_id, { titulo: 'ConténMente', cuerpo: 'Tienes un mensaje nuevo.', url: '/conversar', etiqueta: 'contenmente' }).catch(log);
   return m;
 }
 
@@ -379,7 +379,7 @@ async function recordatorios() {
   for (const f of filas) {
     tr.aUsuario(f.tomado_por, 'alerta', { casoId: f.id, folio: pad(f.folio), texto: 'Tu hora agendada es en 5 minutos o menos.' });
     avisos.aUsuarios([f.tomado_por], { titulo: `Hora agendada · caso N.º ${pad(f.folio)}`, cuerpo: 'Es en 5 minutos o menos.', url: '/equipo#caso-' + f.id, etiqueta: 'hora-' + f.id, urgente: true }).catch(log);
-    avisos.aConversacion(f.conversacion_id, { titulo: 'ConténMente', cuerpo: 'Tu hora con el especialista es en unos minutos. Vuelve a ConténMente.', url: '/', etiqueta: 'contenmente' }).catch(log);
+    avisos.aConversacion(f.conversacion_id, { titulo: 'ConténMente', cuerpo: 'Tu hora con el especialista es en unos minutos. Vuelve a ConténMente.', url: '/conversar', etiqueta: 'contenmente' }).catch(log);
   }
 }
 

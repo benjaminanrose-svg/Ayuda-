@@ -101,4 +101,24 @@ r.get('/metricas', async (req, res) => {
   res.json({ ...m, ...disp });
 });
 
+/* perfiles del directorio: revisión antes de publicar */
+r.get('/perfiles', async (req, res) => {
+  const filas = (await q(`select p.usuario_id id, p.slug, p.estado, p.registro_sis, p.especialidades, p.actualizado_en, p.nota_revision, u.nombre, u.titulo, u.correo
+    from perfiles p join usuarios u on u.id = p.usuario_id where p.estado in ('pendiente', 'publicado', 'rechazado') order by (p.estado = 'pendiente') desc, p.actualizado_en desc limit 300`)).rows;
+  res.json({ perfiles: filas.map(f => ({ id: f.id, slug: f.slug, estado: f.estado, registroSis: f.registro_sis, especialidades: f.especialidades, actualizadoEn: f.actualizado_en,
+    notaRevision: f.nota_revision, nombre: [f.titulo, f.nombre].filter(Boolean).join(' '), correo: f.correo })) });
+});
+r.post('/perfiles/:id/:accion', async (req, res) => {
+  const id = idDe(req), acc = req.params.accion;
+  if (!['aprobar', 'rechazar', 'ocultar'].includes(acc)) throw falla(404, 'Acción desconocida.');
+  const nota = texto(req.body && req.body.nota, 500);
+  if (acc === 'rechazar' && !nota) throw falla(400, 'Escribe qué debe corregir.');
+  const estado = { aprobar: 'publicado', rechazar: 'rechazado', ocultar: 'borrador' }[acc];
+  const x = (await q(`update perfiles set estado = $2, nota_revision = $3, publicado_en = case when $2 = 'publicado' then coalesce(publicado_en, now()) else publicado_en end
+    where usuario_id = $1 returning usuario_id`, [id, estado, acc === 'aprobar' ? '' : nota])).rows[0];
+  if (!x) throw falla(404, 'Perfil no encontrado.');
+  await auditar(req, 'perfil ' + acc, { usuario: id });
+  res.json({ ok: true, estado });
+});
+
 module.exports = r;

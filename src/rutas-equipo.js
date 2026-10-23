@@ -31,6 +31,8 @@ r.get('/yo', (req, res) => res.json({ usuario: ses.usuarioPublico(req.usuario), 
 r.post('/clave', limitador(10, 15 * 60e3, req => 'clave|' + req.usuario.id), async (req, res) => { await ses.cambiarClave(req); res.json({ ok: true }); });
 
 r.use(ses.claveAlDia);
+// las cuentas solo de directorio no entran al panel de casos
+r.use((req, res, next) => (req.usuario.rol === 'psicologo' && req.path !== '/push' ? next(falla(403, 'Tu cuenta es solo para el directorio.', { directorio: true })) : next()));
 r.post('/disponible', async (req, res) => {
   const d = !!(req.body && req.body.disponible);
   await q('update usuarios set disponible = $2 where id = $1', [req.usuario.id, d]);

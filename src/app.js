@@ -20,14 +20,20 @@ function crearApp() {
     try { await q('select 1'); res.json({ ok: true }); } catch { res.status(503).json({ ok: false, error: 'Sin conexión a la base de datos' }); }
   });
 
+  app.use('/api/directorio/mio/foto', express.json({ limit: '600kb' }));
   app.use('/api', express.json({ limit: '32kb' }), mismoOrigen);
   app.get('/api/push/clave', (req, res) => res.json({ clave: avisos.clavePublica() }));
   app.use('/api/persona', require('./rutas-persona'));
   app.use('/api/equipo', require('./rutas-equipo'));
+  app.use('/api/directorio', require('./rutas-directorio'));
   app.use('/api/admin', ses.sesion, ses.claveAlDia, ses.soloAdmin, require('./rutas-admin'));
   app.use('/api', (req, res, next) => next(falla(404, 'No encontrado.')));
 
-  app.get('/', pagina('index.html'));
+  app.get('/', pagina('directorio.html'));
+  app.get('/psicologos/:slug', pagina('perfil.html'));
+  app.get('/registro', pagina('registro.html'));
+  app.get('/mi-perfil', pagina('mi-perfil.html'));
+  app.get('/conversar', pagina('index.html'));
   app.get('/o/:slug', pagina('index.html'));
   app.get('/equipo', pagina('equipo.html'));
   app.get('/ingresar', pagina('ingresar.html'));

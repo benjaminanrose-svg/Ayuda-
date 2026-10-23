@@ -1,0 +1,191 @@
+'use strict';
+/* Directorio de psicólogos: perfiles públicos, registro, edición del perfil propio y solicitudes de hora. */
+const express = require('express');
+const { q } = require('./db');
+const ses = require('./sesion');
+const avisos = require('./avisos');
+const { cifrar, descifrar, hashClave, token, hashToken } = require('./cifrado');
+const { falla, limitador, ponerCookie } = require('./http');
+
+const r = express.Router();
+const CORREO = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,20}$/;
+const MODALIDAD = ['online', 'presencial', 'ambas'];
+const TIPOS = ['titulo', 'magister', 'doctorado', 'diplomado', 'curso'];
+const texto = (v, max) => String(v == null ? '' : v).replace(/\s+\n/g, '\n').trim().slice(0, max);
+const linea = (v, max) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, max);
+const nombreDe = u => [u.titulo, u.nombre].filter(Boolean).join(' ');
+
+function slugDe(nombre) {
+  const s = String(nombre).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
+  return s.length >= 2 ? s : 'psicologo';
+}
+async function slugLibre(base, usuarioId) {
+  for (let i = 1; i < 500; i++) {
+    const s = i === 1 ? base : `${base}-${i}`;
+    const x = (await q('select usuario_id from perfiles where slug = $1', [s])).rows[0];
+    if (!x || x.usuario_id === usuarioId) return s;
+  }
+  return base + '-' + Date.now();
+}
+async function perfilDe(u) {
+  let p = (await q('select * from perfiles where usuario_id = $1', [u.id])).rows[0];
+  if (!p) {
+    await q('insert into perfiles (usuario_id, slug) values ($1, $2) on conflict do nothing', [u.id, await slugLibre(slugDe(u.nombre), u.id)]);
+    p = (await q('select * from perfiles where usuario_id = $1', [u.id])).rows[0];
+  }
+  return p;
+}
+
+/* forma pública (y la del dueño, que además ve estado y nota de revisión) */
+function vista(p, u, propio) {
+  const v = {
+    slug: p.slug, nombre: nombreDe(u), resumen: p.resumen, enfoque: p.enfoque, especialidades: p.especialidades,
+    estudios: p.estudios, experiencia: p.experiencia, modalidad: p.modalidad, comuna: p.comuna, registroSis: p.registro_sis,
+    linkedin: p.linkedin, precio: p.precio, foto: p.foto ? `/api/directorio/perfiles/${p.slug}/foto?v=${new Date(p.actualizado_en).getTime()}` : null,
+    verificado: p.estado === 'publicado'
+  };
+  if (propio) Object.assign(v, { estado: p.estado, notaRevision: p.nota_revision, titulo: u.titulo, nombreSolo: u.nombre });
+  return v;
+}
+const tarjeta = p => ({
+  slug: p.slug, nombre: nombreDe(p), resumen: p.resumen.slice(0, 220), especialidades: p.especialidades.slice(0, 6),
+  modalidad: p.modalidad, comuna: p.comuna, precio: p.precio,
+  foto: p.tiene_foto ? `/api/directorio/perfiles/${p.slug}/foto?v=${new Date(p.actualizado_en).getTime()}` : null
+});
+
+/* ── público ── */
+r.get('/perfiles', async (req, res) => {
+  const filas = (await q(`select p.slug, p.resumen, p.especialidades, p.modalidad, p.comuna, p.precio, p.actualizado_en, p.foto is not null tiene_foto, u.nombre, u.titulo
+    from perfiles p join usuarios u on u.id = p.usuario_id where p.estado = 'publicado' and u.activo order by p.publicado_en desc nulls last limit 500`)).rows;
+  res.json({ perfiles: filas.map(tarjeta) });
+});
+
+async function publicoPorSlug(slug) {
+  return (await q('select p.*, u.nombre, u.titulo, u.activo from perfiles p join usuarios u on u.id = p.usuario_id where p.slug = $1', [String(slug).slice(0, 60)])).rows[0];
+}
+r.get('/perfiles/:slug', async (req, res) => {
+  const p = await publicoPorSlug(req.params.slug);
+  const s = await ses.usuarioDeSesion(req);
+  const puedeVer = p && ((p.estado === 'publicado' && p.activo) || (s && (s.r.id === p.usuario_id || s.r.rol === 'admin')));
+  if (!puedeVer) throw falla(404, 'Este perfil no existe o aún no está publicado.');
+  res.json({ perfil: vista(p, p, false), vistaPrevia: p.estado !== 'publicado' });
+});
+r.get('/perfiles/:slug/foto', async (req, res) => {
+  const p = await publicoPorSlug(req.params.slug);
+  if (!p || !p.foto) return res.status(404).end();
+  if (p.estado !== 'publicado') {
+    const s = await ses.usuarioDeSesion(req);
+    if (!s || (s.r.id !== p.usuario_id && s.r.rol !== 'admin')) return res.status(404).end();
+  }
+  res.set({ 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=86400' }).send(p.foto);
+});
+
+r.post('/perfiles/:slug/solicitudes', limitador(5, 3600e3, req => 'sol|' + req.ip), async (req, res) => {
+  const p = await publicoPorSlug(req.params.slug);
+  if (!p || p.estado !== 'publicado' || !p.activo) throw falla(404, 'Este perfil no está disponible.');
+  const b = req.body || {};
+  const d = { nombre: linea(b.nombre, 80), contacto: linea(b.contacto, 120), mensaje: texto(b.mensaje, 1500) };
+  if (!d.nombre || !d.contacto) throw falla(400, 'Escribe tu nombre y cómo contactarte (teléfono o correo).');
+  await q('insert into solicitudes (usuario_id, contenido) values ($1, $2)', [p.usuario_id, cifrar(JSON.stringify(d))]);
+  avisos.aUsuarios([p.usuario_id], { titulo: 'ConténMente', cuerpo: 'Tienes una nueva solicitud de hora.', url: '/mi-perfil', etiqueta: 'solicitud' }).catch(() => {});
+  res.json({ ok: true });
+});
+
+r.post('/registro', limitador(5, 3600e3, req => 'reg|' + req.ip), async (req, res) => {
+  const b = req.body || {};
+  const correo = linea(b.correo, 200).toLowerCase(), nombre = linea(b.nombre, 80), titulo = linea(b.titulo, 12);
+  if (!CORREO.test(correo)) throw falla(400, 'Escribe un correo válido.');
+  if (nombre.length < 4) throw falla(400, 'Escribe tu nombre y apellido.');
+  ses.validarClave(b.clave);
+  if ((await q('select 1 from usuarios where correo = $1', [correo])).rows[0]) throw falla(409, 'Ya existe una cuenta con ese correo. Ingresa con tu clave.');
+  const u = (await q(`insert into usuarios (correo, nombre, titulo, rol, clave_hash, debe_cambiar_clave) values ($1, $2, $3, 'psicologo', $4, false) returning *`,
+    [correo, nombre, titulo, await hashClave(String(b.clave))])).rows[0];
+  await perfilDe(u);
+  await q('insert into auditoria (usuario_id, accion) values ($1, $2)', [u.id, 'registro psicólogo']);
+  const t = token();
+  await q("insert into sesiones (token_hash, usuario_id, expira_en) values ($1, $2, now() + interval '12 hours')", [hashToken(t), u.id]);
+  ponerCookie(res, req, 'ra_sesion', t, 12 * 3600);
+  res.json({ ok: true });
+});
+
+/* ── perfil propio ── */
+r.use('/mio', ses.sesion, ses.claveAlDia);
+r.get('/mio', async (req, res) => {
+  const p = await perfilDe(req.usuario);
+  const n = (await q('select count(*) filter (where not leida)::int n from solicitudes where usuario_id = $1', [req.usuario.id])).rows[0].n;
+  res.json({ perfil: vista(p, req.usuario, true), rol: req.usuario.rol, solicitudesNuevas: n });
+});
+
+function lista(v, campos, max) {
+  if (!Array.isArray(v)) return [];
+  return v.slice(0, max).map(x => {
+    const o = {};
+    for (const [k, n] of Object.entries(campos)) o[k] = linea(x && x[k], n);
+    return o;
+  }).filter(o => Object.values(o).some(Boolean));
+}
+r.put('/mio', async (req, res) => {
+  const b = req.body || {}, u = req.usuario;
+  const antes = await perfilDe(u);
+  const nombre = linea(b.nombre, 80), titulo = linea(b.titulo, 12);
+  if (nombre.length < 4) throw falla(400, 'Escribe tu nombre y apellido.');
+  const modalidad = MODALIDAD.includes(b.modalidad) ? b.modalidad : 'online';
+  const precio = b.precio === '' || b.precio == null ? null : Math.round(Number(b.precio));
+  if (precio != null && (!Number.isFinite(precio) || precio < 0 || precio > 1e7)) throw falla(400, 'El valor de la sesión no es válido.');
+  const linkedin = linea(b.linkedin, 200);
+  if (linkedin && !/^https:\/\/([a-z]{2,3}\.)?linkedin\.com\//i.test(linkedin)) throw falla(400, 'El enlace de LinkedIn debe empezar con https://www.linkedin.com/');
+  const especialidades = [...new Set((Array.isArray(b.especialidades) ? b.especialidades : []).map(x => linea(x, 40)).filter(Boolean))].slice(0, 12);
+  const estudios = lista(b.estudios, { tipo: 20, titulo: 120, institucion: 120, anio: 4 }, 15).map(e => ({ ...e, tipo: TIPOS.includes(e.tipo) ? e.tipo : 'curso' }));
+  const experiencia = lista(b.experiencia, { cargo: 100, lugar: 120, periodo: 40 }, 15);
+  const registro = linea(b.registroSis, 20);
+  // si cambia lo que se verificó (nombre o registro), el perfil vuelve a revisión
+  const cambiaVerificado = nombre !== u.nombre || titulo !== u.titulo || registro !== antes.registro_sis;
+  const estado = antes.estado === 'publicado' && cambiaVerificado ? 'pendiente' : antes.estado;
+  await q('update usuarios set nombre = $2, titulo = $3 where id = $1', [u.id, nombre, titulo]);
+  await q(`update perfiles set resumen = $2, enfoque = $3, especialidades = $4, estudios = $5::jsonb, experiencia = $6::jsonb, modalidad = $7,
+      comuna = $8, registro_sis = $9, linkedin = $10, precio = $11, estado = $12, actualizado_en = now() where usuario_id = $1`,
+    [u.id, texto(b.resumen, 1500), texto(b.enfoque, 800), especialidades, JSON.stringify(estudios), JSON.stringify(experiencia), modalidad,
+      linea(b.comuna, 60), registro, linkedin, precio, estado]);
+  const p = (await q('select * from perfiles where usuario_id = $1', [u.id])).rows[0];
+  res.json({ perfil: vista(p, { ...u, nombre, titulo }, true), volvioARevision: estado !== antes.estado });
+});
+
+r.post('/mio/foto', async (req, res) => {
+  const m = String((req.body && req.body.imagen) || '').match(/^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/);
+  if (!m) throw falla(400, 'La foto debe ser una imagen JPG.');
+  const buf = Buffer.from(m[1], 'base64');
+  if (buf.length > 400e3 || buf[0] !== 0xff || buf[1] !== 0xd8) throw falla(400, 'La foto no es válida o es muy grande.');
+  await perfilDe(req.usuario);
+  await q('update perfiles set foto = $2, actualizado_en = now() where usuario_id = $1', [req.usuario.id, buf]);
+  res.json({ ok: true });
+});
+r.delete('/mio/foto', async (req, res) => {
+  await q('update perfiles set foto = null, actualizado_en = now() where usuario_id = $1', [req.usuario.id]);
+  res.json({ ok: true });
+});
+
+r.post('/mio/enviar', async (req, res) => {
+  const p = await perfilDe(req.usuario);
+  const falta = [];
+  if (p.resumen.length < 80) falta.push('un resumen de al menos 80 letras');
+  if (!p.especialidades.length) falta.push('al menos una especialidad');
+  if (!p.estudios.length) falta.push('tus estudios');
+  if (!p.registro_sis) falta.push('tu número de registro en la Superintendencia de Salud');
+  if (falta.length) throw falla(400, 'Para enviar a revisión falta: ' + falta.join(', ') + '.');
+  if (p.estado === 'publicado') return res.json({ estado: p.estado });
+  await q("update perfiles set estado = 'pendiente', nota_revision = '' where usuario_id = $1", [req.usuario.id]);
+  const admins = (await q("select id from usuarios where rol = 'admin' and activo")).rows.map(x => x.id);
+  avisos.aUsuarios(admins, { titulo: 'ConténMente', cuerpo: 'Hay un perfil de psicólogo para revisar.', url: '/equipo#admin', etiqueta: 'revision' }).catch(() => {});
+  res.json({ estado: 'pendiente' });
+});
+
+r.get('/mio/solicitudes', async (req, res) => {
+  const filas = (await q('select id, contenido, leida, creada_en from solicitudes where usuario_id = $1 order by creada_en desc limit 100', [req.usuario.id])).rows;
+  res.json({ solicitudes: filas.map(s => ({ id: s.id, leida: s.leida, creadaEn: s.creada_en, ...JSON.parse(descifrar(s.contenido)) })) });
+});
+r.post('/mio/solicitudes/:id/leida', async (req, res) => {
+  await q('update solicitudes set leida = true where id = $1 and usuario_id = $2', [Number.parseInt(req.params.id, 10) || 0, req.usuario.id]);
+  res.json({ ok: true });
+});
+
+module.exports = r;

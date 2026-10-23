@@ -43,7 +43,7 @@ const espera = ms => new Promise(r => setTimeout(r, ms));
 
     // persona en el teléfono
     const per = await b.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }); vigilar(per, 'persona');
-    await per.goto(BASE + '/'); await espera(3500);
+    await per.goto(BASE + '/conversar'); await espera(3500);
     await per.screenshot({ path: path.join(OUT, 'persona-inicio.png') });
     await per.fill('#input', 'me quiero matar'); await per.press('#input', 'Enter'); await espera(5000);
     await per.screenshot({ path: path.join(OUT, 'persona-riesgo.png') });
@@ -64,7 +64,7 @@ const espera = ms => new Promise(r => setTimeout(r, ms));
     // más casos (riesgo alto y bajo) y vistas en el teléfono
     for (const t of ['mi papá me pega cuando toma', 'quiero hablar con un psicólogo']) {
       const p = await b.newPage({ viewport: { width: 390, height: 844 } }); vigilar(p, 'persona2');
-      await p.goto(BASE + '/'); await espera(1500); await p.fill('#input', t); await p.press('#input', 'Enter'); await espera(2500); await p.close();
+      await p.goto(BASE + '/conversar'); await espera(1500); await p.fill('#input', t); await p.press('#input', 'Enter'); await espera(2500); await p.close();
     }
     await esp.waitForFunction(() => document.querySelectorAll('#cola .item').length >= 2);
     await esp.screenshot({ path: path.join(OUT, 'panel-lista.png') });
@@ -76,8 +76,35 @@ const espera = ms => new Promise(r => setTimeout(r, ms));
     await esp.screenshot({ path: path.join(OUT, 'panel-movil-caso.png'), fullPage: true });
     await adm.setViewportSize({ width: 390, height: 844 }); await adm.reload(); await adm.waitForSelector('.cifras'); await espera(300);
     await adm.screenshot({ path: path.join(OUT, 'admin-movil.png'), fullPage: true });
-    const sinDesborde = await Promise.all([per, esp, adm].map(p => p.evaluate(() => document.documentElement.scrollWidth - innerWidth)));
-    console.log('desborde horizontal (persona, especialista, admin):', sinDesborde.join(', '));
+    // directorio: una psicóloga se registra, completa su perfil con foto y lo envía; administración lo aprueba
+    const psi = await b.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }); vigilar(psi, 'psicologa');
+    await psi.goto(BASE + '/registro');
+    await psi.fill('#r-nombre', 'Javiera Soto'); await psi.fill('#r-correo', 'javiera@ejemplo.cl'); await psi.fill('#r-clave', 'clave-javiera-1'); await psi.fill('#r-repetir', 'clave-javiera-1');
+    await psi.check('#r-acepto', { force: true }); await psi.click('#f-registro button[type=submit]');
+    await psi.waitForSelector('#f-perfil');
+    await psi.fill('#m-sis', '123456'); await psi.selectOption('#m-mod', 'ambas'); await psi.fill('#m-comuna', 'Melipilla'); await psi.fill('#m-precio', '30000');
+    await psi.fill('#m-resumen', 'Psicóloga clínica. Acompaño a adolescentes y adultos que viven ansiedad, ánimo bajo o duelos, con un espacio cercano y sin juicios.');
+    await psi.click('#esp button:has-text("Ansiedad")'); await psi.click('#esp button:has-text("Duelo")'); await psi.click('#esp button:has-text("Adolescentes")');
+    const est = await psi.$$('#estudios .fila-ed input'); await est[0].fill('Psicóloga'); await est[1].fill('Universidad de Chile'); await est[2].fill('2018');
+    await psi.click('#mas-est'); const est2 = await psi.$$('#estudios .fila-ed:nth-child(2) input'); await est2[0].fill('Diplomado en Intervención en Crisis'); await est2[1].fill('PUC'); await est2[2].fill('2021');
+    const ex = await psi.$$('#experiencia .fila-ed input'); await ex[0].fill('Psicóloga clínica'); await ex[1].fill('CESFAM Melipilla'); await ex[2].fill('2019 – hoy');
+    await psi.setInputFiles('#m-foto', path.join(__dirname, '..', 'public', 'img', 'icono-512.png')); await psi.waitForSelector('#foto-prev img');
+    await psi.click('#enviar'); await psi.waitForSelector('.estado-perfil.pendiente');
+    await psi.screenshot({ path: path.join(OUT, 'mi-perfil.png'), fullPage: true });
+    await adm.reload(); await adm.waitForSelector('[data-acc="perfil-aprobar"]'); await adm.click('[data-acc="perfil-aprobar"]'); await espera(800);
+    const pub = await b.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }); vigilar(pub, 'publico');
+    await pub.goto(BASE + '/'); await pub.waitForSelector('.tarjeta'); await espera(300);
+    await pub.screenshot({ path: path.join(OUT, 'directorio-movil.png'), fullPage: true });
+    await pub.click('.tarjeta'); await pub.waitForSelector('#f-pedir'); await espera(300);
+    await pub.screenshot({ path: path.join(OUT, 'perfil-movil.png'), fullPage: true });
+    await pub.fill('#s-nombre', 'Ana'); await pub.fill('#s-contacto', '+56 9 1234 5678'); await pub.click('#f-pedir button'); await pub.waitForSelector('#f-pedir .ok');
+    await pub.click('.sos-btn'); await espera(200);
+    await pub.screenshot({ path: path.join(OUT, 'sos-movil.png') });
+    const dsk = await b.newPage({ viewport: { width: 1366, height: 768 } }); vigilar(dsk, 'publico-escritorio');
+    await dsk.goto(BASE + '/'); await dsk.waitForSelector('.tarjeta'); await dsk.screenshot({ path: path.join(OUT, 'directorio.png') });
+    await psi.reload(); await psi.waitForSelector('.solicitud'); await psi.screenshot({ path: path.join(OUT, 'mi-perfil-solicitud.png') });
+    const sinDesborde = await Promise.all([per, esp, adm, psi, pub].map(p => p.evaluate(() => document.documentElement.scrollWidth - innerWidth)));
+    console.log('desborde horizontal (persona, especialista, admin, psicóloga, público):', sinDesborde.join(', '));
   } finally {
     await b.close();
     srv.kill('SIGTERM');

@@ -4,7 +4,8 @@
   const { $, api } = window.RA;
   let claveTemporal = '';
   const error = (sel, t) => { const e = $(sel); e.textContent = t || ''; e.hidden = !t; };
-  const destino = () => '/equipo' + (/^#caso-\d+$|^#admin$/.test(location.hash) ? location.hash : '');
+  const destino = rol => (rol === 'psicologo' || location.hash === '#perfil' ? '/mi-perfil' : '/equipo' + (/^#caso-\d+$|^#admin$/.test(location.hash) ? location.hash : ''));
+  let rol = '';
   function pedirCambio(conActual) {
     $('#f-ingreso').hidden = true;
     $('#f-clave').hidden = false;
@@ -28,7 +29,8 @@
     if (b) b.disabled = true;
     try {
       const d = await api('POST', '/api/equipo/ingresar', { correo: $('#correo').value, clave: $('#clave').value });
-      if (d.usuario.debeCambiarClave) { claveTemporal = $('#clave').value; pedirCambio(false); } else location.replace(destino());
+      rol = d.usuario.rol;
+      if (d.usuario.debeCambiarClave) { claveTemporal = $('#clave').value; pedirCambio(false); } else location.replace(destino(rol));
     } catch (x) { error('#err-ingreso', x.message); } finally { if (b) b.disabled = false; }
   });
 
@@ -40,7 +42,7 @@
     if (nueva !== $('#repetir').value) return error('#err-clave', 'Las dos claves no coinciden.');
     try {
       await api('POST', '/api/equipo/clave', { actual: claveTemporal || $('#actual').value, nueva });
-      location.replace(destino());
+      location.replace(destino(rol));
     } catch (x) { error('#err-clave', x.message); }
   });
 })();

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Crea tu perfil · ConténMente</title>
+<meta name="description" content="Publica tu perfil profesional de psicólogo en ConténMente.">
+<meta name="theme-color" content="#30486C">
+<link rel="icon" href="/img/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/img/icono-180.png">
+<link rel="stylesheet" href="/css/fuentes.css">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/directorio.css">
+<script src="/js/comun.js" defer></script>
+<script src="/js/sos.js" defer></script>
+<script src="/js/registro.js" defer></script>
+</head>
+<body class="publica">
+<header class="banda">
+  <div class="banda-in">
+    <a class="marca" href="/">
+      <img class="mark" src="/img/logo-128.png" alt="" width="36" height="36">
+      <div><div class="marca-nombre">Contén<b>Mente</b></div><div class="marca-sub">Psicólogos con perfil revisado</div></div>
+    </a>
+    <nav class="banda-acc" aria-label="Cuenta"><a class="btn-banda" href="/mi-perfil" id="cuenta">Soy psicólogo</a></nav>
+  </div>
+</header>
+<main>
+  <form class="hoja-form" id="f-registro">
+    <h1>Crea tu perfil profesional</h1>
+    <p class="sub">Es gratis. Después de crear tu cuenta completas tu perfil y lo envías a revisión. ¿Ya tienes cuenta? <a href="/ingresar#perfil">Ingresa</a>.</p>
+    <div class="rejilla">
+      <div class="campo-form"><label for="r-titulo">Título</label><input id="r-titulo" value="Ps." maxlength="12"></div>
+      <div class="campo-form"><label for="r-nombre">Nombre y apellido</label><input id="r-nombre" required maxlength="80" autocomplete="name"></div>
+    </div>
+    <div class="campo-form"><label for="r-correo">Correo</label><input id="r-correo" type="email" required maxlength="200" autocomplete="email"></div>
+    <div class="campo-form"><label for="r-clave">Clave (mínimo 10 caracteres)</label><input id="r-clave" type="password" required minlength="10" autocomplete="new-password"></div>
+    <div class="campo-form"><label for="r-repetir">Repite la clave</label><input id="r-repetir" type="password" required minlength="10" autocomplete="new-password"></div>
+    <label class="casilla"><input type="checkbox" id="r-acepto" required><i></i>Soy psicólogo/a titulado/a y acepto el <a href="/privacidad" target="_blank">aviso de privacidad</a></label>
+    <p class="error" id="r-error" hidden></p>
+    <button class="btn" type="submit">Crear cuenta</button>
+  </form>
+</main>
+<footer class="pie-dir"><a href="/">Psicólogos</a><a href="/conversar">Hablar con Nexo</a><a href="/privacidad">Aviso de privacidad</a><a href="/ingresar">Ingresar</a></footer>
+</body>
+</html>

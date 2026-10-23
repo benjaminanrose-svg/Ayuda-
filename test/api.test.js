@@ -175,6 +175,37 @@ test('agendar crea la hora y la persona recibe el aviso', async () => {
   assert.equal(h.datos.caso.paso, 'agendado');
 });
 
+test('directorio: un psicólogo se registra, completa su perfil, se aprueba y recibe una solicitud', async () => {
+  let r = await pedir('ps', 'POST', '/api/directorio/registro', { titulo: 'Ps.', nombre: 'Javiera Soto', correo: 'javiera@ejemplo.cl', clave: 'clave-javiera-1' });
+  assert.equal(r.estado, 200);
+  r = await pedir('ps', 'GET', '/api/directorio/mio');
+  assert.equal(r.datos.perfil.estado, 'borrador'); assert.equal(r.datos.perfil.slug, 'javiera-soto');
+  assert.equal((await pedir('ps', 'GET', '/api/equipo/casos')).estado, 403, 'una cuenta de directorio no ve casos');
+  assert.equal((await pedir('ps', 'POST', '/api/directorio/mio/enviar', {})).estado, 400, 'perfil incompleto no se envía');
+  r = await pedir('ps', 'PUT', '/api/directorio/mio', { titulo: 'Ps.', nombre: 'Javiera Soto', registroSis: '123456', modalidad: 'ambas', comuna: 'Melipilla', precio: '30000',
+    resumen: 'Psicóloga clínica. Acompaño a adolescentes y adultos con ansiedad, ánimo bajo y procesos de duelo, con un enfoque cercano.', especialidades: ['Ansiedad', 'Duelo'],
+    estudios: [{ tipo: 'titulo', titulo: 'Psicóloga', institucion: 'Universidad de Chile', anio: '2018' }], experiencia: [{ cargo: 'Psicóloga', lugar: 'CESFAM', periodo: '2019 – hoy' }], linkedin: 'https://www.linkedin.com/in/javiera' });
+  assert.equal(r.estado, 200); assert.equal(r.datos.perfil.precio, 30000);
+  assert.equal((await pedir('nadie', 'GET', '/api/directorio/perfiles/javiera-soto')).estado, 404, 'no se ve antes de aprobar');
+  assert.equal((await pedir('ps', 'POST', '/api/directorio/mio/enviar', {})).datos.estado, 'pendiente');
+  r = await pedir('a', 'GET', '/api/admin/perfiles');
+  const pf = r.datos.perfiles.find(x => x.slug === 'javiera-soto');
+  assert.equal(pf.estado, 'pendiente');
+  assert.equal((await pedir('a', 'POST', `/api/admin/perfiles/${pf.id}/aprobar`, {})).datos.estado, 'publicado');
+  r = await pedir('nadie', 'GET', '/api/directorio/perfiles');
+  assert.ok(r.datos.perfiles.some(x => x.slug === 'javiera-soto' && x.especialidades.includes('Duelo')));
+  r = await pedir('nadie', 'GET', '/api/directorio/perfiles/javiera-soto');
+  assert.equal(r.datos.perfil.verificado, true); assert.equal(r.datos.perfil.estado, undefined, 'el público no ve datos internos');
+  r = await pedir('z', 'POST', '/api/directorio/perfiles/javiera-soto/solicitudes', { nombre: 'Ana', contacto: '+56 9 1234 5678', mensaje: 'Busco hora para mi hija' });
+  assert.equal(r.estado, 200);
+  r = await pedir('ps', 'GET', '/api/directorio/mio/solicitudes');
+  assert.equal(r.datos.solicitudes[0].contacto, '+56 9 1234 5678');
+  const fila = (await db.q('select contenido from solicitudes limit 1')).rows[0];
+  assert.ok(!fila.contenido.toString('latin1').includes('Ana'), 'la solicitud se guarda cifrada');
+  r = await pedir('ps', 'PUT', '/api/directorio/mio', { titulo: 'Ps.', nombre: 'Javiera Soto Pérez', registroSis: '123456', resumen: 'x'.repeat(90), especialidades: ['Ansiedad'], estudios: [{ titulo: 'Psicóloga' }] });
+  assert.equal(r.datos.volvioARevision, true, 'cambiar el nombre vuelve a revisión');
+});
+
 test('límite de intentos de ingreso', async () => {
   let ultimo;
   for (let i = 0; i < 9; i++) ultimo = await pedir('z', 'POST', '/api/equipo/ingresar', { correo: 'nadie@ejemplo.cl', clave: 'x' + i });

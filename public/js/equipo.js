@@ -307,12 +307,18 @@
   function filaUsuario(u) {
     const estado = u.activo ? (u.disponible ? 'Disponible ahora' : 'No disponible') : 'Cuenta desactivada';
     return `<tr><td data-l="Persona"><b>${esc(nombre(u))}</b><span class="sub bloque">${esc(u.correo)}${u.especialidad ? ' · ' + esc(u.especialidad) : ''}</span></td>
-      <td data-l="Rol">${u.rol === 'admin' ? 'Administración' : 'Especialista'}<span class="sub bloque">${estado}${u.debeCambiarClave ? ' · con clave temporal' : ''}${u.ultimoAcceso ? '' : ' · nunca ha ingresado'}</span></td>
+      <td data-l="Rol">${{ admin: 'Administración', especialista: 'Especialista', psicologo: 'Solo directorio' }[u.rol] || u.rol}<span class="sub bloque">${estado}${u.debeCambiarClave ? ' · con clave temporal' : ''}${u.ultimoAcceso ? '' : ' · nunca ha ingresado'}</span></td>
       <td data-l="Guardia"><label class="casilla"><input type="checkbox" data-u="${u.id}" data-campo="guardia"${u.guardia ? ' checked' : ''}><i></i><span class="sr">De guardia</span></label></td>
       <td class="acc"><button class="btn plain" data-u="${u.id}" data-acc="editar">Editar</button> <button class="btn plain" data-u="${u.id}" data-n="${esc(nombre(u))}" data-acc="clave">Nueva clave</button>${u.id === yo.id ? '' : ` <button class="btn plain" data-u="${u.id}" data-acc="${u.activo ? 'desactivar' : 'activar'}">${u.activo ? 'Desactivar' : 'Activar'}</button>`}</td></tr>`;
   }
+  function filaPerfil(x) {
+    const est = { pendiente: 'Por revisar', publicado: 'Publicado', rechazado: 'Rechazado' }[x.estado];
+    return `<tr><td data-l="Psicólogo"><b>${esc(x.nombre)}</b><span class="sub bloque">${esc(x.correo)} · ${est}${x.especialidades.length ? ' · ' + esc(x.especialidades.slice(0, 3).join(', ')) : ''}</span>${x.notaRevision ? `<span class="sub bloque">Nota: ${esc(x.notaRevision)}</span>` : ''}</td>
+      <td data-l="Registro">${esc(x.registroSis || '—')}</td>
+      <td class="acc"><a class="btn plain" href="/psicologos/${esc(x.slug)}" target="_blank" rel="noopener">Vista previa</a>${x.estado !== 'publicado' ? ` <button class="btn" data-p="${x.id}" data-acc="perfil-aprobar">Aprobar</button>` : ` <button class="btn plain" data-p="${x.id}" data-acc="perfil-ocultar">Ocultar</button>`}${x.estado === 'pendiente' ? ` <button class="btn plain" data-p="${x.id}" data-acc="perfil-rechazar">Pedir cambios</button>` : ''}</td></tr>`;
+  }
   function filaOrg(o) {
-    const enlace = location.origin + (o.slug === 'general' ? '/' : '/o/' + o.slug);
+    const enlace = location.origin + (o.slug === 'general' ? '/conversar' : '/o/' + o.slug);
     return `<tr><td data-l="Organización"><b>${esc(o.nombre)}</b><span class="sub bloque">${o.activa ? 'Activa' : 'Desactivada'} · ${o.casos_30} ${o.casos_30 === 1 ? 'caso' : 'casos'} en 30 días</span></td>
       <td data-l="Enlace"><a href="${esc(enlace)}" target="_blank" rel="noopener">${esc(enlace)}</a></td>
       <td class="acc"><button class="btn plain" data-o="${o.id}" data-acc="${o.activa ? 'org-off' : 'org-on'}">${o.activa ? 'Desactivar' : 'Activar'}</button></td></tr>`;
@@ -337,7 +343,8 @@
   async function verAdmin(despues) {
     const box = $('#vista-admin');
     try {
-      const [u, o, m] = await Promise.all([api('GET', '/api/admin/usuarios'), api('GET', '/api/admin/organizaciones'), api('GET', '/api/admin/metricas')]);
+      const [u, o, m, pf] = await Promise.all([api('GET', '/api/admin/usuarios'), api('GET', '/api/admin/organizaciones'), api('GET', '/api/admin/metricas'), api('GET', '/api/admin/perfiles')]);
+      const pend = pf.perfiles.filter(x => x.estado === 'pendiente'), resto = pf.perfiles.filter(x => x.estado !== 'pendiente');
       usuariosAdmin = u.usuarios;
       box.innerHTML = `<div class="hoja-blanca">
         <header class="adm-top"><div><h1>Administración</h1><p class="sub">Tu equipo, las organizaciones y un resumen del uso.</p></div><a class="btn plain" href="#">Volver a los casos</a></header>
@@ -347,6 +354,11 @@
           ${cifra(m.alto, 'Riesgo alto', 'En los últimos 30 días')}
           ${cifra(m.disponibles, 'Disponibles ahora', m.guardia + ' de guardia')}
         </div>
+        <section class="adm-sec"><h2>Perfiles del directorio${pend.length ? ` <span class="nivel urgente">${pend.length} por revisar</span>` : ''}</h2>
+          <p class="sub">Revisa cada perfil antes de publicarlo: abre la vista previa y busca su número de registro en la <a href="https://rnpi.superdesalud.gob.cl/" target="_blank" rel="noopener">Superintendencia de Salud</a>.</p>
+          ${pend.length ? `<div class="tabla-marco"><table class="tabla"><thead><tr><th>Psicólogo</th><th>Registro</th><th><span class="sr">Acciones</span></th></tr></thead><tbody>${pend.map(filaPerfil).join('')}</tbody></table></div>` : '<p class="nota-suave">No hay perfiles esperando revisión.</p>'}
+          ${resto.length ? `<details class="agregar"><summary class="btn ghost">Ver publicados y rechazados (${resto.length})</summary><div class="tabla-marco"><table class="tabla"><tbody>${resto.map(filaPerfil).join('')}</tbody></table></div></details>` : ''}
+        </section>
         <section class="adm-sec"><h2>Equipo</h2>
           <div class="tabla-marco"><table class="tabla"><thead><tr><th>Persona</th><th>Rol y estado</th><th>Guardia</th><th><span class="sr">Acciones</span></th></tr></thead>
           <tbody>${u.usuarios.map(filaUsuario).join('')}</tbody></table></div>
@@ -357,7 +369,7 @@
             <div class="campo-form"><label for="u-titulo">Título</label><input id="u-titulo" value="Ps." maxlength="12"></div>
             <div class="campo-form"><label for="u-nombre">Nombre y apellido</label><input id="u-nombre" required maxlength="80"></div>
             <div class="campo-form"><label for="u-esp">Especialidad</label><input id="u-esp" maxlength="80" placeholder="Adultos, crisis"></div>
-            <div class="campo-form"><label for="u-rol">Rol</label><select id="u-rol"><option value="especialista">Especialista</option><option value="admin">Administración</option></select></div>
+            <div class="campo-form"><label for="u-rol">Rol</label><select id="u-rol"><option value="especialista">Especialista (panel de casos)</option><option value="admin">Administración</option></select></div>
             <label class="casilla"><input type="checkbox" id="u-guardia"><i></i>De guardia</label>
             <button class="btn" type="submit">Agregar al equipo</button>
           </form></details>
@@ -392,6 +404,13 @@
       const acc = b.dataset.acc;
       if (acc === 'clave') { const d = await api('POST', `/api/admin/usuarios/${b.dataset.u}/clave`, {}); return verAdmin(() => mostrarClave(b.dataset.n, d.claveTemporal)); }
       if (acc === 'desactivar' || acc === 'activar') await api('PATCH', '/api/admin/usuarios/' + b.dataset.u, { activo: acc === 'activar' });
+      if (acc.startsWith('perfil-')) {
+        const a = acc.slice(7);
+        let nota = '';
+        if (a === 'rechazar') { nota = window.prompt('¿Qué debe corregir? (se lo mostraremos al psicólogo)') || ''; if (!nota.trim()) { b.disabled = false; return; } }
+        await api('POST', `/api/admin/perfiles/${b.dataset.p}/${a}`, { nota });
+        aviso({ aprobar: 'Perfil publicado.', rechazar: 'Le pedimos cambios.', ocultar: 'Perfil ocultado del directorio.' }[a]);
+      }
       if (acc === 'org-off' || acc === 'org-on') await api('PATCH', '/api/admin/organizaciones/' + b.dataset.o, { activa: acc === 'org-on' });
       verAdmin();
     } catch (err) { aviso(err.message); b.disabled = false; }
@@ -432,6 +451,7 @@
       const d = await api('GET', '/api/equipo/yo');
       yo = d.usuario;
       if (yo.debeCambiarClave) return location.replace('/ingresar');
+      if (yo.rol === 'psicologo') return location.replace('/mi-perfil');
     } catch (e) {
       if (e.estado === 401) return location.replace('/ingresar' + location.hash);
       return aviso(e.message);
