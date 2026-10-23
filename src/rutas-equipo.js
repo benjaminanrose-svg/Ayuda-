@@ -22,7 +22,7 @@ r.post('/ingresar', limitador(8, 15 * 60e3, req => req.ip + '|' + String((req.bo
 
 r.get('/estado', async (req, res) => {
   const s = await ses.usuarioDeSesion(req);
-  res.json({ sesion: !!s, debeCambiarClave: !!(s && s.r.debe_cambiar_clave) });
+  res.json({ sesion: !!s, debeCambiarClave: !!(s && s.r.debe_cambiar_clave), correo: s ? s.r.correo : null, rol: s ? s.r.rol : null });
 });
 
 r.use(ses.sesion);

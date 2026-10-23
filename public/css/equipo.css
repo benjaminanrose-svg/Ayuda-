@@ -142,3 +142,4 @@
   .tabla td.acc{text-align:left;white-space:normal;display:flex;flex-wrap:wrap;gap:6px;padding-top:8px}
 }
 @media (max-width:380px){.equipo .marca-nombre{display:none}}
+.sesion-abierta{display:grid;gap:10px}.sesion-abierta p{margin:0}

@@ -17,7 +17,19 @@
     try {
       const d = await api('GET', '/api/equipo/estado');
       if (d.sesion && d.debeCambiarClave) pedirCambio(true);
-      else if (d.sesion) location.replace(destino());
+      else if (d.sesion) {
+        // ya hay una sesión abierta: ofrecer seguir o entrar con otra cuenta (por ejemplo, la de administración)
+        rol = d.rol;
+        const f = $('#f-ingreso'), aviso = document.createElement('div');
+        aviso.className = 'sesion-abierta';
+        aviso.innerHTML = '<p>Ya ingresaste como <b></b>.</p><div class="fila-btn"><button class="btn" type="button" id="seguir">Continuar</button><button class="btn plain" type="button" id="otra">Ingresar con otra cuenta</button></div>';
+        aviso.querySelector('b').textContent = d.correo;
+        f.prepend(aviso);
+        const ocultos = [...f.querySelectorAll('.campo-form, button[type=submit]')];
+        ocultos.forEach(x => { x.hidden = true; });
+        $('#seguir').onclick = () => location.replace(destino(rol));
+        $('#otra').onclick = async () => { try { await api('POST', '/api/equipo/salir', {}); } catch { /* sin sesión */ } aviso.remove(); ocultos.forEach(x => { x.hidden = false; }); rol = ''; $('#correo').focus(); };
+      }
       else $('#correo').focus();
     } catch { $('#correo').focus(); }
   })();
