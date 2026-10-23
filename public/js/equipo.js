@@ -312,7 +312,7 @@
       <td class="acc"><button class="btn plain" data-u="${u.id}" data-acc="editar">Editar</button> <button class="btn plain" data-u="${u.id}" data-n="${esc(nombre(u))}" data-acc="clave">Nueva clave</button>${u.id === yo.id ? '' : ` <button class="btn plain" data-u="${u.id}" data-acc="${u.activo ? 'desactivar' : 'activar'}">${u.activo ? 'Desactivar' : 'Activar'}</button>`}</td></tr>`;
   }
   function filaPerfil(x) {
-    const est = { pendiente: 'Por revisar', publicado: 'Publicado', rechazado: 'Rechazado' }[x.estado];
+    const est = { pendiente: 'Por revisar', publicado: 'Publicado', rechazado: 'Rechazado', borrador: 'Sin enviar' }[x.estado];
     return `<tr><td data-l="Psicólogo"><b>${esc(x.nombre)}</b><span class="sub bloque">${esc(x.correo)} · ${est}${x.especialidades.length ? ' · ' + esc(x.especialidades.slice(0, 3).join(', ')) : ''}</span>${x.notaRevision ? `<span class="sub bloque">Nota: ${esc(x.notaRevision)}</span>` : ''}</td>
       <td data-l="Registro">${esc(x.registroSis || '—')}</td>
       <td class="acc"><a class="btn plain" href="/psicologos/${esc(x.slug)}" target="_blank" rel="noopener">Vista previa</a>${x.estado !== 'publicado' ? ` <button class="btn" data-p="${x.id}" data-acc="perfil-aprobar">Aprobar</button>` : ` <button class="btn plain" data-p="${x.id}" data-acc="perfil-ocultar">Ocultar</button>`}${x.estado === 'pendiente' ? ` <button class="btn plain" data-p="${x.id}" data-acc="perfil-rechazar">Pedir cambios</button>` : ''}</td></tr>`;
@@ -344,7 +344,7 @@
     const box = $('#vista-admin');
     try {
       const [u, o, m, pf] = await Promise.all([api('GET', '/api/admin/usuarios'), api('GET', '/api/admin/organizaciones'), api('GET', '/api/admin/metricas'), api('GET', '/api/admin/perfiles')]);
-      const pend = pf.perfiles.filter(x => x.estado === 'pendiente'), resto = pf.perfiles.filter(x => x.estado !== 'pendiente');
+      const pend = pf.perfiles.filter(x => x.estado === 'pendiente'), borr = pf.perfiles.filter(x => x.estado === 'borrador'), resto = pf.perfiles.filter(x => !['pendiente', 'borrador'].includes(x.estado));
       usuariosAdmin = u.usuarios;
       box.innerHTML = `<div class="hoja-blanca">
         <header class="adm-top"><div><h1>Administración</h1><p class="sub">Tu equipo, las organizaciones y un resumen del uso.</p></div><a class="btn plain" href="#">Volver a los casos</a></header>
@@ -357,6 +357,7 @@
         <section class="adm-sec"><h2>Perfiles del directorio${pend.length ? ` <span class="nivel urgente">${pend.length} por revisar</span>` : ''}</h2>
           <p class="sub">Revisa cada perfil antes de publicarlo: abre la vista previa y busca su número de registro en la <a href="https://rnpi.superdesalud.gob.cl/" target="_blank" rel="noopener">Superintendencia de Salud</a>.</p>
           ${pend.length ? `<div class="tabla-marco"><table class="tabla"><thead><tr><th>Psicólogo</th><th>Registro</th><th><span class="sr">Acciones</span></th></tr></thead><tbody>${pend.map(filaPerfil).join('')}</tbody></table></div>` : '<p class="nota-suave">No hay perfiles esperando revisión.</p>'}
+          ${borr.length ? `<details class="agregar"><summary class="btn ghost">Aún no enviados a revisión (${borr.length})</summary><p class="nota-suave">Estos psicólogos crearon su cuenta pero no han enviado su perfil. Puedes ver cómo va o publicarlo igual.</p><div class="tabla-marco"><table class="tabla"><tbody>${borr.map(filaPerfil).join('')}</tbody></table></div></details>` : ''}
           ${resto.length ? `<details class="agregar"><summary class="btn ghost">Ver publicados y rechazados (${resto.length})</summary><div class="tabla-marco"><table class="tabla"><tbody>${resto.map(filaPerfil).join('')}</tbody></table></div></details>` : ''}
         </section>
         <section class="adm-sec"><h2>Equipo</h2>

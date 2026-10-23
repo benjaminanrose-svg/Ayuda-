@@ -104,7 +104,7 @@ r.get('/metricas', async (req, res) => {
 /* perfiles del directorio: revisión antes de publicar */
 r.get('/perfiles', async (req, res) => {
   const filas = (await q(`select p.usuario_id id, p.slug, p.estado, p.registro_sis, p.especialidades, p.actualizado_en, p.nota_revision, u.nombre, u.titulo, u.correo
-    from perfiles p join usuarios u on u.id = p.usuario_id where p.estado in ('pendiente', 'publicado', 'rechazado') order by (p.estado = 'pendiente') desc, p.actualizado_en desc limit 300`)).rows;
+    from perfiles p join usuarios u on u.id = p.usuario_id order by (p.estado = 'pendiente') desc, p.actualizado_en desc limit 300`)).rows;
   res.json({ perfiles: filas.map(f => ({ id: f.id, slug: f.slug, estado: f.estado, registroSis: f.registro_sis, especialidades: f.especialidades, actualizadoEn: f.actualizado_en,
     notaRevision: f.nota_revision, nombre: [f.titulo, f.nombre].filter(Boolean).join(' '), correo: f.correo })) });
 });

@@ -147,6 +147,7 @@ r.post('/registro', limitador(5, 3600e3, req => 'reg|' + req.ip), async (req, re
   const u = (await q(`insert into usuarios (correo, nombre, titulo, rol, clave_hash, debe_cambiar_clave) values ($1, $2, $3, 'psicologo', $4, false) returning *`,
     [correo, nombre, titulo, await hashClave(String(b.clave))])).rows[0];
   await perfilDe(u);
+  await q('update usuarios set ultimo_acceso = now() where id = $1', [u.id]);
   await q('insert into auditoria (usuario_id, accion) values ($1, $2)', [u.id, 'registro psicólogo']);
   const t = token();
   await q("insert into sesiones (token_hash, usuario_id, expira_en) values ($1, $2, now() + interval '12 hours')", [hashToken(t), u.id]);
