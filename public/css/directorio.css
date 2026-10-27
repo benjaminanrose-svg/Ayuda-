@@ -355,3 +355,4 @@ body.publica{--fondo-p:#F6F4FB;--tinta-2:#3B8478;--borde-p:#E6E2F0;--sombra-p:0 
 .publica .hoja-form .btn{justify-self:stretch;text-align:center}
 .publica #f-registro{max-width:520px}
 .publica .hoja-form .casilla{align-items:flex-start;line-height:1.4;font-family:var(--body);font-weight:600}.publica .hoja-form .casilla i{margin-top:2px}
+.publica .hoja-form .enlace.olvide{justify-self:center;font:600 .9rem/1.3 var(--body);color:var(--tinta)}

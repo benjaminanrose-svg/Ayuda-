@@ -306,10 +306,10 @@
   const cifra = (n, t, x) => `<div class="cifra"><b>${n}</b><span>${t}</span>${x ? `<small>${esc(x)}</small>` : ''}</div>`;
   function filaUsuario(u) {
     const estado = u.activo ? (u.disponible ? 'Disponible ahora' : 'No disponible') : 'Cuenta desactivada';
-    return `<tr><td data-l="Persona"><b>${esc(nombre(u))}</b><span class="sub bloque">${esc(u.correo)}${u.especialidad ? ' · ' + esc(u.especialidad) : ''}</span></td>
+    return `<tr><td data-l="Persona"><b>${esc(nombre(u))}</b>${u.pideClave ? ' <span class="nivel mid">Pidió nueva clave</span>' : ''}<span class="sub bloque">${esc(u.correo)}${u.especialidad ? ' · ' + esc(u.especialidad) : ''}</span></td>
       <td data-l="Rol">${{ admin: 'Administración', especialista: 'Especialista', psicologo: 'Solo directorio' }[u.rol] || u.rol}<span class="sub bloque">${estado}${u.debeCambiarClave ? ' · con clave temporal' : ''}${u.ultimoAcceso ? '' : ' · nunca ha ingresado'}</span></td>
       <td data-l="Guardia"><label class="casilla"><input type="checkbox" data-u="${u.id}" data-campo="guardia"${u.guardia ? ' checked' : ''}><i></i><span class="sr">De guardia</span></label></td>
-      <td class="acc"><button class="btn plain" data-u="${u.id}" data-acc="editar">Editar</button> <button class="btn plain" data-u="${u.id}" data-n="${esc(nombre(u))}" data-acc="clave">Nueva clave</button>${u.id === yo.id ? '' : ` <button class="btn plain" data-u="${u.id}" data-acc="${u.activo ? 'desactivar' : 'activar'}">${u.activo ? 'Desactivar' : 'Activar'}</button>`}</td></tr>`;
+      <td class="acc"><button class="btn plain" data-u="${u.id}" data-acc="editar">Editar</button> <button class="btn plain" data-u="${u.id}" data-acc="clave">Cambiar clave</button>${u.id === yo.id ? '' : ` <button class="btn plain" data-u="${u.id}" data-acc="${u.activo ? 'desactivar' : 'activar'}">${u.activo ? 'Desactivar' : 'Activar'}</button>`}</td></tr>`;
   }
   function filaPerfil(x) {
     const est = { pendiente: 'Por revisar', publicado: 'Publicado', rechazado: 'Rechazado', borrador: 'Sin enviar' }[x.estado];
@@ -323,10 +323,30 @@
       <td data-l="Enlace"><a href="${esc(enlace)}" target="_blank" rel="noopener">${esc(enlace)}</a></td>
       <td class="acc"><button class="btn plain" data-o="${o.id}" data-acc="${o.activa ? 'org-off' : 'org-on'}">${o.activa ? 'Desactivar' : 'Activar'}</button></td></tr>`;
   }
-  function mostrarClave(n, clave) {
-    const el = $('#clave-temp');
-    el.innerHTML = `Clave temporal de <b>${esc(n)}</b>: <code>${esc(clave)}</code>. Entrégala en persona o por un canal seguro; al ingresar se le pedirá cambiarla. No se vuelve a mostrar.`;
+  // mensaje listo para entregarle la clave temporal (copiar o abrir el correo)
+  const mensajeClave = (u, clave) => `Hola ${u.nombre}: te dejamos una clave temporal para entrar a ConténMente: ${clave}\n\nIngresa en ${location.origin}/ingresar con tu correo ${u.correo} y esta clave. Al entrar te pediremos crear una clave nueva, solo tuya.\n\nSi no pediste este cambio, avísanos respondiendo este mensaje.`;
+  function mostrarClave(u, clave) {
+    const el = $('#clave-temp'), msg = mensajeClave(u, clave);
+    el.innerHTML = `<p>Clave temporal de <b>${esc(nombre(u))}</b>: <code>${esc(clave)}</code></p>
+      <p class="sub">Entrégasela por un canal seguro. Al ingresar con ella se le pedirá crear una propia. Esta clave no se vuelve a mostrar.</p>
+      <div class="fila-btn"><button class="btn" type="button" id="copiar-clave">Copiar mensaje</button><a class="btn ghost" href="mailto:${encodeURIComponent(u.correo)}?subject=${encodeURIComponent('Tu clave temporal de ConténMente')}&body=${encodeURIComponent(msg)}">Enviar por correo</a></div>`;
     el.hidden = false;
+    $('#copiar-clave').onclick = async () => {
+      try { await navigator.clipboard.writeText(msg); aviso('Mensaje copiado. Pégalo en WhatsApp o en un correo.'); }
+      catch { window.prompt('Copia este mensaje:', msg); }
+    };
+    el.scrollIntoView({ block: 'center' });
+  }
+  function formClave(id) {
+    const u = usuariosAdmin.find(x => x.id === +id);
+    const fila = document.querySelector(`button[data-acc="clave"][data-u="${id}"]`);
+    if (!u || !fila) return;
+    fila.closest('tr').outerHTML = `<tr><td colspan="4"><form class="form-fila form-clave" data-clave="${u.id}">
+      <p class="bloque"><b>Cambiar la clave de ${esc(nombre(u))}</b><span class="sub bloque">Se cerrarán sus sesiones abiertas y, al ingresar con la clave nueva, se le pedirá crear una propia.</span></p>
+      <label class="casilla"><input type="radio" name="modo-clave" value="auto" checked><i></i>Generar una clave temporal (recomendado)</label>
+      <label class="casilla"><input type="radio" name="modo-clave" value="escrita"><i></i>Escribir yo la clave temporal</label>
+      <div class="campo-form" id="campo-clave-escrita" hidden><label for="c-escrita">Clave temporal (mínimo 10 caracteres)</label><input id="c-escrita" minlength="10" maxlength="200" autocomplete="off"></div>
+      <div class="fila-btn"><button class="btn" type="submit">Cambiar clave</button><button class="btn plain" type="button" data-acc="cancelar-edicion">Cancelar</button></div></form></td></tr>`;
   }
   let usuariosAdmin = [];
   function editarFila(id) {
@@ -360,7 +380,7 @@
           ${borr.length ? `<details class="agregar"><summary class="btn ghost">Aún no enviados a revisión (${borr.length})</summary><p class="nota-suave">Estos psicólogos crearon su cuenta pero no han enviado su perfil. Puedes ver cómo va o publicarlo igual.</p><div class="tabla-marco"><table class="tabla"><tbody>${borr.map(filaPerfil).join('')}</tbody></table></div></details>` : ''}
           ${resto.length ? `<details class="agregar"><summary class="btn ghost">Ver publicados y rechazados (${resto.length})</summary><div class="tabla-marco"><table class="tabla"><tbody>${resto.map(filaPerfil).join('')}</tbody></table></div></details>` : ''}
         </section>
-        <section class="adm-sec"><h2>Equipo</h2>
+        <section class="adm-sec"><h2>Equipo${u.usuarios.some(x => x.pideClave) ? ` <span class="nivel mid">${u.usuarios.filter(x => x.pideClave).length === 1 ? '1 persona pidió una clave nueva' : u.usuarios.filter(x => x.pideClave).length + ' personas pidieron una clave nueva'}</span>` : ''}</h2>
           <div class="tabla-marco"><table class="tabla"><thead><tr><th>Persona</th><th>Rol y estado</th><th>Guardia</th><th><span class="sr">Acciones</span></th></tr></thead>
           <tbody>${u.usuarios.map(filaUsuario).join('')}</tbody></table></div>
           <div class="clave-temp" id="clave-temp" role="status" hidden></div>
@@ -390,6 +410,7 @@
     } catch (e) { box.innerHTML = `<div class="hoja-blanca"><p class="error">${esc(e.message)}</p></div>`; }
   }
   $('#vista-admin').addEventListener('change', async e => {
+    if (e.target.name === 'modo-clave') { const c = $('#campo-clave-escrita'); c.hidden = e.target.value !== 'escrita'; if (!c.hidden) $('#c-escrita').focus(); return; }
     const c = e.target.closest('[data-campo]');
     if (!c) return;
     try { await api('PATCH', '/api/admin/usuarios/' + c.dataset.u, { [c.dataset.campo]: c.checked }); aviso('Guardado.'); }
@@ -399,11 +420,11 @@
     const b = e.target.closest('button[data-acc]');
     if (!b) return;
     if (b.dataset.acc === 'editar') return editarFila(b.dataset.u);
+    if (b.dataset.acc === 'clave') return formClave(b.dataset.u);
     if (b.dataset.acc === 'cancelar-edicion') return verAdmin();
     b.disabled = true;
     try {
       const acc = b.dataset.acc;
-      if (acc === 'clave') { const d = await api('POST', `/api/admin/usuarios/${b.dataset.u}/clave`, {}); return verAdmin(() => mostrarClave(b.dataset.n, d.claveTemporal)); }
       if (acc === 'desactivar' || acc === 'activar') await api('PATCH', '/api/admin/usuarios/' + b.dataset.u, { activo: acc === 'activar' });
       if (acc.startsWith('perfil-')) {
         const a = acc.slice(7);
@@ -421,6 +442,12 @@
     const f = e.target, b = f.querySelector('button[type=submit]');
     b.disabled = true;
     try {
+      if (f.dataset.clave) {
+        const escrita = f.querySelector('input[name="modo-clave"]:checked').value === 'escrita' ? $('#c-escrita').value.trim() : '';
+        if (f.querySelector('input[name="modo-clave"]:checked').value === 'escrita' && escrita.length < 10) throw new Error('La clave debe tener al menos 10 caracteres.');
+        const d = await api('POST', `/api/admin/usuarios/${f.dataset.clave}/clave`, escrita ? { clave: escrita } : {});
+        return verAdmin(() => mostrarClave(d.usuario, d.claveTemporal));
+      }
       if (f.dataset.editar) {
         const d = await api('PATCH', '/api/admin/usuarios/' + f.dataset.editar, { titulo: $('#e-titulo').value, nombre: $('#e-nombre').value, especialidad: $('#e-esp').value });
         if (d.usuario.id === yo.id) { Object.assign(yo, d.usuario); $('#yo').textContent = nombre(yo); }
@@ -429,7 +456,7 @@
       }
       if (f.id === 'f-usuario') {
         const d = await api('POST', '/api/admin/usuarios', { correo: $('#u-correo').value, titulo: $('#u-titulo').value, nombre: $('#u-nombre').value, especialidad: $('#u-esp').value, rol: $('#u-rol').value, guardia: $('#u-guardia').checked });
-        verAdmin(() => mostrarClave(nombre(d.usuario), d.claveTemporal));
+        verAdmin(() => mostrarClave(d.usuario, d.claveTemporal));
       }
       if (f.id === 'f-org') { await api('POST', '/api/admin/organizaciones', { nombre: $('#o-nombre').value, slug: $('#o-slug').value }); verAdmin(); aviso('Organización agregada.'); }
     } catch (err) { aviso(err.message); b.disabled = false; }

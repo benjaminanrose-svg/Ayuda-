@@ -250,6 +250,25 @@ test('agenda: el psicólogo publica su horario, un paciente reserva, no hay dobl
   assert.ok(!r.datos.horas.includes(hora), 'un día bloqueado no muestra horas');
 });
 
+test('clave olvidada: el psicólogo pide ayuda y administración le pone una clave temporal', async () => {
+  assert.equal((await pedir('nadie', 'POST', '/api/equipo/olvide-clave', { correo: 'noexiste@ejemplo.cl' })).estado, 200, 'misma respuesta aunque el correo no exista');
+  assert.equal((await pedir('nadie', 'POST', '/api/equipo/olvide-clave', { correo: 'javiera@ejemplo.cl' })).estado, 200);
+  let r = await pedir('a', 'GET', '/api/admin/usuarios');
+  const u = r.datos.usuarios.find(x => x.correo === 'javiera@ejemplo.cl');
+  assert.ok(u.pideClave, 'administración ve que pidió una clave'); assert.equal(r.datos.usuarios[0].correo, 'javiera@ejemplo.cl', 'aparece primero');
+  assert.equal((await pedir('a', 'POST', `/api/admin/usuarios/${u.id}/clave`, { clave: 'corta' })).estado, 400, 'clave escrita muy corta');
+  r = await pedir('a', 'POST', `/api/admin/usuarios/${u.id}/clave`, { clave: 'temporal-javiera-1' });
+  assert.equal(r.datos.claveTemporal, 'temporal-javiera-1'); assert.equal(r.datos.usuario.pideClave, null); assert.equal(r.datos.usuario.debeCambiarClave, true);
+  assert.equal((await pedir('ps', 'GET', '/api/directorio/mio')).estado, 401, 'se cerraron sus sesiones');
+  r = await pedir('ps2', 'POST', '/api/equipo/ingresar', { correo: 'javiera@ejemplo.cl', clave: 'temporal-javiera-1' });
+  assert.equal(r.estado, 200); assert.equal(r.datos.usuario.debeCambiarClave, true);
+  assert.equal((await pedir('ps2', 'GET', '/api/directorio/mio')).estado, 403, 'debe crear su clave antes de seguir');
+  assert.equal((await pedir('ps2', 'POST', '/api/equipo/clave', { actual: 'temporal-javiera-1', nueva: 'clave-propia-javiera' })).estado, 200);
+  assert.equal((await pedir('ps2', 'GET', '/api/directorio/mio')).estado, 200);
+  r = await pedir('a', 'POST', `/api/admin/usuarios/${u.id}/clave`, {});
+  assert.match(r.datos.claveTemporal, /\w{4}/, 'también puede generarla el sistema');
+});
+
 test('límite de intentos de ingreso', async () => {
   let ultimo;
   for (let i = 0; i < 9; i++) ultimo = await pedir('z', 'POST', '/api/equipo/ingresar', { correo: 'nadie@ejemplo.cl', clave: 'x' + i });

@@ -46,6 +46,20 @@
     } catch (x) { error('#err-ingreso', x.message); } finally { if (b) b.disabled = false; }
   });
 
+  /* ¿Olvidaste tu clave?: avisa a administración, que entrega una clave temporal */
+  const verOlvide = v => { $('#f-ingreso').hidden = v; $('#f-olvide').hidden = !v; (v ? $('#correo-olvide') : $('#correo')).focus(); };
+  $('#olvide').addEventListener('click', () => { $('#correo-olvide').value = $('#correo').value; verOlvide(true); });
+  $('#volver-ingreso').addEventListener('click', () => verOlvide(false));
+  $('#f-olvide').addEventListener('submit', async e => {
+    e.preventDefault();
+    error('#err-olvide');
+    const b = e.submitter; if (b) b.disabled = true;
+    try {
+      await api('POST', '/api/equipo/olvide-clave', { correo: $('#correo-olvide').value });
+      $('#f-olvide').innerHTML = '<h1>Listo, avisamos al equipo</h1><p>Si ese correo tiene una cuenta, te contactaremos con una clave temporal. Con ella entras aquí mismo y creas una clave nueva.</p><p class="sub">Si no te llega nada en un día hábil, escríbenos directamente.</p><a class="btn" href="/">Volver al directorio</a>';
+    } catch (x) { error('#err-olvide', x.message); if (b) b.disabled = false; }
+  });
+
   $('#f-clave').addEventListener('submit', async e => {
     e.preventDefault();
     error('#err-clave');

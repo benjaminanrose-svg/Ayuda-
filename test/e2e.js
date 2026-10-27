@@ -125,6 +125,14 @@ const espera = ms => new Promise(r => setTimeout(r, ms));
     await dsk.goto(BASE + '/'); await dsk.waitForSelector('.tarjeta'); await dsk.screenshot({ path: path.join(OUT, 'directorio.png'), fullPage: true });
     await dsk.click('.tarjeta'); await dsk.waitForSelector('.credencial'); await espera(400); await dsk.screenshot({ path: path.join(OUT, 'perfil.png'), fullPage: true });
     await psi.goto(BASE + '/mi-perfil#agenda'); await psi.waitForSelector('.cita-ed'); await psi.screenshot({ path: path.join(OUT, 'mi-agenda-cita.png') });
+    // clave olvidada: la psicóloga pide ayuda y administración le pone una clave temporal
+    await pub.goto(BASE + '/ingresar'); await pub.click('#olvide'); await pub.fill('#correo-olvide', 'javiera@ejemplo.cl'); await pub.click('#f-olvide button[type=submit]');
+    await pub.waitForSelector('#f-olvide h1:has-text("Listo")'); await pub.screenshot({ path: path.join(OUT, 'olvide-clave-movil.png') });
+    await adm.reload(); await adm.waitForSelector('tr:has-text("javiera@ejemplo.cl") [data-acc="clave"]');
+    await adm.click('tr:has-text("javiera@ejemplo.cl") [data-acc="clave"]'); await adm.waitForSelector('.form-clave');
+    await adm.screenshot({ path: path.join(OUT, 'admin-clave-form.png'), fullPage: true });
+    await adm.click('.form-clave button[type=submit]'); await adm.waitForSelector('#copiar-clave'); await espera(300);
+    await adm.screenshot({ path: path.join(OUT, 'admin-clave.png'), fullPage: true });
     const sinDesborde = await Promise.all([per, esp, adm, psi, pub].map(p => p.evaluate(() => document.documentElement.scrollWidth - innerWidth)));
     console.log('desborde horizontal (persona, especialista, admin, psicóloga, público):', sinDesborde.join(', '));
   } finally {

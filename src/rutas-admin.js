@@ -20,7 +20,7 @@ const idDe = req => {
 const auditar = (req, accion, detalle) => svc.auditar({ query: q }, req.usuario.id, accion, null, detalle);
 
 r.get('/usuarios', async (req, res) => {
-  res.json({ usuarios: (await q('select * from usuarios order by activo desc, rol, nombre')).rows.map(ses.usuarioPublico) });
+  res.json({ usuarios: (await q('select * from usuarios order by (pide_clave_en is not null) desc, activo desc, rol, nombre')).rows.map(ses.usuarioPublico) });
 });
 
 r.post('/usuarios', async (req, res) => {
@@ -56,9 +56,12 @@ r.patch('/usuarios/:id', async (req, res) => {
   res.json({ usuario: ses.usuarioPublico(u) });
 });
 
+/* clave temporal: la genera el sistema o la escribe administración; siempre se pide cambiarla al ingresar */
 r.post('/usuarios/:id/clave', async (req, res) => {
-  const id = idDe(req), temporal = claveTemporal();
-  const u = (await q('update usuarios set clave_hash = $2, debe_cambiar_clave = true where id = $1 returning *', [id, await hashClave(temporal)])).rows[0];
+  const id = idDe(req), escrita = req.body && typeof req.body.clave === 'string' ? req.body.clave.trim() : '';
+  if (escrita) ses.validarClave(escrita);
+  const temporal = escrita || claveTemporal();
+  const u = (await q('update usuarios set clave_hash = $2, debe_cambiar_clave = true, pide_clave_en = null where id = $1 returning *', [id, await hashClave(temporal)])).rows[0];
   if (!u) throw falla(404, 'Esa cuenta no existe.');
   await q('delete from sesiones where usuario_id = $1', [id]);
   await auditar(req, 'nueva clave temporal', { usuario: id });

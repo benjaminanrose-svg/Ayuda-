@@ -60,7 +60,16 @@
     diseno = p.fondoDiseno || 'calma';
     const panel = rol !== 'psicologo' ? '<a class="btn ghost" href="/equipo">Ir al panel de casos</a>' : '';
     $('#mp').innerHTML = `<header class="adm-top"><div><h1>Mi perfil profesional</h1><p class="sub">Lo que completes aquí es lo que verán los pacientes.</p></div>
-        <div class="fila-btn">${panel}<button class="btn plain" type="button" id="salir">Salir</button></div></header>
+        <div class="fila-btn">${panel}<button class="btn plain" type="button" id="mi-clave" aria-expanded="false">Cambiar mi clave</button><button class="btn plain" type="button" id="salir">Salir</button></div></header>
+      <form class="caja" id="f-mi-clave" hidden>
+        <h2 class="sec-t">Cambiar mi clave</h2>
+        <div class="rejilla">
+          <div class="campo-form"><label for="mc-actual">Clave actual</label><input id="mc-actual" type="password" autocomplete="current-password" required></div>
+          <div class="campo-form"><label for="mc-nueva">Clave nueva (mínimo 10 caracteres)</label><input id="mc-nueva" type="password" autocomplete="new-password" minlength="10" required></div>
+          <div class="campo-form"><label for="mc-repetir">Repite la clave nueva</label><input id="mc-repetir" type="password" autocomplete="new-password" minlength="10" required></div>
+        </div>
+        <div class="fila-btn"><button class="btn" type="submit">Guardar clave</button><button class="btn plain" type="button" id="mc-cancelar">Cancelar</button></div>
+      </form>
       <div class="estado-perfil ${p.estado}" id="pasos"></div>
       <nav class="pestanas" aria-label="Secciones"><a href="#perfil" id="p-perfil">Mi perfil</a><a href="#agenda" id="p-agenda">Agenda y citas</a></nav>
       <div id="tab-perfil">
@@ -173,6 +182,7 @@
     if (t.classList.contains('quitar') && t.closest('.fila-ed')) return t.closest('.fila-ed').remove();
     try {
       if (t.id === 'salir') { await api('POST', '/api/equipo/salir', {}); return location.replace('/'); }
+      if (t.id === 'mi-clave' || t.id === 'mc-cancelar') { const f = $('#f-mi-clave'); f.hidden = !f.hidden; $('#mi-clave').setAttribute('aria-expanded', String(!f.hidden)); if (!f.hidden) $('#mc-actual').focus(); return; }
       if (t.id === 'enviar') { t.disabled = true; await guardar(true); await api('POST', '/api/directorio/mio/enviar', {}); aviso('¡Enviado! Revisaremos tu perfil pronto.'); return iniciar(); }
       if (t.id === 'quitar-foto') { await guardar(true); await api('DELETE', '/api/directorio/mio/foto'); return iniciar(); }
       if (t.id === 'quitar-fondo') { await guardar(true); await api('DELETE', '/api/directorio/mio/fondo'); return iniciar(); }
@@ -212,6 +222,15 @@
     } catch (x) { aviso(x.message); }
   });
   $('#mp').addEventListener('submit', async e => {
+    if (e.target.id === 'f-mi-clave') {
+      e.preventDefault();
+      const b = e.submitter, nueva = $('#mc-nueva').value;
+      if (nueva !== $('#mc-repetir').value) return aviso('Las dos claves nuevas no coinciden.');
+      if (b) b.disabled = true;
+      try { await api('POST', '/api/equipo/clave', { actual: $('#mc-actual').value, nueva }); e.target.reset(); e.target.hidden = true; $('#mi-clave').setAttribute('aria-expanded', 'false'); aviso('Tu clave quedó cambiada.'); }
+      catch (x) { aviso(x.message); } finally { if (b) b.disabled = false; }
+      return;
+    }
     if (e.target.id !== 'f-perfil') return;
     e.preventDefault();
     const b = e.submitter; if (b) b.disabled = true;

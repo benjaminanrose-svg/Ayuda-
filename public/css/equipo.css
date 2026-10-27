@@ -143,3 +143,7 @@
 }
 @media (max-width:380px){.equipo .marca-nombre{display:none}}
 .sesion-abierta{display:grid;gap:10px}.sesion-abierta p{margin:0}
+.form-clave{grid-template-columns:1fr}
+.form-clave .casilla{font-weight:600}
+.clave-temp p{margin:0 0 6px}
+.clave-temp .fila-btn{margin-top:8px}

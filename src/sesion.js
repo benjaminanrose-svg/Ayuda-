@@ -10,7 +10,7 @@ let falsa = null; // para que un correo inexistente tarde lo mismo que uno real
 
 const usuarioPublico = u => ({
   id: u.id, correo: u.correo, nombre: u.nombre, titulo: u.titulo, especialidad: u.especialidad, rol: u.rol,
-  guardia: u.guardia, disponible: u.disponible, activo: u.activo, debeCambiarClave: u.debe_cambiar_clave, ultimoAcceso: u.ultimo_acceso
+  guardia: u.guardia, disponible: u.disponible, activo: u.activo, debeCambiarClave: u.debe_cambiar_clave, ultimoAcceso: u.ultimo_acceso, pideClave: u.pide_clave_en || null
 });
 
 function validarClave(c) {

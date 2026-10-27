@@ -33,6 +33,15 @@
     <div class="campo-form"><label for="clave">Clave</label><input id="clave" type="password" autocomplete="current-password" required></div>
     <p class="error" id="err-ingreso" role="alert" hidden></p>
     <button class="btn" type="submit">Ingresar</button>
+    <button class="enlace olvide" type="button" id="olvide">¿Olvidaste tu clave?</button>
+  </form>
+  <form class="hoja-form" id="f-olvide" hidden>
+    <h1>¿Olvidaste tu clave?</h1>
+    <p class="sub">Escribe el correo con el que te registraste. Avisaremos al equipo de ConténMente y te enviarán una clave temporal para que entres y crees una nueva.</p>
+    <div class="campo-form"><label for="correo-olvide">Correo</label><input id="correo-olvide" type="email" autocomplete="email" required></div>
+    <p class="error" id="err-olvide" role="alert" hidden></p>
+    <button class="btn" type="submit">Pedir una clave nueva</button>
+    <button class="enlace olvide" type="button" id="volver-ingreso">Volver a ingresar</button>
   </form>
   <form class="hoja-form" id="f-clave" hidden>
     <h1>Crea tu clave</h1>

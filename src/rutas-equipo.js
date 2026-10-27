@@ -25,6 +25,18 @@ r.get('/estado', async (req, res) => {
   res.json({ sesion: !!s, debeCambiarClave: !!(s && s.r.debe_cambiar_clave), correo: s ? s.r.correo : null, rol: s ? s.r.rol : null });
 });
 
+/* «¿Olvidaste tu clave?»: avisa a administración; la respuesta es siempre igual para no revelar qué correos existen */
+r.post('/olvide-clave', limitador(5, 3600e3, req => 'olvide|' + req.ip), async (req, res) => {
+  const correo = String((req.body && req.body.correo) || '').trim().toLowerCase().slice(0, 200);
+  const u = correo ? (await q('update usuarios set pide_clave_en = now() where correo = $1 and activo returning id, nombre, titulo', [correo])).rows[0] : null;
+  if (u) {
+    await q('insert into auditoria (usuario_id, accion) values ($1, $2)', [u.id, 'pidió nueva clave']);
+    const admins = (await q("select id from usuarios where rol = 'admin' and activo")).rows.map(x => x.id);
+    avisos.aUsuarios(admins, { titulo: 'ConténMente', cuerpo: [u.titulo, u.nombre].filter(Boolean).join(' ') + ' olvidó su clave y pide una nueva.', url: '/equipo#admin', etiqueta: 'clave' }).catch(() => {});
+  }
+  res.json({ ok: true });
+});
+
 r.use(ses.sesion);
 r.post('/salir', async (req, res) => { await ses.salir(req, res); res.json({ ok: true }); });
 r.get('/yo', (req, res) => res.json({ usuario: ses.usuarioPublico(req.usuario), clavePush: avisos.clavePublica() }));
