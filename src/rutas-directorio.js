@@ -15,6 +15,12 @@ const MODALIDAD = ['online', 'presencial', 'ambas'];
 const TIPOS = ['titulo', 'magister', 'doctorado', 'diplomado', 'curso'];
 const DISENOS = ['calma', 'lavanda', 'brotes', 'noche', 'trama', 'aurora'];
 const TIPOS_DOC = ['titulo', 'diploma', 'certificado', 'otro'];
+// personalización (los nombres visibles están en public/js/comun.js)
+const COLORES = ['menta', 'lavanda', 'azul', 'durazno', 'rosa'];
+const ATIENDE = ['ninos', 'adolescentes', 'adultos', 'mayores', 'parejas', 'familias'];
+const IDIOMAS = ['es', 'en', 'pt', 'fr', 'ht', 'lsch', 'arn'];
+const PAGOS = ['fonasa', 'isapre', 'seguro', 'boleta'];
+const elegir = (v, ok, antes) => (v === undefined ? antes : [...new Set((Array.isArray(v) ? v : []).filter(x => ok.includes(x)))]);
 const MAX_DOCS = 12;
 const texto = (v, max) => String(v == null ? '' : v).replace(/\s+\n/g, '\n').trim().slice(0, max);
 const linea = (v, max) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, max);
@@ -68,6 +74,7 @@ function vista(p, u, propio) {
     linkedin: p.linkedin, precio: p.precio, foto: p.foto ? `/api/directorio/perfiles/${p.slug}/foto?v=${v0}` : null,
     fondo: p.fondo ? `/api/directorio/perfiles/${p.slug}/fondo?v=${v0}` : `/img/fondos/${DISENOS.includes(p.fondo_diseno) ? p.fondo_diseno : 'calma'}.svg`,
     fondoPropio: !!p.fondo, fondoDiseno: p.fondo_diseno,
+    color: COLORES.includes(p.color) ? p.color : 'menta', lema: p.lema || '', atiende: p.atiende || [], idiomas: p.idiomas || [], pagos: p.pagos || [], primeraSesion: p.primera_sesion || '',
     verificado: p.estado === 'publicado'
   };
   if (propio) Object.assign(v, { estado: p.estado, notaRevision: p.nota_revision, titulo: u.titulo, nombreSolo: u.nombre });
@@ -76,6 +83,7 @@ function vista(p, u, propio) {
 const tarjeta = p => ({
   slug: p.slug, nombre: nombreDe(p), resumen: p.resumen.slice(0, 220), especialidades: p.especialidades.slice(0, 6),
   modalidad: p.modalidad, comuna: p.comuna, precio: p.precio,
+  color: COLORES.includes(p.color) ? p.color : 'menta', lema: p.lema || '', atiende: p.atiende || [],
   foto: p.tiene_foto ? `/api/directorio/perfiles/${p.slug}/foto?v=${new Date(p.actualizado_en).getTime()}` : null,
   fondo: p.tiene_fondo ? `/api/directorio/perfiles/${p.slug}/fondo?v=${new Date(p.actualizado_en).getTime()}` : `/img/fondos/${DISENOS.includes(p.fondo_diseno) ? p.fondo_diseno : 'calma'}.svg`,
   documentos: p.n_docs
@@ -83,7 +91,7 @@ const tarjeta = p => ({
 
 /* ── público ── */
 r.get('/perfiles', async (req, res) => {
-  const filas = (await q(`select p.slug, p.resumen, p.especialidades, p.modalidad, p.comuna, p.precio, p.actualizado_en, p.foto is not null tiene_foto, p.fondo is not null tiene_fondo, p.fondo_diseno, p.agenda, p.usuario_id, u.nombre, u.titulo,
+  const filas = (await q(`select p.slug, p.resumen, p.especialidades, p.modalidad, p.comuna, p.precio, p.actualizado_en, p.foto is not null tiene_foto, p.fondo is not null tiene_fondo, p.fondo_diseno, p.color, p.lema, p.atiende, p.agenda, p.usuario_id, u.nombre, u.titulo,
     (select count(*)::int from documentos d where d.usuario_id = p.usuario_id and d.publico) n_docs
     from perfiles p join usuarios u on u.id = p.usuario_id where p.estado = 'publicado' and u.activo order by p.publicado_en desc nulls last limit 500`)).rows;
   // próxima hora libre de cada uno (para mostrarla en la tarjeta)
@@ -188,14 +196,18 @@ r.put('/mio', async (req, res) => {
   const estudios = lista(b.estudios, { tipo: 20, titulo: 120, institucion: 120, anio: 4 }, 15).map(e => ({ ...e, tipo: TIPOS.includes(e.tipo) ? e.tipo : 'curso' }));
   const experiencia = lista(b.experiencia, { cargo: 100, lugar: 120, periodo: 40 }, 15);
   const registro = linea(b.registroSis, 20);
+  const extra = [COLORES.includes(b.color) ? b.color : antes.color, b.lema === undefined ? antes.lema : linea(b.lema, 90),
+    elegir(b.atiende, ATIENDE, antes.atiende), elegir(b.idiomas, IDIOMAS, antes.idiomas), elegir(b.pagos, PAGOS, antes.pagos),
+    b.primeraSesion === undefined ? antes.primera_sesion : texto(b.primeraSesion, 300)];
   // si cambia lo que se verificó (nombre o registro), el perfil vuelve a revisión
   const cambiaVerificado = nombre !== u.nombre || titulo !== u.titulo || registro !== antes.registro_sis;
   const estado = antes.estado === 'publicado' && cambiaVerificado ? 'pendiente' : antes.estado;
   await q('update usuarios set nombre = $2, titulo = $3 where id = $1', [u.id, nombre, titulo]);
   await q(`update perfiles set resumen = $2, enfoque = $3, especialidades = $4, estudios = $5::jsonb, experiencia = $6::jsonb, modalidad = $7,
-      comuna = $8, registro_sis = $9, linkedin = $10, precio = $11, estado = $12, fondo_diseno = $13, actualizado_en = now() where usuario_id = $1`,
+      comuna = $8, registro_sis = $9, linkedin = $10, precio = $11, estado = $12, fondo_diseno = $13,
+      color = $14, lema = $15, atiende = $16, idiomas = $17, pagos = $18, primera_sesion = $19, actualizado_en = now() where usuario_id = $1`,
     [u.id, texto(b.resumen, 1500), texto(b.enfoque, 800), especialidades, JSON.stringify(estudios), JSON.stringify(experiencia), modalidad,
-      linea(b.comuna, 60), registro, linkedin, precio, estado, DISENOS.includes(b.fondoDiseno) ? b.fondoDiseno : antes.fondo_diseno]);
+      linea(b.comuna, 60), registro, linkedin, precio, estado, DISENOS.includes(b.fondoDiseno) ? b.fondoDiseno : antes.fondo_diseno, ...extra]);
   const p = (await q('select * from perfiles where usuario_id = $1', [u.id])).rows[0];
   res.json({ perfil: vista(p, { ...u, nombre, titulo }, true), volvioARevision: estado !== antes.estado });
 });

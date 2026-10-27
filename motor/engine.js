@@ -1443,7 +1443,7 @@ function create(saved){
       else if (['DIRECTORIO','FAQ_COSTO','DIR_SEGUIMIENTO'].includes(S.lastPrimary)) {
         if (/^(y )?(conversar|hablar|escribir) (contigo|con nexo|aca|aqui)|^(y )?contigo\b/.test(t)) c = 'Conversar conmigo es gratis, todas las veces que quieras.';
         else if (/^(y )?(online|presencial|por videollamada|virtual)\??$/.test(t)) c = 'Sí: en el directorio puedes filtrar por «Online» o «Presencial».';
-        else if (/^(y )?(por )?(isapre|fonasa|boleta|reembolso|bonos?)\??$/.test(t)) c = 'Lo mismo: depende de cada psicólogo. Pregúntale al reservar si entrega boleta para reembolso.';
+        else if (/^(y )?(por )?(isapre|fonasa|boleta|reembolso|bonos?)\??$/.test(t)) c = 'Lo mismo: depende de cada psicólogo. Revisa «Pagos y reembolsos» en su perfil, o pregúntale al reservar.';
       }
       if (!c && !RISKY.has(P) && /\b(quiero|prefiero|me gustaria) (una|un) (mujer|hombre|psicologa|psicologo|terapeuta)\b/.test(t) && !crisisMode0()) c = 'En el directorio ves la foto y el perfil de cada profesional, así que puedes elegir con quien te sientas más a gusto.';
       if (!c && /\bno (encuentro|tengo|me llego|guarde) (el|mi) (enlace|link)\b/.test(t)) c = 'El enlace aparece al terminar la reserva, y también va dentro del archivo de calendario si lo agregaste. Si no lo tienes, el psicólogo igual tiene tu contacto y te puede ayudar a cambiar o cancelar la hora.';
@@ -1987,12 +1987,12 @@ function create(saved){
         case 'DIRECTORIO': {
           const d = S.dirTipo;
           if (a.themes.length && !['inscribir','para_otro'].includes(d)) say(pick(['Lamento que lo estés pasando así.','Gracias por contarme cómo estás.'],'dirEmp'));
-          if (d === 'para_otro') say('En el directorio de ConténMente puedes buscar psicólogos por especialidad, por ejemplo «Infanto-juvenil» o «Adolescentes», ver su formación y reservar una hora.');
+          if (d === 'para_otro') say('En el directorio de ConténMente puedes filtrar por «Para quién» (por ejemplo «Niños y niñas» o «Adolescentes»), ver la formación de cada psicólogo y reservar una hora.');
           else if (d === 'inscribir') say('¡Qué bueno! Para aparecer en el directorio, entra a «Soy psicólogo» en la página principal, crea tu cuenta y completa tu perfil. Lo revisamos antes de publicarlo.');
           else if (d === 'cancelar') say(S.mode === 'agendado' ? 'Tu hora con el especialista sigue registrada. Si no puedes asistir, escríbelo aquí: queda anotado en tu conversación para que el especialista lo vea.' : 'Si reservaste con un psicólogo del directorio, abre el enlace de tu cita que recibiste al reservar: ahí puedes verla o cancelarla.');
           else if (d === 'hora') say(S.horaTexto ? `Tu hora quedó para ${S.horaTexto}.` : 'Si reservaste con un psicólogo del directorio, la fecha y la hora están en el enlace de tu cita que recibiste al reservar.');
           else if (d === 'precio') say('Conversar conmigo es gratis. Si quieres atenderte con un psicólogo del directorio, cada profesional muestra el valor de su sesión en su perfil.');
-          else if (d === 'prevision') say('Cada psicólogo del directorio define cómo atiende y el valor de su sesión. Si necesitas boleta para reembolso o usar bonos, pregúntaselo al reservar; yo no tengo esa información.');
+          else if (d === 'prevision') say('Cada psicólogo muestra en su perfil el valor de su sesión y, si lo indicó, si acepta bono Fonasa, reembolso de isapre o entrega boleta. Si no aparece, pregúntaselo al reservar.');
           else if (d === 'modalidad') say('En el directorio de psicólogos puedes buscar por comuna y elegir si quieres atención online o presencial.');
           else say('En ConténMente hay un directorio de psicólogos con perfil revisado: ves su formación y especialidades, eliges uno y reservas una hora tú mismo, online o presencial.');
           wrapUp();

@@ -1,7 +1,7 @@
 'use strict';
 /* Edición del perfil propio del psicólogo, envío a revisión y solicitudes de hora recibidas. */
 (() => {
-  const { $, api, esc, fecha, soportaAvisos, activarAvisos, TIPO_DOC, vistaDoc } = window.RA;
+  const { $, api, esc, fecha, soportaAvisos, activarAvisos, TIPO_DOC, vistaDoc, COLORES, ATIENDE, IDIOMAS, PAGOS } = window.RA;
   const DISENOS = [['calma', 'Calma'], ['lavanda', 'Lavanda'], ['brotes', 'Brotes'], ['noche', 'Noche'], ['trama', 'Trama'], ['aurora', 'Aurora']];
   const SUGERIDAS = ['Ansiedad', 'Depresión', 'Adolescentes', 'Infanto-juvenil', 'Adultos', 'Adulto mayor', 'Pareja', 'Familia', 'Duelo', 'Trauma',
     'Crisis y prevención del suicidio', 'Autoestima', 'Estrés laboral', 'Adicciones', 'Trastornos alimentarios', 'Diversidad sexual y de género',
@@ -13,7 +13,9 @@
     publicado: 'Tu perfil está publicado en el directorio.',
     rechazado: 'Tu perfil necesita cambios antes de publicarse.'
   };
-  let p = null, esp = [], diseno = 'calma', tieneHorario = false;
+  let p = null, esp = [], diseno = 'calma', color = 'menta', tieneHorario = false;
+  const opciones = (grupo, lista, elegidas) => `<div class="esp-opc" data-grupo="${grupo}">${lista.map(([v, t]) => `<button type="button" data-v="${v}" aria-pressed="${elegidas.includes(v)}">${t}</button>`).join('')}</div>`;
+  const marcadas = grupo => [...document.querySelectorAll(`[data-grupo="${grupo}"] [aria-pressed="true"]`)].map(b => b.dataset.v);
   function aviso(t) { const el = $('#toast'); el.textContent = t; el.hidden = false; clearTimeout(aviso.t); aviso.t = setTimeout(() => { el.hidden = true; }, 5000); }
 
   const filaEst = (e = {}) => `<div class="fila-ed"><select aria-label="Tipo">${TIPOS.map(([v, t]) => `<option value="${v}"${e.tipo === v ? ' selected' : ''}>${t}</option>`).join('')}</select>
@@ -40,6 +42,7 @@
       ['Estudios', v.estudios.length > 0, true, 's-est'],
       ['N.º de registro en la Superintendencia', !!v.registroSis.trim(), true, 's-datos'],
       ['Diplomas o certificados', p.documentos.length > 0, false, 's-docs'],
+      ['A quién atiendes', v.atiende.length > 0, false, 's-practico'],
       ['Horario de atención', tieneHorario, false, 'agenda']
     ];
     const listos = pasos.filter(x => x[1]).length, faltan = pasos.filter(x => x[2] && !x[1]).length;
@@ -58,6 +61,7 @@
   function pintar(rol, nuevas) {
     esp = p.especialidades.slice();
     diseno = p.fondoDiseno || 'calma';
+    color = p.color || 'menta';
     const panel = rol !== 'psicologo' ? '<a class="btn ghost" href="/equipo">Ir al panel de casos</a>' : '';
     $('#mp').innerHTML = `<header class="adm-top"><div><h1>Mi perfil profesional</h1><p class="sub">Lo que completes aquí es lo que verán los pacientes.</p></div>
         <div class="fila-btn">${panel}<button class="btn plain" type="button" id="mi-clave" aria-expanded="false">Cambiar mi clave</button><button class="btn plain" type="button" id="salir">Salir</button></div></header>
@@ -77,16 +81,19 @@
         ${soportaAvisos() ? '<button class="btn plain" type="button" id="avisos">Avisarme en este navegador cuando llegue una</button>' : ''}</section>
       <form class="caja" id="f-perfil">
         <h2 class="sec-t" id="s-vista">Cómo se ve tu perfil</h2>
-        <div class="vista-ed">
+        <div class="vista-ed acento ac-${esc(color)}" id="vista-ed">
           <div class="portada"><img id="portada-img" src="${esc(p.fondo)}" alt=""></div>
           <button type="button" class="btn-sobre" id="cambiar-fondo">Subir imagen de fondo</button>
           <div class="p-cab"><button type="button" class="foto-boton" id="cambiar-foto" aria-label="Cambiar foto"><span class="foto grande anillo" id="foto-prev">${p.foto ? `<img src="${esc(p.foto)}" alt="">` : 'Foto'}</span><span class="lapiz" aria-hidden="true">✎</span></button>
-            <div class="p-nombre"><b class="t-cuerpo">${esc(p.nombre)}</b><span class="t-meta">Toca la foto o el fondo para cambiarlos</span></div></div>
+            <div class="p-nombre"><b class="t-cuerpo">${esc(p.nombre)}</b><span class="lema" id="lema-prev"${p.lema ? '' : ' hidden'}>${esc(p.lema)}</span><span class="t-meta">Toca la foto o el fondo para cambiarlos</span></div></div>
         </div>
         <input id="m-foto" type="file" accept="image/*" class="sr" tabindex="-1"><input id="m-fondo" type="file" accept="image/*" class="sr" tabindex="-1">
         <div class="campo-form"><span class="rotulo">O elige uno de nuestros fondos</span>
           <div class="disenos" id="disenos">${DISENOS.map(([v, t]) => `<button type="button" data-diseno="${v}" aria-pressed="${!p.fondoPropio && diseno === v}" aria-label="Fondo ${t}"><img src="/img/fondos/${v}.svg" alt=""></button>`).join('')}</div>
           ${p.fondoPropio ? '<button class="btn plain" type="button" id="quitar-fondo">Quitar mi imagen de fondo</button>' : ''}${p.foto ? '<button class="btn plain" type="button" id="quitar-foto">Quitar mi foto</button>' : ''}</div>
+        <div class="campo-form"><span class="rotulo">Color de tu perfil</span>
+          <div class="colores" id="colores">${COLORES.map(([v, t]) => `<button type="button" data-color="${v}" aria-pressed="${color === v}"><i class="ac-${v}"></i>${t}</button>`).join('')}</div></div>
+        <div class="campo-form"><label for="m-lema">Frase bajo tu nombre (opcional)</label><input id="m-lema" maxlength="90" value="${esc(p.lema)}" placeholder="Ej: Acompaño a adolescentes y familias en momentos difíciles"><small>Hasta 90 letras. Aparece en tu perfil y en tu tarjeta del directorio.</small></div>
         <h2 class="sec-t" id="s-datos">Datos básicos</h2>
         <div class="rejilla">
           <div class="campo-form"><label for="m-titulo">Título</label><input id="m-titulo" maxlength="12" value="${esc(p.titulo)}" placeholder="Ps."></div>
@@ -102,6 +109,12 @@
         <h2 class="sec-t" id="s-esp">Especialidades</h2>
         <div class="esp-opc" id="esp">${chipsEsp()}</div>
         <div class="fila-btn"><label class="sr" for="m-otra">Otra especialidad</label><input id="m-otra" class="entrada" maxlength="40" placeholder="Agregar otra especialidad"><button class="btn ghost" type="button" id="agregar-esp">Agregar</button></div>
+        <h2 class="sec-t" id="s-practico">A quién atiendes y cómo</h2>
+        <p class="nota-suave">Ayuda a los pacientes a saber rápido si eres para ellos. Toca todas las que correspondan.</p>
+        <div class="campo-form"><span class="rotulo">Atiendo a</span>${opciones('atiende', ATIENDE, p.atiende)}</div>
+        <div class="campo-form"><span class="rotulo">Idiomas</span>${opciones('idiomas', IDIOMAS, p.idiomas)}</div>
+        <div class="campo-form"><span class="rotulo">Pagos y reembolsos</span>${opciones('pagos', PAGOS, p.pagos)}</div>
+        <div class="campo-form"><label for="m-primera">La primera sesión (opcional)</label><textarea id="m-primera" maxlength="300" rows="2" placeholder="Ej: La primera sesión es para conocernos y ver juntos qué necesitas. Si no te acomoda, no seguimos.">${esc(p.primeraSesion)}</textarea></div>
         <h2 class="sec-t" id="s-est">Estudios, diplomados y cursos</h2>
         <div class="filas" id="estudios">${(p.estudios.length ? p.estudios : [{ tipo: 'titulo' }]).map(filaEst).join('')}</div>
         <button class="btn plain" type="button" id="mas-est">+ Agregar estudio</button>
@@ -129,7 +142,8 @@
 
   const datos = () => ({
     titulo: $('#m-titulo').value, nombre: $('#m-nombre').value, registroSis: $('#m-sis').value, modalidad: $('#m-mod').value, comuna: $('#m-comuna').value,
-    precio: $('#m-precio').value.replace(/\D/g, ''), fondoDiseno: diseno, resumen: $('#m-resumen').value, enfoque: $('#m-enfoque').value, especialidades: esp, linkedin: $('#m-linkedin').value,
+    precio: $('#m-precio').value.replace(/\D/g, ''), fondoDiseno: diseno, color, lema: $('#m-lema').value,
+    atiende: marcadas('atiende'), idiomas: marcadas('idiomas'), pagos: marcadas('pagos'), primeraSesion: $('#m-primera').value, resumen: $('#m-resumen').value, enfoque: $('#m-enfoque').value, especialidades: esp, linkedin: $('#m-linkedin').value,
     estudios: [...document.querySelectorAll('#estudios .fila-ed')].map(f => { const [t, a, b, c] = f.querySelectorAll('select,input'); return { tipo: t.value, titulo: a.value, institucion: b.value, anio: c.value }; }).filter(e => e.titulo || e.institucion),
     experiencia: [...document.querySelectorAll('#experiencia .fila-ed')].map(f => { const [a, b, c] = f.querySelectorAll('input'); return { cargo: a.value, lugar: b.value, periodo: c.value }; }).filter(e => e.cargo || e.lugar)
   });
@@ -165,6 +179,15 @@
 
   $('#mp').addEventListener('click', async e => {
     const t = e.target;
+    const op = t.closest('[data-grupo] button');
+    if (op) { op.setAttribute('aria-pressed', String(op.getAttribute('aria-pressed') !== 'true')); return; }
+    const co = t.closest('[data-color]');
+    if (co) {
+      color = co.dataset.color;
+      document.querySelectorAll('[data-color]').forEach(b => b.setAttribute('aria-pressed', String(b === co)));
+      $('#vista-ed').className = 'vista-ed acento ac-' + color;
+      return;
+    }
     if (t.closest('#esp button')) { const v = t.textContent; esp = esp.includes(v) ? esp.filter(x => x !== v) : [...esp, v]; t.setAttribute('aria-pressed', String(esp.includes(v))); return; }
     if (t.id === 'agregar-esp') { const v = $('#m-otra').value.trim(); if (v && !esp.includes(v)) { esp.push(v); $('#esp').innerHTML = chipsEsp(); } $('#m-otra').value = ''; return; }
     if (t.id === 'mas-est') return $('#estudios').insertAdjacentHTML('beforeend', filaEst({ tipo: 'diplomado' }));
@@ -249,7 +272,10 @@
   // el avance se actualiza mientras escribe
   let espera = null;
   const refrescarPasos = () => { clearTimeout(espera); espera = setTimeout(() => { if (p && $('#pasos') && $('#f-perfil')) pintarPasos(); }, 250); };
-  $('#mp').addEventListener('input', e => { if (e.target.closest('#f-perfil')) refrescarPasos(); });
+  $('#mp').addEventListener('input', e => {
+    if (e.target.id === 'm-lema') { const l = $('#lema-prev'); l.textContent = e.target.value; l.hidden = !e.target.value.trim(); }
+    if (e.target.closest('#f-perfil')) refrescarPasos();
+  });
   $('#mp').addEventListener('click', e => { if (e.target.closest('#f-perfil')) refrescarPasos(); });
   window.addEventListener('horario', e => { tieneHorario = e.detail; if (p && $('#pasos')) pintarPasos(); });
 

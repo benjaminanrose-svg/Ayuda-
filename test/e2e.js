@@ -49,7 +49,7 @@ const espera = ms => new Promise(r => setTimeout(r, ms));
     await per.screenshot({ path: path.join(OUT, 'persona-riesgo.png') });
 
     // el caso llega al panel en vivo
-    await esp.waitForSelector('#cola .item'); await esp.click('#cola .item'); await espera(500);
+    await esp.waitForSelector('#ahora .item'); await esp.click('#ahora .item'); await espera(500);
     await esp.screenshot({ path: path.join(OUT, 'panel-ficha.png') });
     await esp.click('[data-acc="tomar"]'); await esp.waitForSelector('#pro-in'); await espera(900);
     await esp.screenshot({ path: path.join(OUT, 'panel-tomado.png') });
@@ -66,13 +66,13 @@ const espera = ms => new Promise(r => setTimeout(r, ms));
       const p = await b.newPage({ viewport: { width: 390, height: 844 } }); vigilar(p, 'persona2');
       await p.goto(BASE + '/conversar'); await espera(1500); await p.fill('#input', t); await p.press('#input', 'Enter'); await espera(2500); await p.close();
     }
-    await esp.waitForFunction(() => document.querySelectorAll('#cola .item').length >= 2);
+    await esp.waitForFunction(() => document.querySelectorAll('#ahora .item').length >= 2);
     await esp.screenshot({ path: path.join(OUT, 'panel-lista.png') });
-    await esp.setViewportSize({ width: 390, height: 844 }); await esp.goto(BASE + '/equipo'); await esp.waitForSelector('#cola .item'); await espera(500);
+    await esp.setViewportSize({ width: 390, height: 844 }); await esp.goto(BASE + '/equipo'); await esp.waitForSelector('#ahora .item'); await espera(500);
     await esp.screenshot({ path: path.join(OUT, 'panel-movil-lista.png') });
     await esp.click('#menu-btn'); await espera(200);
     await esp.screenshot({ path: path.join(OUT, 'panel-movil-menu.png') });
-    await esp.click('#menu-btn'); await esp.click('#cola .item'); await espera(500);
+    await esp.click('#menu-btn'); await esp.click('#ahora .item'); await espera(500);
     await esp.screenshot({ path: path.join(OUT, 'panel-movil-caso.png'), fullPage: true });
     await adm.setViewportSize({ width: 390, height: 844 }); await adm.reload(); await adm.waitForSelector('.cifras'); await espera(300);
     await adm.screenshot({ path: path.join(OUT, 'admin-movil.png'), fullPage: true });
@@ -93,6 +93,11 @@ const espera = ms => new Promise(r => setTimeout(r, ms));
     await psi.setInputFiles('#m-foto', path.join(__dirname, '..', 'public', 'img', 'icono-512.png')); await psi.waitForSelector('dialog.recorte[open]');
     await psi.screenshot({ path: path.join(OUT, 'recorte-foto.png') }); await psi.click('[data-r="ok"]'); await psi.waitForSelector('#foto-prev img');
     await psi.click('[data-diseno="lavanda"]');
+    await psi.click('[data-color="lavanda"]'); await psi.fill('#m-lema', 'Acompaño a adolescentes y adultos en momentos difíciles');
+    await psi.$eval('#s-vista', el => el.scrollIntoView()); await psi.screenshot({ path: path.join(OUT, 'mi-perfil-color.png') });
+    for (const [g, v] of [['atiende', 'adolescentes'], ['atiende', 'adultos'], ['idiomas', 'es'], ['idiomas', 'en'], ['pagos', 'isapre'], ['pagos', 'boleta']]) await psi.click(`[data-grupo="${g}"] [data-v="${v}"]`);
+    await psi.fill('#m-primera', 'La primera sesión es para conocernos y ver juntos qué necesitas. Si no te acomoda, no seguimos.');
+    await psi.$eval('#s-practico', el => el.scrollIntoView()); await psi.screenshot({ path: path.join(OUT, 'mi-perfil-practico.png') });
     const pdf = Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj 3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 300 200]>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF');
     await psi.selectOption('#d-tipo', 'titulo'); await psi.fill('#d-nombre', 'Título de Psicóloga, Universidad de Chile');
     await psi.setInputFiles('#d-archivo', { name: 'titulo.pdf', mimeType: 'application/pdf', buffer: pdf }); await psi.waitForSelector('.doc-ed');

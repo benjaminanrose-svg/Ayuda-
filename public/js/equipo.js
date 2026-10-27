@@ -69,24 +69,44 @@
   /* ── lista ── */
   const orden = (a, b) => b.urgente - a.urgente || RANGO[a.riesgo] - RANGO[b.riesgo] || new Date(a.creadoEn) - new Date(b.creadoEn);
   let variasOrgs = false;
+  const DIA = 864e5;
+  const ultimo = k => k.ultimoEn || k.tomadoEn;
+  const quieto = k => k.estado === 'en_atencion' && Date.now() - new Date(ultimo(k)) > DIA;
+  const leToca = k => k.estado === 'en_atencion' && k.ultimoAutor === 'persona';
+  const CORTO = { high: 'Alto', mid: 'Medio', low: 'Bajo' };
+  // qué pasa con el caso en una línea: quién habló último y hace cuánto
+  function situacion(k) {
+    if (enCola(k)) { const l = lapso(k.creadoEn); return (k.estado === 'guardia' ? 'En guardia · ' : 'Sin asignar · ') + (l ? 'espera hace ' + l : 'recién llegó'); }
+    if (k.estado === 'agendado') return 'Hora: ' + fecha(k.agendadoPara);
+    const l = lapso(ultimo(k));
+    return k.ultimoAutor === 'persona' ? 'Te escribió ' + (l ? 'hace ' + l : 'recién') : 'Esperando su respuesta' + (l ? ' · ' + l : '');
+  }
+  const vivo = (k, id) => `<span class="vivo${k.enLinea ? ' si' : ''}"${id ? ' id="vivo-f"' : ''}>${k.enLinea ? 'En línea' : 'Fuera de línea'}</span>`;
   function item(k) {
-    const etq = nivelHtml(k) + (k.estado === 'guardia' ? '<span class="chip">En guardia</span>' : '') + (sinLeer.has(k.id) ? '<span class="punto">Nuevo</span>' : '');
-    const pie = ['N.º ' + k.folio, variasOrgs && k.organizacion ? esc(k.organizacion) : '', k.estado === 'agendado' ? 'Hora: ' + esc(fecha(k.agendadoPara)) : ''].filter(Boolean).join(' · ');
-    return `<li><a class="item ${k.urgente && enCola(k) ? 'high' : k.riesgo}${sel === k.id ? ' sel' : ''}" href="#caso-${k.id}">
-      <span class="item-a">${etq}<span class="t${tarde(k) ? ' late' : ''}" data-t="${k.id}">${tiempo(k)}</span></span>
-      <span class="item-b">${deQue(k)}</span>
-      <span class="item-c">${pie}</span></a></li>`;
+    const urg = k.urgente && enCola(k);
+    const pie = [variasOrgs && k.organizacion ? esc(k.organizacion) : '', 'N.º ' + k.folio].filter(Boolean).join(' · ');
+    return `<li><a class="item ${urg ? 'high' : k.riesgo}${sel === k.id ? ' sel' : ''}" href="#caso-${k.id}">
+      <span class="item-a">${vivo(k)}<span class="nivel ${urg ? 'urgente' : k.riesgo}">${urg ? 'Urgente' : CORTO[k.riesgo]}</span>${sinLeer.has(k.id) ? '<span class="punto">Nuevo</span>' : ''}<span class="item-c">${pie}</span></span>
+      <span class="item-s${enCola(k) || leToca(k) ? ' fuerte' : ''}${tarde(k) ? ' late' : ''}" data-t="${k.id}">${esc(situacion(k))}</span>
+      <span class="item-b">${deQue(k)}</span></a></li>`;
+  }
+  function grupo(id, lista, vacio) {
+    const ul = $('#' + id);
+    ul.innerHTML = lista.map(item).join('') || (vacio ? `<li class="vacio">${vacio}</li>` : '');
+    $('#n-' + id).textContent = lista.length || '';
+    if (!vacio) ul.parentElement.hidden = !lista.length;
   }
   function pintarLista() {
     const todos = [...casos.values()];
     variasOrgs = new Set(todos.map(k => k.organizacion)).size > 1;
-    const cola = todos.filter(enCola).sort(orden);
-    const mios = todos.filter(mio).sort((a, b) => new Date(a.tomadoEn) - new Date(b.tomadoEn));
-    $('#cola').innerHTML = cola.map(item).join('') || '<li class="vacio">No hay casos en espera.</li>';
-    $('#mios').innerHTML = mios.map(item).join('') || '<li class="vacio">No tienes casos abiertos.</li>';
-    $('#n-cola').textContent = cola.length || '';
-    $('#n-mios').textContent = mios.length || '';
-    document.title = (cola.length ? `(${cola.length}) ` : '') + 'Panel · ConténMente';
+    const mios = todos.filter(mio);
+    const espera = k => new Date(enCola(k) ? k.creadoEn : ultimo(k));
+    const ahora = [...todos.filter(enCola), ...mios.filter(k => leToca(k) && !quieto(k))].sort((a, b) => (b.urgente && enCola(b)) - (a.urgente && enCola(a)) || RANGO[a.riesgo] - RANGO[b.riesgo] || espera(a) - espera(b));
+    grupo('ahora', ahora, 'Nadie está esperando respuesta.');
+    grupo('conv', mios.filter(k => k.estado === 'en_atencion' && !leToca(k) && !quieto(k)).sort((a, b) => new Date(ultimo(b)) - new Date(ultimo(a))));
+    grupo('agenda', mios.filter(k => k.estado === 'agendado').sort((a, b) => new Date(a.agendadoPara) - new Date(b.agendadoPara)));
+    grupo('quietos', mios.filter(quieto));
+    document.title = (ahora.length ? `(${ahora.length}) ` : '') + 'Panel · ConténMente';
   }
 
   /* ── ficha ── */
@@ -114,14 +134,14 @@
     return `<article class="ficha ${k.riesgo}" aria-label="Caso N.º ${k.folio}">
       <a class="volver" href="#">← Volver a la lista</a>
       <header class="f-top"><div class="f-etq">${etq}${enCola(k) ? `<span class="t${tarde(k) ? ' late' : ''}" data-f="${k.id}">${tiempo(k)}</span>` : ''}</div>
-        <h2>Caso N.º ${k.folio}</h2><p class="sub">${quien}</p></header>
+        <h2>Caso N.º ${k.folio}</h2><p class="sub">${vivo(k, true)} · ${quien}</p></header>
       ${estado}
       <dl class="datos">
         ${k.senales.length ? `<div class="dato ancho"><dt>Señales</dt><dd class="tags">${k.senales.map(x => `<span class="tag flag${x.urgente ? ' u' : ''}">${esc(x.texto)}</span>`).join('')}</dd></div>` : ''}
-        <div class="dato"><dt>¿Está en un lugar seguro?</dt><dd>${esc(k.seguro)}</dd></div>
-        <div class="dato"><dt>Temas</dt><dd>${esc(k.temas.join(', ') || 'Aún no aparecen')}</dd></div>
+        ${k.riesgo !== 'low' || !/sin preguntar/i.test(k.seguro) ? `<div class="dato"><dt>¿Está en un lugar seguro?</dt><dd>${esc(k.seguro)}</dd></div>` : ''}
+        ${k.temas.length ? `<div class="dato"><dt>Temas</dt><dd>${esc(k.temas.join(', '))}</dd></div>` : ''}
       </dl>
-      <section class="escribio"><h3>Lo que escribió</h3>${escribio ? `<ul>${escribio}</ul>` : '<p class="nota-suave">Sin mensajes.</p>'}</section>
+      ${tomada ? '' : `<section class="escribio"><h3>Lo que escribió</h3>${escribio ? `<ul>${escribio}</ul>` : '<p class="nota-suave">Sin mensajes.</p>'}</section>`}
       ${deriv ? `<div class="deriv">${deriv}</div>` : ''}
     </article>`;
   }
@@ -188,10 +208,12 @@
     else pintarFicha();
   }
   function recibirMensaje(d) {
-    const m = d.mensaje;
+    const m = d.mensaje, k = casos.get(d.casoId);
+    if (k && (m.autor === 'persona' || m.autor === 'especialista')) { k.ultimoAutor = m.autor; k.ultimoEn = m.hora || new Date().toISOString(); if (m.autor === 'persona') k.enLinea = true; }
     if (sel === d.casoId && registro) {
       if (!registro.some(x => x.id === m.id)) { registro.push(m); $('#registro').insertAdjacentHTML('beforeend', lineaRegistro(m)); abajoRegistro(); }
-    } else if (m.autor === 'persona') { sinLeer.add(d.casoId); pintarLista(); }
+    } else if (m.autor === 'persona') sinLeer.add(d.casoId);
+    pintarLista();
     if (m.autor === 'persona') sonar(!!d.urgente);
   }
   function alerta(d) {
@@ -217,15 +239,25 @@
     f.addEventListener('error', () => { $('#desconectado').hidden = false; });
     f.addEventListener('caso', e => actualizarCaso(JSON.parse(e.data)));
     f.addEventListener('mensaje', e => recibirMensaje(JSON.parse(e.data)));
+    f.addEventListener('presencia', e => {
+      const d = JSON.parse(e.data), k = casos.get(d.casoId);
+      if (!k) return;
+      k.enLinea = d.enLinea;
+      pintarLista();
+      const v = $('#vivo-f');
+      if (v && sel === d.casoId) v.outerHTML = vivo(k, true);
+    });
     f.addEventListener('alerta', e => alerta(JSON.parse(e.data)));
   }
   function tic() {
     document.querySelectorAll('[data-t],[data-f]').forEach(el => {
       const k = casos.get(+(el.dataset.t || el.dataset.f));
       if (!k) return;
-      el.textContent = tiempo(k);
+      el.textContent = el.dataset.t ? situacion(k) : tiempo(k);
       el.classList.toggle('late', tarde(k));
     });
+    tic.n = (tic.n || 0) + 1;
+    if (tic.n % 60 === 0) pintarLista(); // pasa de grupo al cumplir un día sin movimiento
   }
 
   /* ── acciones del caso ── */

@@ -39,5 +39,11 @@ window.RA = (() => {
   const sello = '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M22 40l-6 20 10-5 6 7 4-18zM42 40l6 20-10-5-6 7-4-18z" fill="#B8A2DA"/><circle cx="32" cy="28" r="20" fill="#8CC8BC"/><circle cx="32" cy="28" r="14" fill="none" stroke="#fff" stroke-width="2.5" stroke-dasharray="3 3"/><path d="M25 28l5 5 9-10" fill="none" stroke="#30486C" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const TIPO_DOC = { titulo: 'Título', diploma: 'Diploma', certificado: 'Certificado', otro: 'Documento' };
   const vistaDoc = d => `<span class="c-vista">${d.pdf ? sello : `<img src="${esc(d.url)}" alt="" loading="lazy">`}</span>`;
-  return { $, esc, api, soportaAvisos, activarAvisos, hora, fecha, sello, TIPO_DOC, vistaDoc };
+  // personalización del perfil (las claves también están en src/rutas-directorio.js)
+  const COLORES = [['menta', 'Menta'], ['lavanda', 'Lavanda'], ['azul', 'Azul'], ['durazno', 'Durazno'], ['rosa', 'Rosa suave']];
+  const ATIENDE = [['ninos', 'Niños y niñas'], ['adolescentes', 'Adolescentes'], ['adultos', 'Adultos'], ['mayores', 'Personas mayores'], ['parejas', 'Parejas'], ['familias', 'Familias']];
+  const IDIOMAS = [['es', 'Español'], ['en', 'Inglés'], ['pt', 'Portugués'], ['fr', 'Francés'], ['ht', 'Creole haitiano'], ['lsch', 'Lengua de señas chilena'], ['arn', 'Mapudungun']];
+  const PAGOS = [['fonasa', 'Bono Fonasa'], ['isapre', 'Reembolso isapre'], ['seguro', 'Seguro complementario'], ['boleta', 'Entrega boleta']];
+  const nombres = (lista, claves) => lista.filter(([v]) => (claves || []).includes(v)).map(([, t]) => t);
+  return { $, esc, api, soportaAvisos, activarAvisos, hora, fecha, sello, TIPO_DOC, vistaDoc, COLORES, ATIENDE, IDIOMAS, PAGOS, nombres };
 })();

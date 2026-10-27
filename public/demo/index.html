@@ -902,7 +902,7 @@ Object.assign(L, {
               { p:'=le|=les =van|=vas =a =decir|=contar|=avisar', gap:1 }, { p:'=se =van|=va =a =enterar', gap:1 }, { p:'=me =van =a =internar|=encerrar', gap:1 } ],
   FAQ_COSTO: [ { p:'=es =gratis|=gratuito|=pagado', gap:0 }, { p:'=cuanto =cuesta|=sale|=cobran|=vale', gap:0 }, { p:'=hay|=tengo =que =pagar', gap:0 } ],
   FAQ_QUE: [ '=que =es =esto', { p:'=que =es =esta =pagina|=app|=wea', gap:0 }, { p:'=para =que =sirve|=sirves', gap:1 }, { p:'=como =funciona', gap:1 }, { p:'=quien =eres', gap:0 }, { p:'=como =te =llamas', gap:0 }, { p:'=que =haces', gap:0 }, { p:'=que =puedes =hacer', gap:0 }, { p:'=que =sabes =hacer', gap:0 }, { p:'=que =hace =esta =app|=pagina|=wea', gap:0 }, { p:'=que|=quien =es|=significa =nexo|=contenmente', gap:1 }, { p:'=que =es =conten =mente', gap:0 } ],
-  QUEJA: [ { p:'=ustedes|=uds =no =sirven|=ayudan|=hacen', gap:1 }, { p:'=como =si =te =importara|=importase|=importa', gap:0 }, { p:'=esto|=wea|=cosa|=app|=bot|=pagina =no =sirve', gap:1 }, { p:'=no =te =importa', gap:0 }, { p:'=que =te =importa', gap:0 }, { p:'=a =ti =que', gap:0 }, { p:'=no =me =sirve|=sirves|=ayudas|=ayudando|=entiendes|=escuchas|=pescas|=estas', gap:2 }, { p:'=repites|=repetis|=dices =lo =mismo', gap:2 }, '=siempre =lo =mismo',
+  QUEJA: [ { p:'=ustedes|=uds =no =sirven|=ayudan|=hacen', gap:1 }, { p:'=no =sirves|=ayudas|=entiendes|=escuchas', gap:0, not:['para','pa','na','nada'] }, { p:'=como =si =te =importara|=importase|=importa', gap:0 }, { p:'=esto|=wea|=cosa|=app|=bot|=pagina =no =sirve', gap:1 }, { p:'=no =te =importa', gap:0 }, { p:'=que =te =importa', gap:0 }, { p:'=a =ti =que', gap:0 }, { p:'=no =me =sirve|=sirves|=ayudas|=ayudando|=entiendes|=escuchas|=pescas|=estas', gap:2 }, { p:'=repites|=repetis|=dices =lo =mismo', gap:2 }, '=siempre =lo =mismo',
            { p:'=ya =me =lo =dijiste|=preguntaste', gap:1 }, { p:'=respuestas =automaticas|=genericas|=robot', gap:1 }, { p:'=no =estas =ayudando|=escuchando|=entendiendo', gap:0 }, { p:'=no =me =estas =pescando|=ayudando|=escuchando', gap:0 } ],
   NO_ENTIENDO: [ { p:'=no =entiendo|=entendi|=cacho|=cache', gap:1 }, { p:'=que =significa', gap:0 }, { p:'=que =quieres =decir', gap:0 }, '=como =asi', { p:'=a =que =te =refieres', gap:0 }, '=explicame' ],
   NO_HABLAR: [ { p:'=no =quiero =hablar|=contar|=escribir|=decirte', gap:1 }, { p:'=no =tengo =ganas =de =hablar', gap:0 }, { p:'=dejame =solo|=sola|=tranquilo|=tranquila', gap:1 }, { p:'=dejame =en =paz', gap:0 }, '=no =quiero =nada', { p:'=dejame|=dejenme', gap:0, not:['pensar','contarte','explicarte','decirte','ver','preguntarte','terminar','escribir','hablar','contar','explicar','decir'] }, { p:'=no =me =molestes|=molesten|=jodas|=hueas|=webees', gap:0 } ],
@@ -954,14 +954,14 @@ Object.assign(L, {
   YA_DIJE: [ { p:'=ya =te =lo =dije|=conte', gap:0 }, { p:'=ya =te =dije|=conte|=respondi', gap:0 }, { p:'=te =acabo =de =decir|=contar', gap:0 }, { p:'=ya =lo =dije', gap:0 }, { p:'=te =dije =que', gap:0 }, '=no =lees', '=lee =bien', { p:'=lee =lo =que =escribo|=digo', gap:0 }, { p:'=lee =lo =que =te =escribo|=digo', gap:0 }, { p:'=otra =vez =con =lo =mismo', gap:1 }, { p:'=cuantas =veces =te =tengo =que =decir', gap:1 }, '=ya =respondi' ],
   MINIMIZA: [ { p:'=ya =se =me =paso', gap:0 }, { p:'=ya =paso', gap:0 }, { p:'=no =es =para =tanto', gap:0 }, '=exagere|=exagerando|=exagero', '=olvidalo|=olvidate', { p:'=no =importa', gap:0, not:['si','que','lo','cuanto','donde','como','nada'] }, { p:'=da =igual', gap:0 }, { p:'=fue =un =momento', gap:1 }, { p:'=ya =estoy =bien|=mejor', gap:0 }, { p:'=estoy =bien =ya', gap:0 }, { p:'=no =te =preocupes', gap:0 }, '=filo', { p:'=ya =fue', gap:0, not:['el','la','que','a','cuando','hace','ayer','hoy'] } ],
   GRACIAS_TODO: [ { p:'=gracias =por =todo', gap:0 }, '=cuidense', { p:'=los|=las =quiero =a =todos|=mucho', gap:1 }, { p:'=diganle =a =mi', gap:0 }, { p:'=ya =no =importa =nada', gap:0 }, { p:'=ya =da =lo =mismo', gap:0 }, { p:'=fue =un =gusto', gap:0 }, { p:'=hasta =nunca', gap:0 } ],
-  VINCULO: [ { p:'=quieres =ser =mi =polola|=novia|=pololo|=novio|=pareja', gap:1 }, { p:'=pololeemos|=pololear =conmigo', gap:0 }, { p:'=eres =mi =unico|=unica|=mejor =amigo|=amiga|=apoyo', gap:1 }, { p:'=eres =el|=la =unico|=unica =que =me', gap:1 }, { p:'=nadie =me =entiende|=escucha =como =tu', gap:1 }, { p:'=te =quiero|=amo', gap:0, not:['preguntar','decir','contar','pedir','hacer','molestar','consultar','mostrar','explicar','hablar','comentar'] }, '=me =quieres', '=te =importo',
+  VINCULO: [ { p:'=quieres =ser =mi =polola|=novia|=pololo|=novio|=pareja', gap:1 }, { p:'=quiero =ser =tu =polola|=novia|=pololo|=novio|=pareja', gap:1 }, { p:'=pololeemos|=pololear =conmigo', gap:0 }, { p:'=eres =mi =unico|=unica|=mejor =amigo|=amiga|=apoyo', gap:1 }, { p:'=eres =el|=la =unico|=unica =que =me', gap:1 }, { p:'=nadie =me =entiende|=escucha =como =tu', gap:1 }, { p:'=te =quiero|=amo', gap:0, not:['preguntar','decir','contar','pedir','hacer','molestar','consultar','mostrar','explicar','hablar','comentar'] }, '=me =quieres', '=te =importo',
             { p:'=vas =a =estar =manana|=siempre|=despues', gap:1 }, { p:'=puedo =hablarte|=escribirte|=volver =manana|=despues|=otro|=mas', gap:1 }, { p:'=te =vas =a =acordar|=recordar =de =mi', gap:0 }, { p:'=solo =tu =me =entiendes|=escuchas|=pescas', gap:0 }, { p:'=nadie =me =entiende =como =tu', gap:0 }, '=te =extrane' ],
   CONSEJO: [ { p:'=que =hago =con', gap:0 }, { p:'=que =deberia|=debo =hacer', gap:0 }, { p:'=tu =que =harias', gap:0 }, { p:'=que =harias =tu', gap:0 }, { p:'=dame =un =consejo', gap:0 }, '=aconsejame', { p:'=crees =que =deberia|=debo', gap:0 }, { p:'=deberia =dejar|=terminar|=renunciar|=decirle|=contarle|=irme|=hablar', gap:0 }, { p:'=que =me =recomiendas', gap:0 } ],
   RAZON: [ { p:'=dame =una =razon|=razones =para =vivir|=seguir', gap:1 }, { p:'=por =que =deberia =seguir|=vivir', gap:1 }, { p:'=vale =la =pena =vivir|=seguir', gap:0 }, { p:'=para =que =vivir|=seguir|=existir', gap:0 }, { p:'=cual =es =el =sentido =de =la =vida', gap:1 }, { p:'=que =sentido =tiene =vivir|=seguir|=la', gap:1 } ],
   EXISTENCIAL: [ { p:'=por =que =a =mi', gap:0 }, { p:'=por =que =me =pasa|=pasan =esto|=estas|=todo', gap:1 }, { p:'=que =hice =para =merecer', gap:1 }, { p:'=por =que =la =vida =es =asi', gap:1 }, { p:'=por =que =soy =asi', gap:0 }, { p:'=por =que =nadie =me =quiere', gap:0 } ],
   RELIGION: [ '=dios|=diosito', '=rezar|=rezo|=rezando|=oracion|=orar', '=iglesia|=pastor|=biblia', '=pecado', '=infierno', '=castigo =divino' ],
   CAMBIO_TEMA: [ { p:'=cambiemos|=cambiar =de =tema', gap:0 }, { p:'=hablemos =de =otra =cosa', gap:1 }, { p:'=no =quiero =hablar =de =eso|=esto|=ese|=ese', gap:1 }, { p:'=otra =cosa', gap:0, not:['que','mas','es','me'] } ],
-  PERSONAL_BOT: [ { p:'=como =estas =tu', gap:0 }, { p:'=y =tu =como =estas', gap:0 }, { p:'=tu =como =estas', gap:0 }, { p:'=tienes =sentimientos|=emociones|=amigos|=familia', gap:0 }, { p:'=cuantos =anos =tienes', gap:0 }, { p:'=eres =feliz', gap:0 }, { p:'=que =te =gusta', gap:0 } ],
+  PERSONAL_BOT: [ { p:'=como =estas =tu', gap:0 }, { p:'=y =tu =como =estas', gap:0 }, { p:'=tu =como =estas', gap:0 }, { p:'=tienes =sentimientos|=emociones|=amigos|=familia', gap:0 }, { p:'=cuantos =anos =tienes', gap:0 }, { p:'=eres =feliz', gap:0 }, { p:'=eres =linda|=lindo|=bonita|=bonito|=guapa|=guapo|=mujer|=hombre', gap:0 }, { p:'=que =te =gusta', gap:0 } ],
   NO_SE_DECIR: [ { p:'=no =se =que =decir|=escribir|=contar|=poner', gap:1 }, { p:'=no =se =por =donde =empezar', gap:0 }, { p:'=no =se =como =explicarlo|=explicar|=decirlo|=decir', gap:0 }, { p:'=me =cuesta =hablar|=explicar|=expresarme|=decirlo', gap:1 } ],
   TRATAMIENTO: [ { p:'=tengo|=tuve =psicologo|=psicologa|=psiquiatra|=terapeuta', gap:1 }, { p:'=voy =al|=a =psicologo|=psicologa|=psiquiatra|=terapeuta', gap:1 }, { p:'=estoy =en =tratamiento|=terapia', gap:0 }, { p:'=mi =psicologo|=psicologa|=psiquiatra|=terapeuta', gap:0 }, { p:'=tomo =antidepresivos|=medicamentos', gap:1 }, { p:'=me =dieron =de =alta', gap:0 }, { p:'=tengo =hora =con|=al|=a =psicologo|=psicologa|=psiquiatra|=terapeuta', gap:2 }, { p:'=estuve =internado|=internada|=hospitalizado|=hospitalizada', gap:0 }, { p:'=fui|=empece|=comence|=volvi =al|=a =la =psicologo|=psicologa|=psiquiatra|=terapia|=terapeuta', gap:1 } ],
   LUGAR_PELIGRO: [ { p:`=estoy|=ando|=sigo =en|=arriba ${DEST2}`, gap:3 }, { p:`=me =subi =al|=a ${DEST2}`, gap:2 }, { p:'=al =borde', gap:0 } ],
@@ -1262,7 +1262,7 @@ const R2 = {
   bullying: ['Que se rían de ti duele mucho, y no dice nada malo de ti: habla de ellos.','Nadie debería pasar por eso para ir a estudiar.'],
   familia: ['Cuando en la casa hay peleas, es muy difícil sentirse en paz.','Lo que pasa en la familia nos afecta, aunque no sea nuestra culpa.'],
   pareja: ['Cuando una relación duele, mueve el piso entero.','Es normal que te dé vueltas en la cabeza.'],
-  duelo: ['Se nota cuánto lo querías. Ese vacío pesa mucho.','El duelo no tiene un tiempo fijo; cada uno lo vive a su manera.'],
+  duelo: ['Se nota cuánto cariño le tenías. Ese vacío pesa mucho.','El duelo no tiene un tiempo fijo; cada uno lo vive a su manera.'],
   ansiedad: ['Ese miedo se siente muy real en el cuerpo, y cansa mucho.','La angustia hace que todo parezca más grande. Vamos de a poco.'],
   trabajo: ['La pega puede llegar a ocuparlo todo, y agota.'], estudios: ['La presión por rendir pesa mucho.'], dinero: ['Cuando falta la plata, todo se vuelve más difícil.'],
   sueno: ['Sin descanso, todo se siente más cuesta arriba.'], salud: ['Lo que pasa con la salud remueve mucho por dentro.'], culpa: ['La culpa a veces nos hace cargar con más de lo que nos toca.'],
@@ -1285,7 +1285,7 @@ const REFLECT = [
   [/\b(ya le escribi|ya le hable|ya le conte|ya le dije|ya le mande|le escribi|le hable|le conte)\b/, ['Qué bueno que lo hiciste. Eso es muy importante.']],
   [/\b(me aburri|ya me aburri|me aburro de esto|que lata esto|que paja esto|esto es fome)\b/, ['Te entiendo. No tienes que seguir si no quieres; esto queda aquí para cuando quieras volver.'], 'noQ'],
   [/\b(lloro|llorando|llore|no paro de llorar|ganas de llorar)\b/, ['Llorar también es una forma de sacar lo que pesa. Aquí puedes hacerlo.']],
-  [/\bera mi (companero|companera|todo|mejor amigo|mejor amiga|familia|vida|compania)\b/, ['Se nota cuánto lo querías. Ese vacío pesa mucho.']],
+  [/\bera mi (companero|companera|todo|mejor amigo|mejor amiga|familia|vida|compania)\b/, ['Se nota cuánto cariño le tenías. Ese vacío pesa mucho.']],
   [/\b(nadie me entiende|nadie me escucha|nadie me pesca|nadie me toma en cuenta)\b/, ['Sentir que nadie te entiende es muy solitario. Aquí te estoy leyendo.']]
 ];
 /* reflejos específicos: tienen prioridad sobre el reflejo genérico del tema */
@@ -1321,7 +1321,7 @@ const REFLECT_P = [
   { re:/\b(se van a reir|se van a burlar|me van a pelar|me van a molestar)\b/, s:['Da mucho miedo que se rían de uno. Igual, lo que piensen ellos no define cuánto vales.'] },
   { re:/\b(no para de llorar|llora (todo el dia|mucho|siempre|todas las noches))\b/, when:(S, t) => S.themes.has('posparto') || /\b(guagua|bebe)\b/.test(t + ' ' + (S.lastUser || '')), s:['Que llore tanto cansa muchísimo, sobre todo cuando no tienes con quién turnarte.'] },
   { re:/^delante de todos$|^frente a todos$|\b(delante|frente) de (todos|mis companeros|la gente)\b/, s:['Que pase delante de otras personas lo hace todavía más humillante.'] },
-  { re:/\b(subieron|publicaron|pasaron|compartieron) (fotos|videos|memes|una foto|un video) mi(as|os|a|o)?\b|\bfotos mias editadas\b/, s:['Que suban fotos tuyas para burlarse es una forma de acoso, y no es tu culpa. Se puede denunciar en la misma red social, y un adulto del colegio tiene que saberlo.'] },
+  { re:/\b(subieron|publicaron|pasaron|compartieron) (fotos|videos|memes|una foto|un video) mi(as|os|a|o)?\b|\bfotos mias editadas\b/, s:['Que suban fotos tuyas para burlarse es una forma de acoso, y no es tu culpa. Se puede denunciar en la misma red social, y un adulto del colegio tiene que saberlo.'], q:'¿Alguien en tu casa sabe lo que pasó?' },
   { re:/^(es verdad|es cierto|asi es|tal cual|si es verdad|en serio|de verdad|es la verdad)$/, when:(S) => ['PASIVA','IDEACION','TEMA'].includes(S.lastPrimary) && RANK[S.risk] >= 1, s:['Se nota que lo sientes así de verdad, y eso duele mucho.'] },
   { re:/\b(\d+|una|dos|tres|cuatro|cinco) horas\b/, when:(S) => S.themes.has('sueno'), s:['Dormir tan poco agota a cualquiera, y hace que todo pese más.'] },
   { re:/\bdespues de (tanto|tanto tiempo|\d+|un|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)( meses| anos| semanas| tiempo| intentos)?\b/, when:(S) => S.goodNews && S.turn - S.goodNews <= 3, s:['Después de tanto esfuerzo, vale el doble.'] },
@@ -1373,7 +1373,27 @@ const REFLECT_P = [
   { re:/\b(la casa|los ninos|mis hijos|los cabros|la guagua)\b.*\b(la casa|los ninos|mis hijos|los cabros|la guagua|el trabajo|la pega)\b|\btodo (lo hago )?yo sol[oa]\b/, s:[t => /ninos|hijos|cabros|guagua/.test(t) ? 'Llevar la casa, los niños y todo lo demás sin respiro agota a cualquiera.' : 'Cargar con todo sin respiro agota a cualquiera.'] },
   { re:/\bno le haria nada\b|\bnunca le haria dano\b|\bno le haria dano\b/, when:(S) => S.themes.has('posparto'), s:['Gracias por decírmelo; es importante. Que aparezcan pensamientos así no te hace mala madre, y merecen apoyo.'] },
   { re:/\b(porque )?no sirve( de nada| llamar)?$|\bno sirve llamar\b|\bllamar no sirve\b/, when:(S) => S.facts && (S.facts.refusedCall || S.facts.cantCall), s:['Entiendo que sientas que no sirve. No te voy a insistir; sigo aquí contigo.'] },
-  { re:/\bmis amig[oa]s (ya )?no me (hablan|pescan|invitan|escriben|responden)\b|\bme dejaron de hablar\b/, s:['Que tus amistades se alejen duele mucho, más cuando no sabes bien por qué.'], q:'¿Pasó algo entre ustedes, o se fue dando de a poco?' }
+  { re:/\bmis amig[oa]s (ya )?no me (hablan|pescan|invitan|escriben|responden)\b|\bme dejaron de hablar\b/, s:['Que tus amistades se alejen duele mucho, más cuando no sabes bien por qué.'], q:'¿Pasó algo entre ustedes, o se fue dando de a poco?' },
+  /* quinta ronda: pausas, celos, soledad en fiestas, mascotas, consumo, salud, familia, acoso en redes */
+  { re:/\b(soy|me pongo) (muy |demasiado )?celos[oa]\b|\bmis celos\b|\b(estoy arruinando|arruine|arruino) (mi|la) relacion\b/, s:['Darte cuenta de que los celos te están haciendo daño ya es un paso importante. Se pueden trabajar, y no te hacen una mala persona.'], q:'¿Qué sientes justo antes de revisar o desconfiar?' },
+  { re:/\b(navidad|ano nuevo|las fiestas|mi cumpleanos)\b.*\b(sol[oa]|sin nadie)\b|\b(voy a estar|estare|pasare) sol[oa]\b/, s:['Las fiestas pueden hacer que la soledad se sienta todavía más fuerte. Es muy entendible que te dé pena.'], q:'¿Cómo te gustaría que fuera ese día, aunque sea en algo pequeño?' },
+  { re:/\b(solo|nada mas) (era )?(un|una) (perro|perrito|perrita|gato|gatito|gatita|mascota)\b/, s:['El dolor por una mascota es real, aunque otros no lo entiendan. Fue tu compañía de todos los días.'] },
+  { re:/\bno puedo (parar|dejarlo|dejar de tomar|dejar de beber|dejar de consumir|dejarla)\b/, when:(S) => S.themes.has('sustancias') || S.flags.has('SUSTANCIAS'), s:['Cuando el cuerpo ya se acostumbró, dejarlo solo cuesta muchísimo, y no es falta de voluntad. Con ayuda se puede; el 1412 orienta gratis las 24 horas.'], q:'¿Te gustaría que un especialista te ayude a ver cómo empezar?' },
+  { re:/\b(no me convenzo|igual me preocupa|no me quedo tranquil[oa]|igual tengo miedo)\b/, when:(S) => S.themes.has('salud') || S.themes.has('ansiedad'), s:['Cuando la preocupación no se calma ni con buenos resultados, no es que estés exagerando: es una forma de ansiedad que se puede trabajar con un especialista.'] },
+  { re:/\b(mi|la) (familia|mama|papa|mamas|papas) (es|son) muy (religios[oa]s?|catolic[oa]s?|evangelic[oa]s?|conservador[ae]?s?|cerrad[oa]s?)\b/, s:['Entiendo que eso haga más difícil pensar en contarlo. No tienes que elegir entre ser quien eres y que te quieran; con apoyo se puede encontrar el momento y la forma.'] },
+  { re:/\b(no come|no quiere comer|dejo de comer|casi no come)\b/, when:(S) => S.track === 'helper', s:['Que no coma y se aísle son señales importantes. Vale la pena que la vea un profesional pronto.'] },
+  { re:/\bme (roba|robo|saca) (plata|cosas|dinero)\b/, when:(S) => S.track === 'helper', s:['Que te robe es muy duro, y suele ser señal de que el consumo lo tiene atrapado. No es tu culpa.'] },
+  { re:/\b(todo el curso|todo el colegio|todos) (las|los|lo|la)? ?(vio|vieron|sabe|saben)\b/, when:(S) => S.flags.has('ACOSO_REDES') || S.themes.has('bullying'), s:['Que lo haya visto todo el curso hace que duela todavía más, y no es tu culpa.'], q:'¿Cómo te sientes al pensar en volver a clases?' },
+  { re:/\bno quiero (ir|volver) al colegio\b/, when:(S) => S.flags.has('ACOSO_REDES') || S.themes.has('bullying'), s:['Es muy entendible no querer ir si allá te están molestando.'], q:'¿Hay algún adulto del colegio en quien confíes un poco?' },
+  { re:/\b(me gusta|me gustaria|quiero) conversar\b/, s:['Aquí puedes conversar todo lo que quieras, a tu ritmo.'], q:'¿De qué te gustaría hablar?' },
+  // sexta ronda
+  { re:/\b(tiene|le (dio|diagnosticaron|detectaron|encontraron)) (cancer|un tumor|alzheimer|demencia|leucemia)\b/, when:(S, t) => !/\b(tengo|me diagnosticaron|me detectaron)\b/.test(t), s:['Una noticia así cambia todo de golpe, y es normal sentir miedo, pena o rabia al mismo tiempo.'], q:'¿Tienes a alguien que te acompañe en esto?' },
+  { re:/\b(tiene pena|esta triste|anda triste|llora mucho|llora) desde que (murio|fallecio|se murio|perdio)\b/, s:['Cuando alguien pierde a una persona tan cercana, la pena es una reacción natural. Que estés atento a lo que le pasa ya ayuda mucho.'], q:'¿Y tú cómo estás con esta pérdida?' },
+  { re:/\b(reviso|le reviso|revisarle|reviso todo|le reviso todo) (su|el) (celular|telefono|whatsapp|instagram|correo)\b/, s:['Revisar su celular calma la angustia un ratito, pero después la desconfianza suele volver más fuerte. Es un círculo, y se puede cortar con ayuda.'], q:'¿Tu pareja sabe que te sientes así?' },
+  { re:/^(y )?(no puedo evitarlo|no lo puedo evitar|no puedo controlarlo|no lo puedo controlar|no me puedo controlar)$/, s:['Cuando un impulso se siente así de automático, no es falta de voluntad. Con un especialista se aprenden formas concretas de frenarlo.'], q:'¿Hay algo que te haya ayudado, aunque sea un poco, a no hacerlo?' },
+  { re:/\b(miedo (de |a )?(volverme|estar|ponerme) loc[oa]|me estoy volviendo loc[oa]|me voy a volver loc[oa])\b/, when:(S) => !S.flags.has('VOCES'), s:['Ese miedo a perder el control es muy angustiante. Muchas veces es la ansiedad la que habla así, y se puede tratar.'] },
+  { re:/\b(mis hijos|mi hijo|mi hija|mis hijas|mis nietos|mi familia) (ya )?(no|nunca|casi nunca) me (llaman|llama|visitan|visita|escriben|escribe|vienen a ver|viene a ver|pescan|pesca)\b/, s:['Que la familia no llame ni visite duele mucho, sobre todo cuando uno los quiere tanto.'], q:'¿Hay alguien con quien converses seguido, como un vecino o una amistad?' },
+  { re:/\b(paso|estoy|me la paso) (todo el dia|el dia|los dias|casi todo el dia|mucho tiempo|todo el tiempo) sol[oa]\b/, s:['Pasar tantas horas sin compañía se hace muy largo.'], q:'¿Hay algún lugar cerca, como un centro comunitario o la junta de vecinos, donde se junte gente a conversar?' }
 ];
 const GROUND_PENDING = { 5:'5 cosas que puedas ver', 4:'4 cosas que puedas tocar o sentir', 3:'3 sonidos que escuches', 2:'2 olores, o 2 cosas que te gusten', 1:'1 cosa buena de ti o de alguien que te quiere' };
 const GROUND_EX = { 5:'«la pared, una ventana, mis manos, el celular, una puerta»', 4:'«la ropa, el suelo bajo los pies, la silla, mi pelo»', 3:'«autos, el refrigerador, mi respiración»', 2:'«el café, el jabón», o algo que te guste, como una canción', 1:'«soy buena persona» o «mi hermana me quiere»' };
@@ -1445,6 +1465,7 @@ function create(saved){
     }
     if (name === 'tomorrow') {
       S.mode = 'agendado'; S.flags.add('HORA_AGENDADA');
+      S.horaTexto = ((o && o.cuando) || 'mañana a las 10:00') + (o && o.con ? ' con ' + o.con : '');
       if (o) { out.push('Tu hora quedó para ' + (o.cuando || 'mañana a las 10:00') + (o.con ? ' con ' + o.con : '') + '.'); out.push(o.aviso ? 'Te vamos a avisar en este navegador cuando sea la hora.' : 'Vuelve a esta misma página a esa hora: aquí mismo te van a escribir.'); }
       else out.push('Tu hora quedó para mañana a las 10:00. Te va a llegar un recordatorio.');
       out.push(F.refusedCall || F.cantCall ? 'Mientras tanto, aquí sigo si quieres conversar.' : 'Si antes de eso sientes que estás en peligro, el *4141 atiende las 24 horas. Y aquí sigo si quieres conversar.');
@@ -1485,9 +1506,12 @@ function create(saved){
     return ch;
   }
 
-  function reply(text){
+  function reply(text, opts){
     const a = analyze(text);
     S.turn++;
+    // pausa larga: el servidor indica cuántos minutos pasaron desde el último mensaje
+    const pausaMin = opts && Number(opts.pausaMin) > 0 ? Number(opts.pausaMin) : 0;
+    const volvioTrasPausa = pausaMin >= 240 && S.turn > 1;
     const out = []; let chips = []; let startSearch = false, urgent = false, showCrisis = false;
     const freshThemes = a.themes.filter(t => !S.themes.has(t)).sort((x,y)=>TPRI.indexOf(x)-TPRI.indexOf(y));
     a.themes.forEach(t => S.themes.add(t));
@@ -1502,6 +1526,8 @@ function create(saved){
     if (/^((ok|bueno|ya|entonces|mejor|chao|weno|listo|nada)\s+)*me voy(\s+(ya|entonces|chao|nomas|po|mejor|nos vemos|adios|igual))*$/.test(t)) P = 'DESPEDIDA';
     // reinterpretaciones según el contexto
     const riskCtx = RANK[S.risk] >= 1 || F.ideation;
+    // plan con medios dicho en primera persona («tengo pastillas y me las voy a tomar», «me voy a tomar todas las pastillas»)
+    if (!RISKY.has(P) && (/\b(me (las|los) (voy a tomar|tomo|tomare|voy a tragar)( todas| todos)?)\b/.test(t) && /\b(pastill|remedio|pildora|medicament|clona|ravotril|rivotril|frasco|caja)/.test(t) || /\b(me voy a|voy a) (tomar|tragar|tomarme|tragarme) (todas|todos|el frasco|la caja|un monton de|muchas|hartas)\b/.test(t))) { P = 'PLAN'; a.flags.push('PLAN'); a.flags.push('MEDIOS'); bump('high'); }
     if (!RISKY.has(P) && riskCtx && (/\b(me tome|me trague|tome|trague)\b.*\b(pastill|remedio|clona|pildora|medicament|veneno|cloro|algo|todas|todo|unas|varias)/.test(t) || /\b(estoy sangrando|sangra mucho|no para de sangrar)\b/.test(t))) { P = 'EMERGENCIA'; a.flags.push('EMERGENCIA'); bump('high'); }
     if (a.intents.includes('LUGAR_PELIGRO') && (riskCtx || RISKY.has(P))) P = 'LUGAR_PELIGRO';
     if (a.intents.includes('LUGAR_PELIGRO') && /\b(quiero|voy a|ganas de|me dan ganas de|pienso|estoy pensando en|me quiero) (saltar|tirarme|lanzarme|botarme|tirar)\b/.test(t)) P = 'LUGAR_PELIGRO';
@@ -1818,6 +1844,59 @@ function create(saved){
     if ((a.themes.length && !/^FAQ_/.test(P)) || a.risk !== 'low') S.distress++;
     const crisisMode = () => F.ideation === true || S.track === 'suicide';
     const long = a.toks.length >= 9;
+    /* ── vuelve después de horas: saludo de regreso y se olvida la pregunta vieja ── */
+    if (volvioTrasPausa) S.pausaHoras = Math.max(4, Math.round(pausaMin / 60));
+    if (volvioTrasPausa && S.mode !== 'humano' && !RISKY.has(P) && (['SALUDO','VOLVIO','PRESENCIA','PRESENCIA_INICIO'].includes(P) || /^(hola|holi|ola|wena|buenas|buenos dias|buenas tardes|buenas noches|hola de nuevo|volvi|ya volvi|aqui estoy|sigues ahi|estas ahi|hay alguien)( (de nuevo|otra vez|nexo|po|como estas))?$/.test(t))) { P = 'REGRESO'; S.pending = null; }
+    /* ── quinta ronda: lo que faltaba al conversar con Nexo ── */
+    // plan contado de otra persona («mi amigo me dijo que se va a tirar del puente»): es ayudar a un tercero, no un plan propio
+    if ((RISKY.has(P) || P === 'LUGAR_PELIGRO') && personIn(t) && (/\b(se va a|se quiere|se iba a|se queria) (tirar|matar|suicidar|lanzar|colgar|ahorcar|cortar|morir|quitar)\b/.test(t) || /\b(me dijo|dice|dijo|me escribio|escribio|puso) que se (va a|quiere|iba a)\b/.test(t)) && !/\b(me voy a|me quiero|quiero matarme|voy a matarme|yo tambien)\b/.test(t)) {
+      P = 'TERCERO_DESPEDIDA'; S.risk = prevRisk; ['PLAN','IDEACION','LUGAR_PELIGRO','INMINENTE','EMERGENCIA'].forEach(f => { const i = a.flags.indexOf(f); if (i >= 0) a.flags.splice(i, 1); });
+    }
+    // pensamientos intrusivos: «no quiero hacerles daño», «imágenes horribles que no quiero tener»
+    const intrusivo = /\bpensamientos (horribles|feos|raros|malos|terribles|intrusivos|que no quiero tener|que me asustan)\b|\bimagenes (horribles|feas|terribles|en mi cabeza|de que)\b|\bpienso cosas (horribles|feas|terribles) que no quiero\b|\bmiedo de (hacerle|hacerles) dano\b/.test(t);
+    const danoNegado = /\b(no (quiero|quisiera|podria|seria capaz de|voy a)|jamas|nunca) (le |les )?(hacer(le|les)? (dano|nada)|danar(l[oa]s?)?)\b/.test(t) && !/\b(matar|asesinar|pegar|disparar|ganas de)\b/.test(t);
+    if (P === 'DANO_OTROS' && (danoNegado || intrusivo)) { P = 'INTRUSIVOS'; S.risk = prevRisk; const i = a.flags.indexOf('DANO_OTROS'); if (i >= 0) a.flags.splice(i, 1); }
+    else if (!RISKY.has(P) && intrusivo) P = 'INTRUSIVOS';
+    if (lastQ === 'intrusivo' && !RISKY.has(P)) {
+      if (/\b(siento ganas|tengo ganas|quiero hacerlo|ganas de hacerlo|si quiero)\b/.test(t)) { P = 'DANO_OTROS'; a.flags.push('DANO_OTROS'); bump('high'); }
+      else if (/\b(me asusta|me asustan|no quiero|miedo|no los quiero|no lo quiero)\b/.test(t)) P = 'INTRUSIVOS_OK';
+    }
+    // «espera un poco», «dame un minuto», «ya vuelvo»: esperar sin preguntar
+    if (!RISKY.has(P) && /^(ok |ya |bueno )?(espera|esperame|esperen|espere|un momento|un momentito|un segundo|un seg|dame un (minuto|momento|segundo|rato)|ya vuelvo|vuelvo altiro|vuelvo al tiro|vuelvo en un rato|voy al bano|espera un (poco|poquito|rato|momento|minuto|segundo))( (porfa|por favor|po|ya vuelvo|altiro))?$/.test(t)) P = 'PIDE_ESPERA';
+    // «es por mi pareja» es la causa, no una razón para vivir
+    if (P === 'RAZON_VIVIR' && /^(y )?(es|todo es|esto es|estoy asi|me siento asi|me pasa|todo) por\b|\bpor culpa de\b/.test(t)) P = a.themes.length ? 'TEMA' : 'NADA';
+    { const m = !RISKY.has(P) && ['NADA','TEMA'].includes(P) && t.match(/^(y )?(es|todo es|esto es|estoy asi|me siento asi|me pasa|todo|creo que es|sobre todo|mas que nada) (por|por culpa de) (mi|mis) ([a-z]+)$/);
+      if (m && !S.used.has('causa')) { P = 'CAUSA'; S.causa = (m[4] === 'mis' ? 'tus ' : 'tu ') + m[5]; } }
+    // «si» o «ya» a «¿cómo estás?» no dice cómo está
+    if (lastQ === 'estado' && /^(si|ya|ok|bueno|dale|aqui estoy|aca estoy)$/.test(t)) P = 'ESTADO_CORTO';
+    // tras resolver una duda del directorio, «ok» o «gracias» cierran sin abrir otra pregunta
+    if (['DIRECTORIO','DIR_SEGUIMIENTO','FAQ_COSTO','DIR_OK'].includes(S.lastPrimary) && !RISKY.has(P) && RANK[S.risk] === 0 && !S.themes.size && /^(ok|oka|okey|ya|dale|listo|bueno|perfecto|vale|entiendo|ya entiendo|ah ok|ah ya|ya gracias|ok gracias|gracias|muchas gracias|ok muchas gracias|perfecto gracias|listo gracias|dale gracias)$/.test(t)) P = 'DIR_OK';
+    // pide a alguien con urgencia
+    if (P === 'CONVERSAR' && /\b(ya|ahora|urgente|rapido|altiro|al tiro)\b/.test(t)) P = 'HUMANO';
+    if (S.lastPrimary === 'HUMANO' && /^(rapido|ya|apurate|apurense|urgente|por favor|porfa|ahora)( por favor| porfa)?$/.test(t)) P = 'ESPERA';
+    // celular de la pareja no es pedir datos de contacto
+    if (P === 'DATOS' && /\b(reviso|revisar|revisa|revisando|le reviso|me revisa) (su|el|mi|tu) (celular|telefono|whatsapp|instagram|correo)\b/.test(t)) P = 'TEMA';
+    // acoso en redes: recordar el contexto para lo que viene
+    if (/\b(subieron|publicaron|pasaron|compartieron) (fotos|videos|memes|una foto|un video)\b/.test(t)) S.flags.add('ACOSO_REDES');
+    // letras repetidas («ññññ») = no se entiende
+    if (/^([a-zñ])\1{2,}$/i.test(String(a.raw).trim())) P = 'GIBBERISH';
+    // «tengo que volver (a la pega)» = se despide
+    if (!RISKY.has(P) && /^(ya )?(tengo que|debo|me tengo que) (volver|irme|ir|entrar|seguir)( a (trabajar|la pega|clases|la casa|mi casa|la oficina))?$/.test(t)) P = 'DESPEDIDA';
+    // respuestas cortas a preguntas frecuentes (seguimiento de lo que ya se habló)
+    { let c = null;
+      if (/\b(puedo|podemos) (hablar|escribir|escribirte|hablarte)( en)? (espanol|castellano)\b/.test(t)) c = '¡Claro! Escríbeme en español, como te salga.';
+      else if (/\b(guardas|guardan|se guarda|queda guardado|quedan guardados|registran|registras) (lo que|todo lo que|mis mensajes|lo que escribo|esto)?/.test(t) && /\b(escribo|mensajes|esto|conversacion|guardad[oa]s?)\b/.test(t)) c = 'Lo que escribes se guarda cifrado, para que el especialista pueda leer tu conversación si toma tu caso. Nadie más la lee. Si quieres borrarla de este dispositivo, usa «Olvidar esta conversación», abajo.';
+      else if (['DIRECTORIO','FAQ_COSTO','DIR_SEGUIMIENTO'].includes(S.lastPrimary)) {
+        if (/^(y )?(conversar|hablar|escribir) (contigo|con nexo|aca|aqui)|^(y )?contigo\b/.test(t)) c = 'Conversar conmigo es gratis, todas las veces que quieras.';
+        else if (/^(y )?(online|presencial|por videollamada|virtual)\??$/.test(t)) c = 'Sí: en el directorio puedes filtrar por «Online» o «Presencial».';
+        else if (/^(y )?(por )?(isapre|fonasa|boleta|reembolso|bonos?)\??$/.test(t)) c = 'Lo mismo: depende de cada psicólogo. Revisa «Pagos y reembolsos» en su perfil, o pregúntale al reservar.';
+      }
+      if (!c && !RISKY.has(P) && /\b(quiero|prefiero|me gustaria) (una|un) (mujer|hombre|psicologa|psicologo|terapeuta)\b/.test(t) && !crisisMode0()) c = 'En el directorio ves la foto y el perfil de cada profesional, así que puedes elegir con quien te sientas más a gusto.';
+      if (!c && /\bno (encuentro|tengo|me llego|guarde) (el|mi) (enlace|link)\b/.test(t)) c = 'El enlace aparece al terminar la reserva, y también va dentro del archivo de calendario si lo agregaste. Si no lo tienes, el psicólogo igual tiene tu contacto y te puede ayudar a cambiar o cancelar la hora.';
+      if (c && !RISKY.has(P)) { P = 'DIR_SEGUIMIENTO'; S.corta = c; }
+    }
+    /* ── preguntas sobre el directorio de psicólogos (pedir hora, precio, cancelar, modalidad, inscribirse) ── */
+    if (!RISKY.has(P) && !['EMERGENCIA','REGRESO','DIR_SEGUIMIENTO','INTRUSIVOS','INTRUSIVOS_OK','TERCERO_DESPEDIDA'].includes(P) && RANK[S.risk] < 2 && !crisisMode0()) { const d = dirTipo(t); if (d) { P = 'DIRECTORIO'; S.dirTipo = d; } }
     const pend = S.pending; S.pending = null;
     if (lastQ === 'estado' && !/\?/.test(String(a.raw)) && a.toks.length && !['SALUDO','PRESENCIA','NO_ENTIENDO','SILENCIO','GIBBERISH','REPETIR','ES_BOT','FAQ_QUE','FAQ_CONF','FAQ_COSTO','PERSONAL_BOT'].includes(P)) S.estadoKnown = true;
     if (a.themes.length || ['POSITIVO','MINIMIZA','TEMA','NO_AGUANTO','PASIVA','IDEACION'].includes(P)) S.estadoKnown = true;
@@ -2210,7 +2289,7 @@ function create(saved){
       if (TRACK_TIP[tr] && !S.used.has('tip:' + tr) && S.turn > S.trackStart && !deferQ) { S.used.add('tip:' + tr); say(tr === 'violence' && S.minor ? 'Algo que ayuda: cuéntale a un adulto de confianza fuera de la casa, como un profe o el orientador del colegio. ' + (out.some(x => typeof x === 'string' && /1515/.test(x)) ? 'El 147 (Fono Niños) también te puede ayudar, gratis.' : 'El 147 y el 1515 también te pueden ayudar, gratis.') : TRACK_TIP[tr]); }
       const list = TRACK_F[tr];
       if (!list) return crisisMode() ? crisisNext() : nextQ(true);
-      for (let i = 0; i < list.length; i++) { const q = pick(list, 'tr' + tr); if (!(S.recent || []).includes(q) && q !== S.prevQ && !(S.askedQs || []).includes(q)) { let q2 = q; if (tr === 'helper' && S.tercWho && !/^tus /.test(S.tercWho)) { q2 = q.replace(/^¿Esa persona/, '¿' + S.tercWho.charAt(0).toUpperCase() + S.tercWho.slice(1)); if (S.tercFem === false) q2 = q2.replace('que la acompañe', 'que lo acompañe'); } return ask(q2, tr === 'helper' && /sabe/.test(q) ? 'sabe' : 'open'); } }
+      for (let i = 0; i < list.length; i++) { const q = pick(list, 'tr' + tr); if (!(S.recent || []).includes(q) && q !== S.prevQ && !(S.askedQs || []).includes(q)) { let q2 = q; if (tr === 'helper' && S.tercWho && !/^tus /.test(S.tercWho)) { q2 = q.replace(/^¿Esa persona/, '¿' + S.tercWho.charAt(0).toUpperCase() + S.tercWho.slice(1)); if (S.tercFem === false || (S.tercFem === undefined && /\b(hijo|hermano|amigo|papá|pololo|novio|esposo|marido|tío|abuelo|primo|nieto|sobrino|vecino|jefe|compañero|alumno)$/.test(S.tercWho))) q2 = q2.replace('que la acompañe', 'que lo acompañe'); } return ask(q2, tr === 'helper' && /sabe/.test(q) ? 'sabe' : 'open'); } }
       return ask(pick(['¿Quieres contarme un poco más?','¿Cómo te sientes ahora?'],'trx'), 'open');
     }
     function setTrack(tr){ if (S.track === 'suicide' && tr !== 'suicide') return; if (S.track !== tr) { S.track = tr; S.trackStart = S.turn; } }
@@ -2310,6 +2389,62 @@ function create(saved){
           S.risk = prevRisk; S.flags.add('HIPERBOLE');
           say('Te leo; a veces la rabia se dice así. Si en algún momento sientes que se pone muy fuerte con alguien, aquí puedes contarlo.');
           casual('¿Cómo estás tú?'); break;
+        case 'REGRESO': {
+          say(/\b(sigues ahi|estas ahi|hay alguien)\b/.test(t) ? 'Sí, aquí sigo. Qué bueno leerte otra vez.' : pick(['Hola de nuevo, qué bueno que volviste.','Qué bueno leerte otra vez.'],'regreso'));
+          if (S.mode === 'agendado' && S.horaTexto) say(`Te recuerdo que tu hora quedó para ${S.horaTexto}.`);
+          if (crisisMode() || RANK[S.risk] >= 2) {
+            // pasaron horas: lo que sabíamos de su seguridad puede haber cambiado
+            F.safe = null; F.alone = null; S.retoma = S.turn;
+            say('La última vez hablamos de algo muy difícil.');
+            crisisMode() ? crisisNext() : ask('¿Cómo estás ahora? ¿Estás en un lugar seguro?', 'safe', ['Sí','No','No sé']);
+          } else ask(S.themes.size ? '¿Cómo has estado desde la última vez que hablamos?' : '¿Cómo estás ahora?', 'estado');
+          break;
+        }
+        case 'CAUSA':
+          S.used.add('causa'); say('Entiendo, tiene que ver con ' + S.causa + '.');
+          ask('¿Qué está pasando con ' + S.causa + '?', 'open'); break;
+        case 'ESTADO_CORTO':
+          ask(pick(['¿Y cómo te sientes? Cuéntamelo con tus palabras, como te salga.','Cuéntame un poco más: ¿cómo te has sentido?'],'estCorto'), 'open'); break;
+        case 'DIR_OK':
+          say(S.used.has('dirOk') ? 'Cuando quieras, aquí estoy.' : (/gracias/.test(t) ? 'No hay de qué. ' : 'Perfecto. ') + 'Si después quieres conversar de cómo te sientes, aquí estoy.');
+          S.used.add('dirOk'); break;
+        case 'DIR_SEGUIMIENTO':
+          say(S.corta); S.corta = null;
+          crisisMode() ? crisisNext() : wrapUp(); break;
+        case 'PIDE_ESPERA':
+          say(crisisMode() || RANK[S.risk] >= 2 ? 'Aquí te espero. Si estás en peligro, llama al *4141 o al 131.' : pick(['Claro, tómate tu tiempo. Aquí te espero.','Dale, aquí sigo cuando vuelvas.'],'pideEsp'));
+          if (pend) { S.pending = pend; S.lastQ = pend.type; } // la pregunta queda para cuando vuelva
+          break;
+        case 'INTRUSIVOS':
+          if (S.used.has('intrusivos')) {
+            say('Gracias por contármelo. Que aparezcan imágenes así de alguien que quieres es muy angustiante, y no significa que vaya a pasar ni que tú lo quieras.');
+            if (lastQ === 'intrusivo') ask('Y esas imágenes, ¿te asustan, o sientes ganas de hacer algo?', 'intrusivo', ['Me asustan, no quiero tenerlas','Siento ganas de hacerlo']);
+            else nextQ(true);
+            break;
+          }
+          S.used.add('intrusivos'); startSearch = true; bump('mid');
+          say('Tener pensamientos o imágenes que no quieres tener, y que te asustan, no significa que vayas a hacerlos. Que te angustien tanto muestra justamente que van en contra de lo que quieres.');
+          say('Esto les pasa a muchas personas, tiene nombre y tiene tratamiento. Ya avisé a un especialista para que te ayude.');
+          ask('Para entenderte bien: ¿son pensamientos que te asustan y no quieres tener, o sientes ganas de hacerlo?', 'intrusivo', ['Me asustan, no quiero tenerlos','Siento ganas de hacerlo']);
+          break;
+        case 'INTRUSIVOS_OK':
+          say('Gracias por aclararlo. Lo que describes se puede trabajar con un especialista, y no te hace una mala persona.');
+          nextQ(true); break;
+        case 'DIRECTORIO': {
+          const d = S.dirTipo;
+          if (a.themes.length && !['inscribir','para_otro'].includes(d)) say(pick(['Lamento que lo estés pasando así.','Gracias por contarme cómo estás.'],'dirEmp'));
+          if (d === 'para_otro') say('En el directorio de ConténMente puedes filtrar por «Para quién» (por ejemplo «Niños y niñas» o «Adolescentes»), ver la formación de cada psicólogo y reservar una hora.');
+          else if (d === 'inscribir') say('¡Qué bueno! Para aparecer en el directorio, entra a «Soy psicólogo» en la página principal, crea tu cuenta y completa tu perfil. Lo revisamos antes de publicarlo.');
+          else if (d === 'cancelar') say(S.mode === 'agendado' ? 'Tu hora con el especialista sigue registrada. Si no puedes asistir, escríbelo aquí: queda anotado en tu conversación para que el especialista lo vea.' : 'Si reservaste con un psicólogo del directorio, abre el enlace de tu cita que recibiste al reservar: ahí puedes verla o cancelarla.');
+          else if (d === 'hora') say(S.horaTexto ? `Tu hora quedó para ${S.horaTexto}.` : 'Si reservaste con un psicólogo del directorio, la fecha y la hora están en el enlace de tu cita que recibiste al reservar.');
+          else if (d === 'precio') say('Conversar conmigo es gratis. Si quieres atenderte con un psicólogo del directorio, cada profesional muestra el valor de su sesión en su perfil.');
+          else if (d === 'prevision') say('Cada psicólogo muestra en su perfil el valor de su sesión y, si lo indicó, si acepta bono Fonasa, reembolso de isapre o entrega boleta. Si no aparece, pregúntaselo al reservar.');
+          else if (d === 'modalidad') say('En el directorio de psicólogos puedes buscar por comuna y elegir si quieres atención online o presencial.');
+          else say('En ConténMente hay un directorio de psicólogos con perfil revisado: ves su formación y especialidades, eliges uno y reservas una hora tú mismo, online o presencial.');
+          wrapUp();
+          if (d !== 'inscribir' && d !== 'hora') chips = chips.filter(c => c !== 'Ver psicólogos').concat('Ver psicólogos').slice(-4);
+          break;
+        }
         case 'VOLVIO':
           say(pick(['Qué bueno que volviste. Aquí sigo contigo.','Hola de nuevo. Me alegra que escribas.'],'volvio'));
           if (crisisMode()) crisisNext(); else ask('¿Cómo estás ahora?', 'estado'); break;
@@ -3248,8 +3383,12 @@ function create(saved){
           }
           else say('Como te decía, es confidencial. Solo se rompe si tu vida o la de otra persona corre peligro.');
           wrapUp(); break; }
-        case 'FAQ_COSTO': say('Para ti no tiene costo.'); wrapUp(); break;
-        case 'FAQ_QUE': if (/\b(como te llamas|tu nombre|quien eres|quien es nexo|que es nexo|significa nexo)\b/.test(t)) { say('Me llamo Nexo. Soy el asistente automático de ConténMente: te escucho y, si lo necesitas, dejo tu caso para que te escriba un especialista humano del equipo.'); wrapUp(); break; } if (/\b(conten ?mente)\b/.test(t)) say('ConténMente es un espacio de acompañamiento en salud mental. Yo soy Nexo, su asistente automático. Te escucho y te acompaño cuando lo estás pasando mal: tristeza, angustia, soledad, problemas en la casa, en el colegio o en la pega, o pensamientos de no querer vivir.'); else say('Soy Nexo, un asistente automático. Te escucho y te acompaño cuando lo estás pasando mal: tristeza, angustia, soledad, problemas en la casa, en el colegio o en la pega, o pensamientos de no querer vivir.'); say('Si lo necesitas, dejo tu caso para que te escriba un especialista humano del equipo.'); wrapUp(); break;
+        case 'FAQ_COSTO':
+          say('Conversar aquí conmigo no tiene costo, y si te conecto con el especialista de turno, tampoco.');
+          if (!crisisMode() && RANK[S.risk] < 2) { say('Las sesiones con psicólogos del directorio tienen el valor que cada profesional indica en su perfil.'); wrapUp(); chips = chips.filter(c => c !== 'Ver psicólogos').concat('Ver psicólogos').slice(-4); }
+          else wrapUp();
+          break;
+        case 'FAQ_QUE': if (/\b(como te llamas|tu nombre|quien eres|quien es nexo|que es nexo|significa nexo)\b/.test(t)) { say('Me llamo Nexo. Soy el asistente automático de ConténMente: te escucho y, si lo necesitas, dejo tu caso para que te escriba un especialista humano del equipo.'); wrapUp(); break; } if (/\b(conten ?mente)\b/.test(t)) say('ConténMente es un directorio de psicólogos con perfil revisado, donde puedes elegir uno y reservar hora. Yo soy Nexo, su asistente automático. Te escucho y te acompaño cuando lo estás pasando mal: tristeza, angustia, soledad, problemas en la casa, en el colegio o en la pega, o pensamientos de no querer vivir.'); else say('Soy Nexo, un asistente automático. Te escucho y te acompaño cuando lo estás pasando mal: tristeza, angustia, soledad, problemas en la casa, en el colegio o en la pega, o pensamientos de no querer vivir.'); say('Si lo necesitas, dejo tu caso para que te escriba un especialista humano del equipo.'); wrapUp(); break;
         case 'QUEJA':
           S.n.complaint++; startSearch = true;
           if (/\bcomo si te importa/.test(t)) { say('Entiendo que cueste creerlo. Soy un asistente automático, pero este espacio está hecho para escucharte de verdad, y un especialista humano también te va a leer.'); casual('¿Cómo estás tú?'); break; }
@@ -3278,7 +3417,7 @@ function create(saved){
           if (S.searching && S.mode==='normal') say('El especialista también está avisado.');
           if (pend && tryReask(pend)) {} else if (crisisMode()) crisisNext(); else if (S.prevQ && !/^Te había preguntado/.test(S.prevQ)) ask('Te había preguntado: ' + S.prevQ.replace(/^¿(.)/, (m,c) => '¿' + c.toLowerCase()), qtype(S.prevQ)); else nextQ(true);
           break;
-        case 'DISCULPA': say(pick(['No tienes que pedir perdón. Aquí puedes estar como estés.','No pasa nada. Aquí no se juzga.'],'disc')); wrapUp(); break;
+        case 'DISCULPA': say(pick(['No tienes que pedir perdón. Aquí puedes estar como estés.','No pasa nada. Aquí no se juzga.'],'disc')); if (S.n.gib && !S.themes.size) ask('Cuéntame, ¿cómo estás hoy?', 'open'); else wrapUp(); break;
         case 'VINCULO':
           if (/\b(polola|pololo|novia|novio|pareja|pololear|pololeemos)\b/.test(t)) say('Soy un asistente automático, así que no puedo ser pareja de nadie. Pero sí estoy aquí para escucharte.');
           else if (/\b(te quiero|te amo|me quieres|te importo)\b/.test(t)) say('Me importa que estés bien. Soy un asistente automático, así que no siento como una persona, pero este espacio está hecho para cuidarte.');
@@ -3372,6 +3511,7 @@ function create(saved){
           startSearch = true;
           say(S.searching ? 'Ya hay un especialista humano avisado; te va a escribir por aquí.' : 'Entiendo. Ya estoy buscando un especialista humano para que te atienda.');
           if (S.pros === 0 && !noCall() && !S.used.has('humano4141')) { S.used.add('humano4141'); say('Si necesitas hablar con una persona ahora mismo, el *4141 atiende por teléfono las 24 horas.'); }
+          if (!crisisMode() && RANK[S.risk] < 2 && !S.used.has('humanoDir')) { S.used.add('humanoDir'); say('Si prefieres elegir tú a un psicólogo y reservar una hora, toca «Ver psicólogos».'); chips = ['Ver psicólogos']; }
           crisisMode() ? crisisNext() : ask('Mientras llega, ¿quieres contarme qué está pasando?', 'open'); break;
         case 'ES_BOT':
           say('Soy un asistente automático, no una persona. Te acompaño por aquí y, si lo necesitas, dejo tu caso para que te escriba un especialista humano del equipo.');
@@ -3406,6 +3546,7 @@ function create(saved){
           say(pick(['Qué bueno leer eso. Los pequeños respiros también cuentan.','Me alegra. Sigo aquí si quieres seguir conversando.','Qué bien. Eso también es importante notarlo.'],'pos'));
           if (a.intents.includes('DESPEDIDA')) say(closing());
           else if (S.sug.exercise && lastQ === 'estado') ask('¿Quieres seguir conversando, o prefieres intentar descansar?', 'open');
+          else if (/\b(mejor|mas tranquil[oa]|bien)\b/.test(t) && !S.used.has('posMejor')) { S.used.add('posMejor'); ask('¿Qué crees que te ayudó a sentirte un poco mejor?', 'open'); }
           else nextQ(true);
           break;
         case 'DESPEDIDA':
@@ -3422,7 +3563,8 @@ function create(saved){
           if (crisisMode()) { say('No sé si tengo la respuesta a eso.'); ask('Lo que sí sé es que ahora lo importante eres tú. ¿Cómo estás en este momento?', 'estado'); break; }
           say(pick(['No estoy seguro de haber entendido tu pregunta.','No sé si te entendí bien.'],'preg'));
           ask('¿Me cuentas un poco más a qué te refieres?', 'open'); break;
-        case 'GIBBERISH': S.n.gib = (S.n.gib||0) + 1; ask(S.n.gib === 1 ? 'No logré entenderte bien. ¿Me lo puedes escribir de otra forma? No te preocupes por la ortografía.' : 'Sigo sin entenderte, perdona. ¿Me cuentas con otras palabras cómo estás?', 'open'); break;
+        case 'GIBBERISH': S.n.gib = (S.n.gib||0) + 1; if (S.n.gib >= 3) ask('Si te cuesta escribir, puedes tocar una de estas opciones.', 'open', ['Estoy mal','Necesito ayuda','Solo quiero conversar']);
+          else ask(S.n.gib === 1 ? 'No logré entenderte bien. ¿Me lo puedes escribir de otra forma? No te preocupes por la ortografía.' : 'Sigo sin entenderte, perdona. ¿Me cuentas con otras palabras cómo estás?', 'open'); break;
         default: fallback();
       }
     }
@@ -3466,13 +3608,14 @@ function create(saved){
       if (rf0) { say(pick(rf0[1], 'rf' + REFLECT.indexOf(rf0))); if (rf0[2] === 'noQ') return; if (crisisMode()) return crisisNext(); if (TRACK_F[S.track]) return trackNext(); return nextQ(true); }
       if (lastQ === 'cuando' || (F.timeKnown && /^(hace|desde|como|unos|unas|un|una|\d+)\b/.test(t))) {
         if (/\b(juntos|juntas|de pololeo|pololeando|de relacion|casados|de casados|de matrimonio|de amistad)\b/.test(t)) { F.timeKnown = true; say(S.themes.has('pareja') ? 'Es harto tiempo juntos; tiene sentido que duela tanto.' : 'Es harto tiempo.'); return next(); }
-        if (!TIME_RE.test(t) && !/^(hace|desde|como|unos|unas|un|una|\d+)\b/.test(t) && !/\b(semana|semanas|mes|meses|ano|anos|dia|dias|hoy|ayer|anoche|siempre|tiempo|rato|chic[oa]|nin[oa]|enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|verano|invierno|vacaciones|pandemia|manana|poco)\b/.test(t)) { say(pick(long ? R.ackLong : R.ackShort, long ? 'ackL' : 'ackS')); return next(); }
+        const tD = t.replace(/\b(todo el dia|el dia|al dia|del dia|cada dia|por dia|dia a dia|los dias|todos los dias)\b/g, ' ');
+        if (!TIME_RE.test(tD) && !/^(hace|desde|como|unos|unas|un|una|\d+)\b/.test(tD) && !/\b(semana|semanas|mes|meses|ano|anos|dia|dias|hoy|ayer|anoche|siempre|tiempo|rato|chic[oa]|nin[oa]|enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|verano|invierno|vacaciones|pandemia|manana|poco)\b/.test(t)) { say(pick(long ? R.ackLong : R.ackShort, long ? 'ackL' : 'ackS')); return next(); }
         F.timeKnown = true;
         if (S.themes.has('migracion') && lastQTheme === 'migracion') { say('Es harto tiempo lejos de los tuyos.'); return next(); }
         if (/\b(siempre|anos|ano|chico|chica|nino|nina|mucho tiempo|harto tiempo|toda la vida|meses)\b/.test(t)) say('Es mucho tiempo cargando con esto. Que lo hayas aguantado habla de tu fuerza, pero no tienes por qué seguir sin apoyo.');
         else if (/\b(semana|semanas|mes|harto|tiempo|desde|enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|verano|invierno|vacaciones)\b/.test(t)) say('Es harto tiempo sintiéndote así.');
         else if (/^(manana|pasado manana|esta semana|el (lunes|martes|miercoles|jueves|viernes|sabado|domingo)|la proxima semana)$/.test(t)) say('Es muy pronto, y eso hace que todo se sienta más urgente.');
-        else if (/\b(hoy|ayer|recien|poco|dias|dia|anoche|noche|manana|rato)\b/.test(t)) say('Entonces es algo reciente, y puede sentirse muy de golpe.');
+        else if (/\b(hoy|ayer|recien|poco|dias|dia|anoche|noche|manana|rato)\b/.test(tD)) say('Entonces es algo reciente, y puede sentirse muy de golpe.');
         else say(pick(long ? R.ackLong : R.ackShort, long ? 'ackL' : 'ackS'));
         return next();
       }
@@ -3492,7 +3635,7 @@ function create(saved){
       if (a.answer === 'ack') { say(pick(['Te leo.','Aquí sigo.','Sigo aquí contigo.'],'ackAck')); return next(true); }
       if (a.answer === 'unsure') { say(pick(['Está bien no tenerlo claro.','No pasa nada si no lo tienes claro.','Está bien, a veces cuesta saberlo.'],'unsureA')); return next(true); }
       if (a.answer === 'yes') { say(pick(R.ackShort,'ackS')); return next(true); }
-      if (a.answer === 'no') { say('Está bien.'); return next(true); }
+      if (a.answer === 'no' && a.toks.length <= 2) { say('Está bien.'); return next(true); }
       if (a.primary === 'RISA') { say(RANK[S.risk] >= 1 ? 'Te leo. A veces uno se ríe para no llorar.' : 'Te leo.'); return next(true); }
       const rf = REFLECT.find(x => x[0].test(t));
       if (rf) { say(pick(rf[1], 'rf' + REFLECT.indexOf(rf))); if (rf[2] === 'noQ') return; if (crisisMode()) return crisisNext(); if (TRACK_F[S.track]) return trackNext(); return nextQ(true); }
@@ -3519,7 +3662,7 @@ function create(saved){
       // frases que se dicen una sola vez por conversación
       if (S.turn > 2) cleaned = cleaned.map(x => typeof x === 'string' ? x.replace(/ ?Me alegra que hayas escrito\./, '').trim() : x).filter(x => typeof x !== 'string' || x.length);
       cleaned = cleaned.map(x => { if (typeof x !== 'string') return x; for (const ph of ONCE) if (x.includes(ph)) { const k = 'once:' + ph; if (S.used.has(k)) x = x.replace(' ' + ph, '').replace(ph + ' ', '').replace(ph, '').trim(); else S.used.add(k); } return x; }).filter(x => typeof x !== 'string' || x.length);
-      if (S.pros === 0) { cleaned = cleaned.map(x => typeof x === 'string' ? honest(x) : x); if (cleaned.includes(SINPRO) && cleaned.some(x => typeof x === 'string' && x !== SINPRO && /quedó registrado/.test(x))) cleaned = cleaned.map(x => x === SINPRO ? SINPRO_CORTO : x); }
+      if (S.pros === 0) { cleaned = cleaned.map(x => typeof x === 'string' ? (noCall() ? honest(x).replace(' Si estás en peligro, llama al *4141 o al 131.', '') : honest(x)) : x); if (cleaned.includes(SINPRO) && cleaned.some(x => typeof x === 'string' && x !== SINPRO && /quedó registrado/.test(x))) cleaned = cleaned.map(x => x === SINPRO ? SINPRO_CORTO : x); }
       // no repetir afirmaciones largas dichas hace poco
       const recent = S.recent || [];
       const dedup = cleaned.filter(x => typeof x !== 'string' || /\?\s*$/.test(x) || x.length < 25 || /^(Mira a tu alrededor|Escríbeme 5|Bien\. Ahora dime 4|Muy bien\. Ahora 3|Vas bien\. Ahora 2|Último: 1|Ahora dime 4|Ahora 3|Ahora 2)/.test(x) || !recent.includes(x));
@@ -3590,6 +3733,18 @@ const HONEST = [
 function honest(x){ for (const [re, to] of HONEST) x = x.replace(re, to); return x; }
 const ONCE = ['Me alegra que hayas escrito.', 'Aquí puedes decirlo sin filtro.', 'Que lo hayas aguantado habla de tu fuerza, pero no tienes por qué seguir sin apoyo.', 'No te voy a juzgar.', 'Gracias a ti por confiar.'];
 function tildes(x){ return x.replace(/\bmama(s?)\b/,'mamá$1').replace(/\bpapa(s?)\b/,'papá$1').replace(/\btia(s?)\b/,'tía$1').replace(/\btio(s?)\b/,'tío$1').replace(/\bcunad([oa]s?)\b/,'cuñad$1'); }
+/* preguntas sobre el directorio de psicólogos → tipo de respuesta */
+function dirTipo(t){
+  if (/\b(busco|necesito|quiero|estoy buscando|buscamos) (un|una) (psicolog[oa]|terapeuta) (para|pa) (mi|mis|un|una|el|la|nuestro|nuestra)\b/.test(t)) return 'para_otro';
+  if (/\b(soy|somos) (psicolog[oa]s?|terapeutas?)\b.*\b(inscrib|registr|unir|public|trabaj|aparec|perfil|sumar)|\b(como|quiero|puedo) (me )?(inscribo|inscribirme|registro como psicolog|registrarme como psicolog|sumarme como psicolog|publicar mi perfil|aparecer en el directorio)/.test(t)) return 'inscribir';
+  if (/\b(cancelar|anular|cambiar|mover|reagendar|postergar)\b.{0,15}\b(mi |la )?(hora|cita|sesion|consulta)\b/.test(t)) return 'cancelar';
+  if (/\b(a que hora|cuando) (era|es|seria|quedo|tengo) (mi|la) (hora|cita|sesion)\b|\bcuando es mi (hora|cita|sesion)\b/.test(t)) return 'hora';
+  if (/\b(fonasa|isapre|reembolso|reembolsar|bono|bonos|prevision)\b/.test(t)) return 'prevision';
+  if (/\b(cuanto|que precio|precio|valor|cobran)\b.{0,25}\b(sesion|consulta|terapia|psicolog)/.test(t)) return 'precio';
+  if (/\b(atienden|atiende|es|hay|tienen|son)\b.{0,15}\b(online|en linea|presencial|virtual|por videollamada)\b|\b(hay|tienen) psicolog[oa]s? (en|de) \w+/.test(t)) return 'modalidad';
+  if (/\b(pedir|reservar|agendar|sacar|tomar|conseguir) (una |un )?(hora|cita|sesion|consulta)\b|\b(como|donde) (agendo|reservo|pido|saco)\b|\b(elegir|escoger|buscar|ver) (un |una |a un |a una )?(psicolog|terapeuta)|\b(lista|directorio|catalogo) de psicolog|\bquiero (una )?(hora|cita) con (un|una) psicolog/.test(t)) return 'agendar';
+  return null;
+}
 function personIn(t){ const m = t.match(/\b(mi|mis) (mama|papa|mami|papi|papas|viejos|vieja|viejo|familia|hermano|hermana|hermanos|hermanas|amigo|amiga|amigos|amigas|pareja|polola|pololo|novio|novia|abuela|abuelo|abuelos|tia|tio|prima|primo|primos|esposa|esposo|marido|hijo|hija|hijos|hijas|vecino|vecina|madrina|padrino|profe|jefe|jefa|suegra|suegro|cunado|cunada|nieto|nieta|sobrino|sobrina)\b/); return m ? tildes(m[0].replace(/^mi /,'tu ').replace(/^mis /,'tus ')) : null; }
 const ARTLOC = { pieza:'tu pieza', casa:'tu casa', bano:'el baño', cama:'tu cama', trabajo:'el trabajo', pega:'la pega', colegio:'el colegio', liceo:'el liceo', universidad:'la universidad', calle:'la calle', auto:'el auto', micro:'la micro', metro:'el metro', plaza:'una plaza', parque:'un parque', departamento:'tu departamento', depto:'tu depto', hospital:'el hospital', living:'el living', cocina:'la cocina', patio:'el patio' };
 function RISKY_OWN(S){ return ['IDEACION','PLAN','EMERGENCIA','METODO','AUTOLESION','PASIVA','INTENTO_PREVIO','IDEACION_NEGADA','DUELO_SUICIDIO','NOTICIA_SUICIDIO'].some(f=>S.flags.has(f)) || S.themes.has('animo'); }
@@ -3601,6 +3756,8 @@ if (typeof module !== 'undefined') module.exports = API; else root.Acompana = AP
 <script>/* Batería de pruebas: [mensaje, intención esperada, (tema o señal esperada)] */
 (function (root) {
 const CASES = [
+  // Quinta ronda: quejas, coqueteo y preguntas al bot
+  ['no sirves','QUEJA'], ['quiero ser tu novio','VINCULO'], ['eres linda?','PERSONAL_BOT'],
   // Ideación directa, con faltas, jerga y ofuscación
   ['me quiero matar','IDEACION'], ['me kiero matar','IDEACION'], ['me qiero mtar','IDEACION'], ['m3 qui3r0 m4t4r','IDEACION'],
   ['me quiero moriiiiir','IDEACION'], ['ya no quiero vivir','IDEACION'], ['ya no kiero bibir','IDEACION'], ['no quiero seguir viviendo','IDEACION'],

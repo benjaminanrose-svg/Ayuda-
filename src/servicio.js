@@ -82,12 +82,23 @@ const SQL_HISTORIA = `select m.id, m.autor, m.tipo, m.contenido, m.riesgo, m.cre
   nullif(trim(coalesce(u.titulo, '') || ' ' || coalesce(u.nombre, '')), '') nombre
   from mensajes m left join usuarios u on u.id = m.usuario_id where m.conversacion_id = $1 order by m.id`;
 
+/* Presencia: avisa al panel cuando la persona entra o sale del chat. */
+tr.onPresencia(async (convId, enLinea) => {
+  try {
+    const k = (await q("select id, estado, tomado_por from casos where conversacion_id = $1 and estado <> 'cerrado'", [convId])).rows[0];
+    if (!k) return;
+    if (EN_COLA.includes(k.estado)) tr.aEquipo('presencia', { casoId: k.id, enLinea });
+    else if (k.tomado_por) tr.aUsuario(k.tomado_por, 'presencia', { casoId: k.id, enLinea });
+  } catch { /* sin aviso */ }
+});
+
 /* Ficha de derivación resumida (lo que ve el equipo). */
 async function resumenCaso(c, id) {
   const k = (await c.query(`select k.*, o.nombre org, u.nombre t_nombre, u.titulo t_titulo,
       (select count(*)::int from mensajes m where m.conversacion_id = k.conversacion_id and m.autor = 'persona') n_msgs
     from casos k left join organizaciones o on o.id = k.organizacion_id left join usuarios u on u.id = k.tomado_por where k.id = $1`, [id])).rows[0];
   if (!k) return null;
+  const u = (await c.query("select autor, creado_en from mensajes where conversacion_id = $1 and autor in ('persona','especialista') order by id desc limit 1", [k.conversacion_id])).rows[0];
   const ult = (await c.query("select id, contenido from mensajes where conversacion_id = $1 and autor = 'persona' order by id desc limit 2", [k.conversacion_id])).rows.reverse();
   let extracto = ult;
   if (k.mensaje_clave_id && ult.length && !ult.some(m => String(m.id) === String(k.mensaje_clave_id))) {
@@ -99,6 +110,7 @@ async function resumenCaso(c, id) {
     senales: (k.senales || []).filter(f => E.FLAG_LABEL[f] && !OCULTAS.has(f)).map(f => ({ texto: E.FLAG_LABEL[f], urgente: E.URGENT.has(f) })),
     temas: (k.temas || []).filter(t => E.THEMES[t]).map(t => E.THEMES[t].label),
     seguro: k.seguro, menor: k.menor, organizacion: k.org, mensajes: k.n_msgs,
+    enLinea: tr.personaConectada(k.conversacion_id), ultimoAutor: u ? u.autor : null, ultimoEn: u ? u.creado_en : null,
     extracto: extracto.map(m => descifrar(m.contenido)),
     creadoEn: k.creado_en, escaladoEn: k.escalado_en, tomadoEn: k.tomado_en, agendadoPara: k.agendado_para, cerradoEn: k.cerrado_en,
     tomadoPor: k.tomado_por, tomadoPorNombre: k.t_nombre ? nombreDe({ titulo: k.t_titulo, nombre: k.t_nombre }) : null

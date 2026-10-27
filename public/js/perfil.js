@@ -1,7 +1,7 @@
 'use strict';
 /* Perfil público de un psicólogo y formulario para pedir hora. */
 (() => {
-  const { $, api, esc, TIPO_DOC, vistaDoc } = window.RA;
+  const { $, api, esc, TIPO_DOC, vistaDoc, ATIENDE, IDIOMAS, PAGOS, nombres } = window.RA;
   const MOD = { online: 'Atiende online', presencial: 'Atiende presencial', ambas: 'Atiende online y presencial' };
   const TIPO = { titulo: 'Título profesional', magister: 'Magíster', doctorado: 'Doctorado', diplomado: 'Diplomado', curso: 'Curso' };
   const slug = decodeURIComponent(location.pathname.split('/')[2] || '');
@@ -14,18 +14,22 @@
     const exp = p.experiencia.map(e => `<li><b>${esc(e.cargo)}</b><span>${esc([e.lugar, e.periodo].filter(Boolean).join(' · '))}</span></li>`).join('');
     const docs = p.documentos.map(d => `<li><a class="credencial" href="${esc(d.url)}" target="_blank" rel="noopener">${vistaDoc(d)}<b>${esc(d.nombre)}</b>
       <span>${TIPO_DOC[d.tipo]}${d.pdf ? ' · PDF' : ''}${revisor && !d.publico ? ' · <span class="privado">solo para revisión</span>' : ''}</span></a></li>`).join('');
+    const practico = [['Atiende a', nombres(ATIENDE, p.atiende)], ['Idiomas', nombres(IDIOMAS, p.idiomas)], ['Pagos y reembolsos', nombres(PAGOS, p.pagos)]]
+      .filter(([, v]) => v.length).map(([t, v]) => `<div><dt>${t}</dt><dd>${esc(v.join(' · '))}</dd></div>`).join('');
     $('#perfil').innerHTML = `${previa ? '<p class="aviso-prev">Vista previa: este perfil todavía no está publicado.</p>' : ''}
-      <div class="perfil">
+      <div class="perfil acento ac-${esc(p.color || 'menta')}">
         <article class="caja ficha-psi">
           <div class="portada"><img src="${esc(p.fondo)}" alt=""></div>
           <header class="p-cab"><span class="foto grande anillo">${p.foto ? `<img src="${esc(p.foto)}" alt="Foto de ${esc(p.nombre)}">` : esc(iniciales(p.nombre))}</span>
-            <div class="p-nombre"><h1>${esc(p.nombre)}</h1><div class="t-meta">${esc([MOD[p.modalidad], p.comuna].filter(Boolean).join(' · '))}</div>
+            <div class="p-nombre"><h1>${esc(p.nombre)}</h1>${p.lema ? `<p class="lema">${esc(p.lema)}</p>` : ''}<div class="t-meta">${esc([MOD[p.modalidad], p.comuna].filter(Boolean).join(' · '))}</div>
             ${p.precio ? `<div class="t-meta">Sesión: $${Number(p.precio).toLocaleString('es-CL')}</div>` : ''}
             ${p.verificado ? '<span class="verif">✓ Perfil revisado por ConténMente</span>' : ''}</div></header>
           <a class="btn pedir-salto" href="#pedir">Pedir hora</a>
           ${p.especialidades.length ? `<div class="chips">${p.especialidades.map(e => `<span>${esc(e)}</span>`).join('')}</div>` : ''}
+          ${practico ? `<dl class="practico">${practico}</dl>` : ''}
           ${sec('Sobre mí', p.resumen ? `<p>${esc(p.resumen)}</p>` : '')}
           ${sec('Cómo trabajo', p.enfoque ? `<p>${esc(p.enfoque)}</p>` : '')}
+          ${sec('La primera sesión', p.primeraSesion ? `<p>${esc(p.primeraSesion)}</p>` : '')}
           ${sec('Diplomas y certificados', docs ? `<ul class="credenciales">${docs}</ul>` : '')}
           ${sec('Formación', est ? `<ul class="lista-f">${est}</ul>` : '')}
           ${sec('Experiencia', exp ? `<ul class="lista-f">${exp}</ul>` : '')}

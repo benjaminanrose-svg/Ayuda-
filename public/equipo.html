@@ -38,8 +38,10 @@
 
 <main class="panel" id="vista-casos">
   <aside class="lista" aria-label="Casos">
-    <section><h2>En espera <span class="n" id="n-cola"></span></h2><ul id="cola"></ul></section>
-    <section><h2>Mis casos <span class="n" id="n-mios"></span></h2><ul id="mios"></ul></section>
+    <section><h2>Necesitan respuesta <span class="n" id="n-ahora"></span></h2><ul id="ahora"></ul></section>
+    <section hidden><h2>Conversando <span class="n" id="n-conv"></span></h2><ul id="conv"></ul></section>
+    <section hidden><h2>Agendados <span class="n" id="n-agenda"></span></h2><ul id="agenda"></ul></section>
+    <details class="quietos" hidden><summary>Sin movimiento hace más de un día <span class="n" id="n-quietos"></span></summary><ul id="quietos"></ul></details>
   </aside>
   <section class="hoja" id="hoja" aria-live="polite"></section>
 </main>
