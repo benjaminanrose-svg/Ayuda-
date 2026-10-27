@@ -27,10 +27,10 @@ const espera = ms => new Promise(r => setTimeout(r, ms));
     await adm.goto(BASE + '/ingresar');
     await adm.fill('#correo', 'admin@local'); await adm.fill('#clave', 'clave-local-admin'); await adm.click('#f-ingreso button');
     await adm.fill('#nueva', 'clave-admin-nueva-1'); await adm.fill('#repetir', 'clave-admin-nueva-1'); await adm.click('#f-clave button');
-    await adm.waitForURL('**/equipo'); await adm.goto(BASE + '/equipo#admin'); await adm.waitForSelector('#abrir-usuario'); await adm.click('#abrir-usuario');
+    await adm.waitForURL('**/equipo'); await adm.goto(BASE + '/equipo#admin'); await adm.click('[data-tab="equipo"]'); await adm.click('#abrir-usuario');
     await adm.fill('#u-correo', 'camila@ejemplo.cl'); await adm.fill('#u-nombre', 'Camila Fuentes'); await adm.fill('#u-esp', 'Adultos, crisis'); await adm.check('#u-guardia', { force: true });
-    await adm.click('#f-usuario button[type=submit]'); await adm.waitForSelector('#clave-temp:not([hidden]) code');
-    const temporal = await adm.textContent('#clave-temp code');
+    await adm.click('#f-usuario button[type=submit]'); await adm.waitForSelector('#clave-box:not([hidden]) code');
+    const temporal = await adm.textContent('#clave-box code');
     await adm.screenshot({ path: path.join(OUT, 'admin.png'), fullPage: true });
 
     // especialista: ingresa, crea su clave y queda disponible
@@ -74,7 +74,7 @@ const espera = ms => new Promise(r => setTimeout(r, ms));
     await esp.screenshot({ path: path.join(OUT, 'panel-movil-menu.png') });
     await esp.click('#menu-btn'); await esp.click('#ahora .item'); await espera(500);
     await esp.screenshot({ path: path.join(OUT, 'panel-movil-caso.png'), fullPage: true });
-    await adm.setViewportSize({ width: 390, height: 844 }); await adm.reload(); await adm.waitForSelector('.cifras'); await espera(300);
+    await adm.setViewportSize({ width: 390, height: 844 }); await adm.reload(); await adm.waitForSelector('.adm-tabs'); await espera(300);
     await adm.screenshot({ path: path.join(OUT, 'admin-movil.png'), fullPage: true });
     // directorio: una psicóloga se registra, completa su perfil con foto y lo envía; administración lo aprueba
     const psi = await b.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }); vigilar(psi, 'psicologa');
@@ -135,8 +135,9 @@ const espera = ms => new Promise(r => setTimeout(r, ms));
     // clave olvidada: la psicóloga pide ayuda y administración le pone una clave temporal
     await pub.goto(BASE + '/ingresar'); await pub.click('#olvide'); await pub.fill('#correo-olvide', 'javiera@ejemplo.cl'); await pub.click('#f-olvide button[type=submit]');
     await pub.waitForSelector('#f-olvide h1:has-text("Listo")'); await pub.screenshot({ path: path.join(OUT, 'olvide-clave-movil.png') });
-    await adm.reload(); await adm.waitForSelector('tr:has-text("javiera@ejemplo.cl") [data-acc="clave"]');
-    await adm.click('tr:has-text("javiera@ejemplo.cl") [data-acc="clave"]'); await adm.waitForSelector('.form-clave');
+    await adm.waitForSelector('#alerta:has-text("pide una nueva")'); await adm.waitForSelector('.pendiente.clave'); await espera(300);
+    await adm.screenshot({ path: path.join(OUT, 'admin-aviso-clave.png') });
+    await adm.click('.pendiente.clave [data-acc="clave"]'); await adm.waitForSelector('#clave-box .form-clave');
     await adm.screenshot({ path: path.join(OUT, 'admin-clave-form.png'), fullPage: true });
     await adm.click('.form-clave button[type=submit]'); await adm.waitForSelector('#copiar-clave'); await espera(300);
     await adm.screenshot({ path: path.join(OUT, 'admin-clave.png'), fullPage: true });

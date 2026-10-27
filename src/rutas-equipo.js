@@ -22,8 +22,10 @@ r.post('/ingresar', limitador(8, 15 * 60e3, req => req.ip + '|' + String((req.bo
 
 r.get('/estado', async (req, res) => {
   const s = await ses.usuarioDeSesion(req);
-  const pf = s ? (await q('select slug from perfiles where usuario_id = $1', [s.r.id])).rows[0] : null;
-  res.json({ sesion: !!s, debeCambiarClave: !!(s && s.r.debe_cambiar_clave), correo: s ? s.r.correo : null, rol: s ? s.r.rol : null, slug: pf ? pf.slug : null });
+  const pf = s ? (await q('select slug, foto is not null tiene_foto, actualizado_en from perfiles where usuario_id = $1', [s.r.id])).rows[0] : null;
+  res.json({ sesion: !!s, debeCambiarClave: !!(s && s.r.debe_cambiar_clave), correo: s ? s.r.correo : null, rol: s ? s.r.rol : null, slug: pf ? pf.slug : null,
+    nombre: s ? [s.r.titulo, s.r.nombre].filter(Boolean).join(' ') : null,
+    foto: pf && pf.tiene_foto ? `/api/directorio/perfiles/${pf.slug}/foto?v=${new Date(pf.actualizado_en).getTime()}` : null });
 });
 
 /* «¿Olvidaste tu clave?»: avisa a administración; la respuesta es siempre igual para no revelar qué correos existen */
@@ -33,14 +35,20 @@ r.post('/olvide-clave', limitador(5, 3600e3, req => 'olvide|' + req.ip), async (
   if (u) {
     await q('insert into auditoria (usuario_id, accion) values ($1, $2)', [u.id, 'pidió nueva clave']);
     const admins = (await q("select id from usuarios where rol = 'admin' and activo")).rows.map(x => x.id);
-    avisos.aUsuarios(admins, { titulo: 'ConténMente', cuerpo: [u.titulo, u.nombre].filter(Boolean).join(' ') + ' olvidó su clave y pide una nueva.', url: '/equipo#admin', etiqueta: 'clave' }).catch(() => {});
+    const quien = [u.titulo, u.nombre].filter(Boolean).join(' ');
+    avisos.aUsuarios(admins, { titulo: 'ConténMente', cuerpo: quien + ' olvidó su clave y pide una nueva.', url: '/equipo#admin', etiqueta: 'clave' }).catch(() => {});
+    admins.forEach(id => tr.aUsuario(id, 'clave', { nombre: quien })); // aviso en vivo en el panel abierto
   }
   res.json({ ok: true });
 });
 
 r.use(ses.sesion);
 r.post('/salir', async (req, res) => { await ses.salir(req, res); res.json({ ok: true }); });
-r.get('/yo', (req, res) => res.json({ usuario: ses.usuarioPublico(req.usuario), clavePush: avisos.clavePublica() }));
+r.get('/yo', async (req, res) => {
+  // administración: cuántas cosas esperan (claves pedidas y perfiles por revisar) para el número junto a «Administración»
+  const pendientes = req.usuario.rol === 'admin' ? (await q("select (select count(*)::int from usuarios where pide_clave_en is not null and activo) claves, (select count(*)::int from perfiles where estado = 'pendiente') perfiles")).rows[0] : null;
+  res.json({ usuario: ses.usuarioPublico(req.usuario), clavePush: avisos.clavePublica(), pendientes });
+});
 r.post('/clave', limitador(10, 15 * 60e3, req => 'clave|' + req.usuario.id), async (req, res) => { await ses.cambiarClave(req); res.json({ ok: true }); });
 
 r.use(ses.claveAlDia);

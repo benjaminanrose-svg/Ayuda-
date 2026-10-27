@@ -158,3 +158,16 @@
 .form-clave .casilla{font-weight:600}
 .clave-temp p{margin:0 0 6px}
 .clave-temp .fila-btn{margin-top:8px}
+/* administración: lo pendiente arriba y secciones en pestañas */
+.pendientes{display:grid;gap:8px}
+.pendientes h2{font-size:1.02rem;font-weight:800}
+.pendiente{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;padding:12px 14px;border:1px solid var(--regla);border-left:4px solid #D9A21B;border-radius:var(--r);background:#FFFBF0}
+.pendiente.perfil{border-left-color:var(--timbre);background:#F6F3FB}
+.pendiente b{font-weight:800;color:var(--tinta)}
+.al-dia{margin:0;padding:10px 14px;border-radius:var(--r);background:var(--baja-2);color:var(--baja);font-weight:700;font-size:.92rem}
+.adm-tabs{display:flex;gap:2px;overflow-x:auto;border-bottom:1.5px solid var(--regla);scrollbar-width:none;scroll-margin-top:12px}
+.adm-tabs button{flex:none;display:inline-flex;align-items:center;gap:6px;padding:10px 12px;border:0;border-bottom:3px solid transparent;margin-bottom:-1.5px;background:none;font:700 .92rem/1 var(--display);color:var(--suave);cursor:pointer}
+.adm-tabs button[aria-current="true"]{color:var(--tinta);border-bottom-color:var(--tinta)}
+.adm-tabs button:hover{color:var(--tinta)}
+.adm-panel{display:grid;gap:12px}
+.alerta-banda.suave{background:#4B3C70}

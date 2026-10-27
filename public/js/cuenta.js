@@ -5,16 +5,20 @@
   const ancla = document.getElementById('cuenta');
   if (!ancla) return;
   const enlace = (href, t) => `<a href="${href}">${t}</a>`;
-  function menu(titulo, items) {
+  const esc = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const iniciales = n => String(n || '').replace(/^(Ps|Dr|Dra)\.?\s+/i, '').split(/\s+/).slice(0, 2).map(x => x[0] || '').join('').toUpperCase();
+  function menu(boton, items) {
     const d = document.createElement('details');
     d.className = 'cuenta';
-    d.innerHTML = `<summary class="btn-banda">${titulo}</summary><div class="cuenta-lista">${items}</div>`;
+    d.innerHTML = `${boton}<div class="cuenta-lista">${items}</div>`;
     ancla.replaceWith(d);
   }
   fetch('/api/equipo/estado', { credentials: 'same-origin' }).then(r => r.json()).catch(() => ({})).then(s => {
-    if (!s.sesion) return menu('Soy psicólogo', enlace('/registro', 'Crear mi perfil gratis') + enlace('/ingresar', 'Ya tengo cuenta: ingresar'));
+    if (!s.sesion) return menu('<summary class="btn-banda">Soy psicólogo</summary>', enlace('/registro', 'Crear mi perfil gratis') + enlace('/ingresar', 'Ya tengo cuenta: ingresar'));
     const psi = s.rol === 'psicologo' || !!s.slug;
-    menu('Mi cuenta', (psi ? enlace('/mi-perfil', 'Editar mi perfil') + (s.slug ? enlace('/psicologos/' + encodeURIComponent(s.slug), 'Ver mi perfil público') : '') + enlace('/mi-perfil#agenda', 'Mi agenda y citas') : '')
+    // con sesión: la foto de perfil (o las iniciales) arriba a la derecha abre el menú
+    menu(`<summary class="avatar-btn" aria-label="Mi cuenta"><span class="avatar">${s.foto ? `<img src="${esc(s.foto)}" alt="">` : esc(iniciales(s.nombre))}</span></summary>`,
+      `<div class="cuenta-quien"><b>${esc(s.nombre)}</b><span>${esc(s.correo)}</span></div>` + (psi ? enlace('/mi-perfil', 'Editar mi perfil') + (s.slug ? enlace('/psicologos/' + encodeURIComponent(s.slug), 'Ver mi perfil público') : '') + enlace('/mi-perfil#agenda', 'Mi agenda y citas') : '')
       + (s.rol !== 'psicologo' ? enlace('/equipo', 'Panel de casos') + (s.rol === 'admin' ? enlace('/equipo#admin', 'Administración') : '') : '')
       + '<button type="button" data-salir>Salir</button>');
     // en la portada, «Crear mi perfil» pasa a «Ir a mi perfil»

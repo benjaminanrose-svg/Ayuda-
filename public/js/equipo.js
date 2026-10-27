@@ -216,11 +216,20 @@
     pintarLista();
     if (m.autor === 'persona') sonar(!!d.urgente);
   }
-  function alerta(d) {
+  function banda(html, fuerte) {
     const el = $('#alerta');
-    el.innerHTML = `<span>${esc(d.texto)}</span><a href="#caso-${d.casoId}">Ver caso N.º ${esc(d.folio)}</a><button class="enlace" type="button" id="cerrar-alerta">Ocultar</button>`;
+    el.classList.toggle('suave', !fuerte); // las claves pedidas no son urgencias: van en otro color
+    el.innerHTML = html + '<button class="enlace" type="button" id="cerrar-alerta">Ocultar</button>';
     el.hidden = false;
-    sonar(true);
+    sonar(fuerte);
+  }
+  const alerta = d => banda(`<span>${esc(d.texto)}</span><a href="#caso-${d.casoId}">Ver caso N.º ${esc(d.folio)}</a>`, true);
+  // administración: número junto a «Administración» (claves pedidas + perfiles por revisar)
+  let pendientes = { claves: 0, perfiles: 0 };
+  function pintarPendientes(p) {
+    if (p) pendientes = p;
+    const n = pendientes.claves + pendientes.perfiles;
+    $('#ir-admin').innerHTML = 'Administración' + (n ? ` <span class="punto">${n}</span>` : '');
   }
 
   async function recargar() {
@@ -239,6 +248,12 @@
     f.addEventListener('error', () => { $('#desconectado').hidden = false; });
     f.addEventListener('caso', e => actualizarCaso(JSON.parse(e.data)));
     f.addEventListener('mensaje', e => recibirMensaje(JSON.parse(e.data)));
+    f.addEventListener('clave', e => {
+      const d = JSON.parse(e.data);
+      pendientes.claves++; pintarPendientes();
+      banda(`<span>${esc(d.nombre)} olvidó su clave y pide una nueva.</span><a href="#admin">Ver en Administración</a>`, false);
+      if (location.hash === '#admin') verAdmin();
+    });
     f.addEventListener('presencia', e => {
       const d = JSON.parse(e.data), k = casos.get(d.casoId);
       if (!k) return;
@@ -343,6 +358,14 @@
       <td data-l="Guardia"><label class="casilla"><input type="checkbox" data-u="${u.id}" data-campo="guardia"${u.guardia ? ' checked' : ''}><i></i><span class="sr">De guardia</span></label></td>
       <td class="acc"><button class="btn plain" data-u="${u.id}" data-acc="editar">Editar</button> <button class="btn plain" data-u="${u.id}" data-acc="clave">Cambiar clave</button>${u.id === yo.id ? '' : ` <button class="btn plain" data-u="${u.id}" data-acc="${u.activo ? 'desactivar' : 'activar'}">${u.activo ? 'Desactivar' : 'Activar'}</button>`}</td></tr>`;
   }
+  const ROL = { admin: 'Administración', especialista: 'Especialista', psicologo: 'Psicólogo del directorio' };
+  const TABS = [['perfiles', 'Perfiles'], ['psicologos', 'Psicólogos'], ['equipo', 'Equipo'], ['orgs', 'Organizaciones'], ['resumen', 'Resumen']];
+  let tabAdmin = 'perfiles';
+  function filaPsi(u) {
+    return `<tr><td data-l="Psicólogo"><b>${esc(nombre(u))}</b>${u.pideClave ? ' <span class="nivel mid">Pidió nueva clave</span>' : ''}<span class="sub bloque">${esc(u.correo)}</span></td>
+      <td data-l="Estado">${u.activo ? (u.ultimoAcceso ? 'Último ingreso: ' + esc(fecha(u.ultimoAcceso)) : 'Nunca ha ingresado') : 'Cuenta desactivada'}${u.debeCambiarClave ? '<span class="sub bloque">Con clave temporal</span>' : ''}</td>
+      <td class="acc"><button class="btn plain" data-u="${u.id}" data-acc="clave">Cambiar clave</button> <button class="btn plain" data-u="${u.id}" data-acc="${u.activo ? 'desactivar' : 'activar'}">${u.activo ? 'Desactivar' : 'Activar'}</button></td></tr>`;
+  }
   function filaPerfil(x) {
     const est = { pendiente: 'Por revisar', publicado: 'Publicado', rechazado: 'Rechazado', borrador: 'Sin enviar' }[x.estado];
     return `<tr><td data-l="Psicólogo"><b>${esc(x.nombre)}</b><span class="sub bloque">${esc(x.correo)} · ${est}${x.especialidades.length ? ' · ' + esc(x.especialidades.slice(0, 3).join(', ')) : ''}</span>${x.notaRevision ? `<span class="sub bloque">Nota: ${esc(x.notaRevision)}</span>` : ''}</td>
@@ -358,10 +381,10 @@
   // mensaje listo para entregarle la clave temporal (copiar o abrir el correo)
   const mensajeClave = (u, clave) => `Hola ${u.nombre}: te dejamos una clave temporal para entrar a ConténMente: ${clave}\n\nIngresa en ${location.origin}/ingresar con tu correo ${u.correo} y esta clave. Al entrar te pediremos crear una clave nueva, solo tuya.\n\nSi no pediste este cambio, avísanos respondiendo este mensaje.`;
   function mostrarClave(u, clave) {
-    const el = $('#clave-temp'), msg = mensajeClave(u, clave);
+    const el = $('#clave-box'), msg = mensajeClave(u, clave);
     el.innerHTML = `<p>Clave temporal de <b>${esc(nombre(u))}</b>: <code>${esc(clave)}</code></p>
       <p class="sub">Entrégasela por un canal seguro. Al ingresar con ella se le pedirá crear una propia. Esta clave no se vuelve a mostrar.</p>
-      <div class="fila-btn"><button class="btn" type="button" id="copiar-clave">Copiar mensaje</button><a class="btn ghost" href="mailto:${encodeURIComponent(u.correo)}?subject=${encodeURIComponent('Tu clave temporal de ConténMente')}&body=${encodeURIComponent(msg)}">Enviar por correo</a></div>`;
+      <div class="fila-btn"><button class="btn" type="button" id="copiar-clave">Copiar mensaje</button><button class="btn plain" type="button" data-acc="cerrar-clave">Listo</button><a class="btn ghost" href="mailto:${encodeURIComponent(u.correo)}?subject=${encodeURIComponent('Tu clave temporal de ConténMente')}&body=${encodeURIComponent(msg)}">Enviar por correo</a></div>`;
     el.hidden = false;
     $('#copiar-clave').onclick = async () => {
       try { await navigator.clipboard.writeText(msg); aviso('Mensaje copiado. Pégalo en WhatsApp o en un correo.'); }
@@ -370,15 +393,16 @@
     el.scrollIntoView({ block: 'center' });
   }
   function formClave(id) {
-    const u = usuariosAdmin.find(x => x.id === +id);
-    const fila = document.querySelector(`button[data-acc="clave"][data-u="${id}"]`);
-    if (!u || !fila) return;
-    fila.closest('tr').outerHTML = `<tr><td colspan="4"><form class="form-fila form-clave" data-clave="${u.id}">
-      <p class="bloque"><b>Cambiar la clave de ${esc(nombre(u))}</b><span class="sub bloque">Se cerrarán sus sesiones abiertas y, al ingresar con la clave nueva, se le pedirá crear una propia.</span></p>
+    const u = usuariosAdmin.find(x => x.id === +id), box = $('#clave-box');
+    if (!u || !box) return;
+    box.innerHTML = `<form class="form-fila form-clave" data-clave="${u.id}">
+      <p class="bloque"><b>Clave temporal para ${esc(nombre(u))}</b><span class="sub bloque">${esc(u.correo)} · Se cerrarán sus sesiones abiertas y, al entrar con la clave temporal, se le pedirá crear una propia.</span></p>
       <label class="casilla"><input type="radio" name="modo-clave" value="auto" checked><i></i>Generar una clave temporal (recomendado)</label>
       <label class="casilla"><input type="radio" name="modo-clave" value="escrita"><i></i>Escribir yo la clave temporal</label>
       <div class="campo-form" id="campo-clave-escrita" hidden><label for="c-escrita">Clave temporal (mínimo 10 caracteres)</label><input id="c-escrita" minlength="10" maxlength="200" autocomplete="off"></div>
-      <div class="fila-btn"><button class="btn" type="submit">Cambiar clave</button><button class="btn plain" type="button" data-acc="cancelar-edicion">Cancelar</button></div></form></td></tr>`;
+      <div class="fila-btn"><button class="btn" type="submit">Crear clave temporal</button><button class="btn plain" type="button" data-acc="cerrar-clave">Cancelar</button></div></form>`;
+    box.hidden = false;
+    box.scrollIntoView({ block: 'center' });
   }
   let usuariosAdmin = [];
   function editarFila(id) {
@@ -398,24 +422,30 @@
       const [u, o, m, pf] = await Promise.all([api('GET', '/api/admin/usuarios'), api('GET', '/api/admin/organizaciones'), api('GET', '/api/admin/metricas'), api('GET', '/api/admin/perfiles')]);
       const pend = pf.perfiles.filter(x => x.estado === 'pendiente'), borr = pf.perfiles.filter(x => x.estado === 'borrador'), resto = pf.perfiles.filter(x => !['pendiente', 'borrador'].includes(x.estado));
       usuariosAdmin = u.usuarios;
+      const equipo = u.usuarios.filter(x => x.rol !== 'psicologo'), psis = u.usuarios.filter(x => x.rol === 'psicologo');
+      const piden = u.usuarios.filter(x => x.pideClave && x.activo);
+      pintarPendientes({ claves: piden.length, perfiles: pend.length });
+      if (!piden.length && $('#alerta').classList.contains('suave')) $('#alerta').hidden = true;
+      const n = { perfiles: pend.length, psicologos: psis.filter(x => x.pideClave && x.activo).length, equipo: equipo.filter(x => x.pideClave && x.activo).length };
+      const panel = (k, html) => `<div class="adm-panel" data-panel="${k}"${tabAdmin === k ? '' : ' hidden'}>${html}</div>`;
       box.innerHTML = `<div class="hoja-blanca">
-        <header class="adm-top"><div><h1>Administración</h1><p class="sub">Tu equipo, las organizaciones y un resumen del uso.</p></div><a class="btn plain" href="#">Volver a los casos</a></header>
-        <div class="cifras">
-          ${cifra(m.hoy, 'Casos hoy', m.mes + ' en los últimos 30 días')}
-          ${cifra(m.en_espera, 'En espera ahora', m.mediana_seg == null ? '' : 'Suelen atenderse en ' + dur(m.mediana_seg))}
-          ${cifra(m.alto, 'Riesgo alto', 'En los últimos 30 días')}
-          ${cifra(m.disponibles, 'Disponibles ahora', m.guardia + ' de guardia')}
-        </div>
-        <section class="adm-sec"><h2>Perfiles del directorio${pend.length ? ` <span class="nivel urgente">${pend.length} por revisar</span>` : ''}</h2>
+        <header class="adm-top"><div><h1>Administración</h1><p class="sub">Perfiles del directorio, cuentas, tu equipo y organizaciones.</p></div><a class="btn plain" href="#">Volver a los casos</a></header>
+        ${piden.length || pend.length ? `<section class="pendientes" aria-label="Pendientes"><h2>Pendientes</h2>
+          ${piden.map(x => `<div class="pendiente clave"><div><b>${esc(nombre(x))} pide una clave nueva</b><span class="sub bloque">${esc(x.correo)} · ${ROL[x.rol] || ''} · ${lapso(x.pideClave) ? 'hace ' + lapso(x.pideClave) : 'recién'}</span></div><button class="btn" type="button" data-u="${x.id}" data-acc="clave">Crear clave temporal</button></div>`).join('')}
+          ${pend.length ? `<div class="pendiente perfil"><div><b>${pend.length === 1 ? '1 perfil espera revisión' : pend.length + ' perfiles esperan revisión'}</b><span class="sub bloque">Revisa su título y su número de registro antes de publicarlo.</span></div><button class="btn ghost" type="button" data-tab="perfiles">Revisar</button></div>` : ''}
+        </section>` : '<p class="al-dia">✓ Todo al día: nadie espera una clave nueva ni revisión de su perfil.</p>'}
+        <div class="clave-temp" id="clave-box" role="status" hidden></div>
+        <nav class="adm-tabs" aria-label="Secciones de administración">${TABS.map(([k, t]) => `<button type="button" data-tab="${k}" aria-current="${tabAdmin === k}">${t}${n[k] ? ` <span class="punto">${n[k]}</span>` : ''}</button>`).join('')}</nav>
+        ${panel('perfiles', `
           <p class="sub">Revisa cada perfil antes de publicarlo: abre la vista previa y busca su número de registro en la <a href="https://rnpi.superdesalud.gob.cl/" target="_blank" rel="noopener">Superintendencia de Salud</a>.</p>
           ${pend.length ? `<div class="tabla-marco"><table class="tabla"><thead><tr><th>Psicólogo</th><th>Registro</th><th><span class="sr">Acciones</span></th></tr></thead><tbody>${pend.map(filaPerfil).join('')}</tbody></table></div>` : '<p class="nota-suave">No hay perfiles esperando revisión.</p>'}
           ${borr.length ? `<details class="agregar"><summary class="btn ghost">Aún no enviados a revisión (${borr.length})</summary><p class="nota-suave">Estos psicólogos crearon su cuenta pero no han enviado su perfil. Puedes ver cómo va o publicarlo igual.</p><div class="tabla-marco"><table class="tabla"><tbody>${borr.map(filaPerfil).join('')}</tbody></table></div></details>` : ''}
-          ${resto.length ? `<details class="agregar"><summary class="btn ghost">Ver publicados y rechazados (${resto.length})</summary><div class="tabla-marco"><table class="tabla"><tbody>${resto.map(filaPerfil).join('')}</tbody></table></div></details>` : ''}
-        </section>
-        <section class="adm-sec"><h2>Equipo${u.usuarios.some(x => x.pideClave) ? ` <span class="nivel mid">${u.usuarios.filter(x => x.pideClave).length === 1 ? '1 persona pidió una clave nueva' : u.usuarios.filter(x => x.pideClave).length + ' personas pidieron una clave nueva'}</span>` : ''}</h2>
+          ${resto.length ? `<details class="agregar"><summary class="btn ghost">Ver publicados y rechazados (${resto.length})</summary><div class="tabla-marco"><table class="tabla"><tbody>${resto.map(filaPerfil).join('')}</tbody></table></div></details>` : ''}`)}
+        ${panel('psicologos', `<p class="sub">Las cuentas de los psicólogos del directorio. Si alguien olvidó su clave, aquí le creas una temporal.</p>
+          ${psis.length ? `<div class="tabla-marco"><table class="tabla"><thead><tr><th>Psicólogo</th><th>Estado</th><th><span class="sr">Acciones</span></th></tr></thead><tbody>${psis.map(filaPsi).join('')}</tbody></table></div>` : '<p class="nota-suave">Aún no hay psicólogos registrados.</p>'}`)}
+        ${panel('equipo', `<p class="sub">Quienes atienden los casos de Nexo y administran ConténMente.</p>
           <div class="tabla-marco"><table class="tabla"><thead><tr><th>Persona</th><th>Rol y estado</th><th>Guardia</th><th><span class="sr">Acciones</span></th></tr></thead>
-          <tbody>${u.usuarios.map(filaUsuario).join('')}</tbody></table></div>
-          <div class="clave-temp" id="clave-temp" role="status" hidden></div>
+          <tbody>${equipo.map(filaUsuario).join('')}</tbody></table></div>
           <details class="agregar"><summary class="btn ghost" id="abrir-usuario">+ Agregar persona al equipo</summary>
           <form class="form-fila" id="f-usuario">
             <div class="campo-form"><label for="u-correo">Correo</label><input id="u-correo" type="email" required maxlength="254"></div>
@@ -425,9 +455,8 @@
             <div class="campo-form"><label for="u-rol">Rol</label><select id="u-rol"><option value="especialista">Especialista (panel de casos)</option><option value="admin">Administración</option></select></div>
             <label class="casilla"><input type="checkbox" id="u-guardia"><i></i>De guardia</label>
             <button class="btn" type="submit">Agregar al equipo</button>
-          </form></details>
-        </section>
-        <section class="adm-sec"><h2>Organizaciones</h2>
+          </form></details>`)}
+        ${panel('orgs', `
           <p class="sub">Cada organización (colegio, empresa, municipio) tiene su propio enlace para que sus personas escriban.</p>
           <div class="tabla-marco"><table class="tabla"><thead><tr><th>Organización</th><th>Enlace para sus personas</th><th><span class="sr">Acciones</span></th></tr></thead>
           <tbody>${o.organizaciones.map(filaOrg).join('')}</tbody></table></div>
@@ -436,8 +465,13 @@
             <div class="campo-form"><label for="o-nombre">Nombre</label><input id="o-nombre" required maxlength="100" placeholder="Colegio Ejemplo"></div>
             <div class="campo-form"><label for="o-slug">Identificador del enlace</label><input id="o-slug" required maxlength="40" pattern="[a-z0-9\\-]{2,40}" placeholder="colegio-ejemplo"></div>
             <button class="btn" type="submit">Agregar organización</button>
-          </form></details>
-        </section></div>`;
+          </form></details>`)}
+        ${panel('resumen', `<div class="cifras">
+          ${cifra(m.hoy, 'Casos hoy', m.mes + ' en los últimos 30 días')}
+          ${cifra(m.en_espera, 'En espera ahora', m.mediana_seg == null ? '' : 'Suelen atenderse en ' + dur(m.mediana_seg))}
+          ${cifra(m.alto, 'Riesgo alto', 'En los últimos 30 días')}
+          ${cifra(m.disponibles, 'Disponibles ahora', m.guardia + ' de guardia')}
+        </div>`)}</div>`;
       if (despues) despues();
     } catch (e) { box.innerHTML = `<div class="hoja-blanca"><p class="error">${esc(e.message)}</p></div>`; }
   }
@@ -449,8 +483,17 @@
     catch (err) { c.checked = !c.checked; aviso(err.message); }
   });
   $('#vista-admin').addEventListener('click', async e => {
+    const tb = e.target.closest('[data-tab]');
+    if (tb) {
+      tabAdmin = tb.dataset.tab;
+      document.querySelectorAll('#vista-admin [data-panel]').forEach(p => { p.hidden = p.dataset.panel !== tabAdmin; });
+      document.querySelectorAll('#vista-admin .adm-tabs [data-tab]').forEach(x => x.setAttribute('aria-current', String(x.dataset.tab === tabAdmin)));
+      if (!tb.closest('.adm-tabs')) $('#vista-admin .adm-tabs').scrollIntoView({ block: 'start', behavior: 'smooth' });
+      return;
+    }
     const b = e.target.closest('button[data-acc]');
     if (!b) return;
+    if (b.dataset.acc === 'cerrar-clave') { const x = $('#clave-box'); x.hidden = true; x.innerHTML = ''; return; }
     if (b.dataset.acc === 'editar') return editarFila(b.dataset.u);
     if (b.dataset.acc === 'clave') return formClave(b.dataset.u);
     if (b.dataset.acc === 'cancelar-edicion') return verAdmin();
@@ -503,13 +546,14 @@
     const m = h.match(/^#caso-(\d+)$/);
     if (m) return abrir(+m[1]);
     document.body.classList.remove('viendo-caso');
-    if (!sel) $('#hoja').innerHTML = vacioHtml('Elige un caso de la lista.', yo.disponible ? 'Cuando llegue uno nuevo, suena un aviso y aparece arriba en “En espera”.' : 'Marca “Disponible” arriba para recibir casos nuevos.');
+    if (!sel) $('#hoja').innerHTML = vacioHtml('Elige un caso de la lista.', yo.disponible ? 'Cuando llegue uno nuevo, suena un aviso y aparece arriba en “Necesitan respuesta”.' : 'Marca “Disponible” arriba para recibir casos nuevos.');
   }
 
   async function iniciar() {
     try {
       const d = await api('GET', '/api/equipo/yo');
       yo = d.usuario;
+      if (d.pendientes) pendientes = d.pendientes;
       if (yo.debeCambiarClave) return location.replace('/ingresar');
       if (yo.rol === 'psicologo') return location.replace('/mi-perfil');
     } catch (e) {
@@ -519,6 +563,7 @@
     $('#yo').textContent = nombre(yo);
     $('#disponible').checked = !!yo.disponible;
     $('#ir-admin').hidden = yo.rol !== 'admin';
+    if (yo.rol === 'admin') pintarPendientes();
     if (soportaAvisos()) {
       if (Notification.permission === 'granted') activarAvisos('/api/equipo/push').catch(() => {});
       else $('#avisos').hidden = Notification.permission === 'denied';
