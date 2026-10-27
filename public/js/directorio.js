@@ -7,6 +7,13 @@
   const iniciales = n => n.replace(/^(Ps|Dr|Dra)\.?\s+/i, '').split(/\s+/).slice(0, 2).map(x => x[0] || '').join('').toUpperCase();
   const precio = n => (n ? '$' + Number(n).toLocaleString('es-CL') + ' la sesión' : '');
   let todos = [];
+  const TZ = 'America/Santiago';
+  function cuando(t) {
+    const d = new Date(t), dia = x => new Date(x).toLocaleDateString('en-CA', { timeZone: TZ }), h = d.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: TZ });
+    if (dia(d) === dia(Date.now())) return 'hoy ' + h;
+    if (dia(d) === dia(Date.now() + 864e5)) return 'mañana ' + h;
+    return d.toLocaleDateString('es-CL', { weekday: 'short', day: 'numeric', month: 'short', timeZone: TZ }).replace('.', '') + ', ' + h;
+  }
 
   const meta = p => [MOD[p.modalidad], p.comuna, precio(p.precio)].filter(Boolean).map(esc).join(' · ');
   const tarjeta = p => `<li><a class="tarjeta" href="/psicologos/${esc(p.slug)}">
@@ -15,6 +22,7 @@
       <span><b>${esc(p.nombre)}</b><span class="t-meta">${meta(p)}</span></span></span>
     <span class="t-res">${esc(p.resumen)}</span>
     <span class="chips">${p.especialidades.slice(0, 4).map(e => `<span>${esc(e)}</span>`).join('')}</span>
+    ${p.proxima ? `<span class="t-prox">Próxima hora: ${esc(cuando(p.proxima))}</span>` : ''}
     ${p.documentos ? `<span class="t-doc">✓ ${p.documentos === 1 ? '1 diploma o certificado' : p.documentos + ' diplomas y certificados'} a la vista</span>` : ''}</a></li>`;
 
   function pintar() {

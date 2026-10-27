@@ -79,6 +79,7 @@ window.MiAgenda = (() => {
       const r = await api('PUT', '/api/directorio/mio/agenda', { agenda: { bloques, duracion: +$('#a-dur').value, descanso: +$('#a-desc').value, anticipacion: +$('#a-ant').value, dias: +$('#a-dias').value }, bloqueos });
       $('#libres').textContent = r.libres ? `Guardado. Tienes ${r.libres} horas disponibles para reservar.` : 'Guardado. Todavía no hay horas disponibles: agrega horarios en algún día.';
       aviso('Horario guardado.');
+      window.dispatchEvent(new CustomEvent('horario', { detail: bloques.length > 0 }));
     } catch (x) { aviso(x.message); } finally { if (b) b.disabled = false; }
   }
   return { cargar };

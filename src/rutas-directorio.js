@@ -83,10 +83,12 @@ const tarjeta = p => ({
 
 /* ── público ── */
 r.get('/perfiles', async (req, res) => {
-  const filas = (await q(`select p.slug, p.resumen, p.especialidades, p.modalidad, p.comuna, p.precio, p.actualizado_en, p.foto is not null tiene_foto, p.fondo is not null tiene_fondo, p.fondo_diseno, u.nombre, u.titulo,
+  const filas = (await q(`select p.slug, p.resumen, p.especialidades, p.modalidad, p.comuna, p.precio, p.actualizado_en, p.foto is not null tiene_foto, p.fondo is not null tiene_fondo, p.fondo_diseno, p.agenda, p.usuario_id, u.nombre, u.titulo,
     (select count(*)::int from documentos d where d.usuario_id = p.usuario_id and d.publico) n_docs
     from perfiles p join usuarios u on u.id = p.usuario_id where p.estado = 'publicado' and u.activo order by p.publicado_en desc nulls last limit 500`)).rows;
-  res.json({ perfiles: filas.map(tarjeta) });
+  // próxima hora libre de cada uno (para mostrarla en la tarjeta)
+  const lista = await Promise.all(filas.map(async f => ({ ...tarjeta(f), proxima: ag.normalizar(f.agenda).bloques.length ? (await libresDe(f.usuario_id, f.agenda))[0] || null : null })));
+  res.json({ perfiles: lista });
 });
 
 async function publicoPorSlug(slug) {
@@ -160,7 +162,8 @@ r.use('/mio', ses.sesion, ses.claveAlDia);
 r.get('/mio', async (req, res) => {
   const p = await perfilDe(req.usuario);
   const n = (await q('select count(*) filter (where not leida)::int n from solicitudes where usuario_id = $1', [req.usuario.id])).rows[0].n;
-  res.json({ perfil: { ...vista(p, req.usuario, true), documentos: await documentosDe(req.usuario.id, true) }, rol: req.usuario.rol, solicitudesNuevas: n });
+  res.json({ perfil: { ...vista(p, req.usuario, true), documentos: await documentosDe(req.usuario.id, true) }, rol: req.usuario.rol, solicitudesNuevas: n,
+    tieneHorario: ag.normalizar(p.agenda).bloques.length > 0 });
 });
 
 function lista(v, campos, max) {

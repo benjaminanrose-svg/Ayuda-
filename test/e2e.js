@@ -79,9 +79,11 @@ const espera = ms => new Promise(r => setTimeout(r, ms));
     // directorio: una psicóloga se registra, completa su perfil con foto y lo envía; administración lo aprueba
     const psi = await b.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }); vigilar(psi, 'psicologa');
     await psi.goto(BASE + '/registro');
+    await psi.screenshot({ path: path.join(OUT, 'registro-movil.png') });
     await psi.fill('#r-nombre', 'Javiera Soto'); await psi.fill('#r-correo', 'javiera@ejemplo.cl'); await psi.fill('#r-clave', 'clave-javiera-1'); await psi.fill('#r-repetir', 'clave-javiera-1');
     await psi.check('#r-acepto', { force: true }); await psi.click('#f-registro button[type=submit]');
     await psi.waitForSelector('#f-perfil');
+    await psi.screenshot({ path: path.join(OUT, 'mi-perfil-inicio.png') });
     await psi.fill('#m-sis', '123456'); await psi.selectOption('#m-mod', 'ambas'); await psi.fill('#m-comuna', 'Melipilla'); await psi.fill('#m-precio', '30000');
     await psi.fill('#m-resumen', 'Psicóloga clínica. Acompaño a adolescentes y adultos que viven ansiedad, ánimo bajo o duelos, con un espacio cercano y sin juicios.');
     await psi.click('#esp button:has-text("Ansiedad")'); await psi.click('#esp button:has-text("Duelo")'); await psi.click('#esp button:has-text("Adolescentes")');

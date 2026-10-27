@@ -4,6 +4,7 @@ const express = require('express');
 const { q } = require('./db');
 const ses = require('./sesion');
 const svc = require('./servicio');
+const avisos = require('./avisos');
 const { hashClave, claveTemporal } = require('./cifrado');
 const { falla } = require('./http');
 
@@ -118,6 +119,7 @@ r.post('/perfiles/:id/:accion', async (req, res) => {
     where usuario_id = $1 returning usuario_id`, [id, estado, acc === 'aprobar' ? '' : nota])).rows[0];
   if (!x) throw falla(404, 'Perfil no encontrado.');
   await auditar(req, 'perfil ' + acc, { usuario: id });
+  if (acc !== 'ocultar') avisos.aUsuarios([id], { titulo: 'ConténMente', cuerpo: acc === 'aprobar' ? '¡Tu perfil ya está publicado en el directorio!' : 'Revisamos tu perfil: hay algo que corregir.', url: '/mi-perfil', etiqueta: 'revision' }).catch(() => {});
   res.json({ ok: true, estado });
 });
 

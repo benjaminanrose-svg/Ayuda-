@@ -13,7 +13,7 @@
     publicado: 'Tu perfil está publicado en el directorio.',
     rechazado: 'Tu perfil necesita cambios antes de publicarse.'
   };
-  let p = null, esp = [], diseno = 'calma';
+  let p = null, esp = [], diseno = 'calma', tieneHorario = false;
   function aviso(t) { const el = $('#toast'); el.textContent = t; el.hidden = false; clearTimeout(aviso.t); aviso.t = setTimeout(() => { el.hidden = true; }, 5000); }
 
   const filaEst = (e = {}) => `<div class="fila-ed"><select aria-label="Tipo">${TIPOS.map(([v, t]) => `<option value="${v}"${e.tipo === v ? ' selected' : ''}>${t}</option>`).join('')}</select>
@@ -30,20 +30,44 @@
       <button type="button" class="quitar" data-doc-quitar="${d.id}" aria-label="Quitar ${esc(d.nombre)}">×</button></div>`).join('') || '<p class="nota-suave">Aún no has subido documentos.</p>';
   const chipsEsp = () => [...new Set([...SUGERIDAS, ...esp])].map(x => `<button type="button" aria-pressed="${esp.includes(x)}">${esc(x)}</button>`).join('');
 
+  // estado del perfil y lista de lo que falta antes de enviarlo a revisión
+  function pintarPasos() {
+    const v = $('#f-perfil') ? datos() : p; // lo que está escrito en pantalla, aunque aún no se guarde
+    const pasos = [
+      ['Foto de perfil', !!p.foto, false, 's-vista'],
+      ['Resumen de 80 letras o más', v.resumen.trim().length >= 80, true, 's-sobre'],
+      ['Especialidades', v.especialidades.length > 0, true, 's-esp'],
+      ['Estudios', v.estudios.length > 0, true, 's-est'],
+      ['N.º de registro en la Superintendencia', !!v.registroSis.trim(), true, 's-datos'],
+      ['Diplomas o certificados', p.documentos.length > 0, false, 's-docs'],
+      ['Horario de atención', tieneHorario, false, 'agenda']
+    ];
+    const listos = pasos.filter(x => x[1]).length, faltan = pasos.filter(x => x[2] && !x[1]).length;
+    const caja = $('#pasos');
+    caja.className = 'estado-perfil ' + p.estado;
+    caja.innerHTML = `<span>${ESTADO[p.estado]}</span>${p.notaRevision ? `<span>Comentario de revisión: ${esc(p.notaRevision)}</span>` : ''}
+      ${p.estado === 'publicado' ? '' : `<div class="progreso"><div class="progreso-cab"><b>Tu perfil está ${Math.round(listos / pasos.length * 100)}% completo</b><span>${listos} de ${pasos.length}</span></div>
+        <div class="barra" role="progressbar" aria-valuemin="0" aria-valuemax="${pasos.length}" aria-valuenow="${listos}"><i style-w="${listos / pasos.length}"></i></div>
+        <ul class="pasos-lista">${pasos.map(([t, ok, oblig, ancla]) => `<li class="${ok ? 'ok' : ''}"><a href="#${ancla}">${ok ? '✓' : '○'} ${t}${oblig && !ok ? ' <em>obligatorio</em>' : ''}</a></li>`).join('')}</ul></div>`}
+      <span class="fila-btn">${p.estado === 'publicado' ? `<a class="btn ghost" href="/psicologos/${esc(p.slug)}" target="_blank">Ver mi perfil público</a>` : `<a class="btn ghost" href="/psicologos/${esc(p.slug)}" target="_blank">Vista previa</a>${p.estado === 'pendiente' ? '' : `<button class="btn" type="button" id="enviar"${faltan ? ' disabled' : ''}>Enviar a revisión</button>`}`}</span>
+      ${faltan && p.estado !== 'pendiente' && p.estado !== 'publicado' ? `<span class="nota-suave">Completa lo obligatorio para poder enviarlo.</span>` : ''}`;
+    const i = caja.querySelector('[style-w]');
+    if (i) i.style.width = (Number(i.getAttribute('style-w')) * 100) + '%';
+  }
+
   function pintar(rol, nuevas) {
     esp = p.especialidades.slice();
     diseno = p.fondoDiseno || 'calma';
     const panel = rol !== 'psicologo' ? '<a class="btn ghost" href="/equipo">Ir al panel de casos</a>' : '';
     $('#mp').innerHTML = `<header class="adm-top"><div><h1>Mi perfil profesional</h1><p class="sub">Lo que completes aquí es lo que verán los pacientes.</p></div>
         <div class="fila-btn">${panel}<button class="btn plain" type="button" id="salir">Salir</button></div></header>
-      <div class="estado-perfil ${p.estado}"><span>${ESTADO[p.estado]}</span>${p.notaRevision ? `<span>Comentario de revisión: ${esc(p.notaRevision)}</span>` : ''}
-        <span class="fila-btn">${p.estado === 'publicado' ? `<a class="btn ghost" href="/psicologos/${esc(p.slug)}" target="_blank">Ver mi perfil público</a>` : `<a class="btn ghost" href="/psicologos/${esc(p.slug)}" target="_blank">Vista previa</a>${p.estado === 'pendiente' ? '' : '<button class="btn" type="button" id="enviar">Enviar a revisión</button>'}`}</span></div>
+      <div class="estado-perfil ${p.estado}" id="pasos"></div>
       <nav class="pestanas" aria-label="Secciones"><a href="#perfil" id="p-perfil">Mi perfil</a><a href="#agenda" id="p-agenda">Agenda y citas</a></nav>
       <div id="tab-perfil">
-      <section class="caja" id="sec-sol"><h2 class="rotulo">Mensajes de pacientes${nuevas ? ` <span class="nivel urgente">${nuevas} nuevas</span>` : ''}</h2><div id="solicitudes" class="filas"><p class="nota-suave">Cargando…</p></div>
+      <section class="caja" id="sec-sol"><h2 class="sec-t">Mensajes de pacientes${nuevas ? ` <span class="nivel urgente">${nuevas} nuevas</span>` : ''}</h2><div id="solicitudes" class="filas"><p class="nota-suave">Cargando…</p></div>
         ${soportaAvisos() ? '<button class="btn plain" type="button" id="avisos">Avisarme en este navegador cuando llegue una</button>' : ''}</section>
       <form class="caja" id="f-perfil">
-        <h2 class="rotulo">Cómo se ve tu perfil</h2>
+        <h2 class="sec-t" id="s-vista">Cómo se ve tu perfil</h2>
         <div class="vista-ed">
           <div class="portada"><img id="portada-img" src="${esc(p.fondo)}" alt=""></div>
           <button type="button" class="btn-sobre" id="cambiar-fondo">Subir imagen de fondo</button>
@@ -54,7 +78,7 @@
         <div class="campo-form"><span class="rotulo">O elige uno de nuestros fondos</span>
           <div class="disenos" id="disenos">${DISENOS.map(([v, t]) => `<button type="button" data-diseno="${v}" aria-pressed="${!p.fondoPropio && diseno === v}" aria-label="Fondo ${t}"><img src="/img/fondos/${v}.svg" alt=""></button>`).join('')}</div>
           ${p.fondoPropio ? '<button class="btn plain" type="button" id="quitar-fondo">Quitar mi imagen de fondo</button>' : ''}${p.foto ? '<button class="btn plain" type="button" id="quitar-foto">Quitar mi foto</button>' : ''}</div>
-        <h2 class="rotulo">Datos básicos</h2>
+        <h2 class="sec-t" id="s-datos">Datos básicos</h2>
         <div class="rejilla">
           <div class="campo-form"><label for="m-titulo">Título</label><input id="m-titulo" maxlength="12" value="${esc(p.titulo)}" placeholder="Ps."></div>
           <div class="campo-form"><label for="m-nombre">Nombre y apellido</label><input id="m-nombre" required maxlength="80" value="${esc(p.nombreSolo)}"></div>
@@ -63,16 +87,16 @@
           <div class="campo-form"><label for="m-comuna">Comuna (si atiendes presencial)</label><input id="m-comuna" maxlength="60" value="${esc(p.comuna)}"></div>
           <div class="campo-form"><label for="m-precio">Valor por sesión (CLP, opcional)</label><input id="m-precio" inputmode="numeric" maxlength="8" value="${p.precio == null ? '' : p.precio}" placeholder="35000"></div>
         </div>
-        <h2 class="rotulo">Sobre mí</h2>
+        <h2 class="sec-t" id="s-sobre">Sobre mí</h2>
         <div class="campo-form"><label for="m-resumen">Resumen (lo primero que leen los pacientes)</label><textarea id="m-resumen" maxlength="1500" rows="5" placeholder="Quién eres, a quiénes atiendes y cómo puedes ayudar.">${esc(p.resumen)}</textarea></div>
         <div class="campo-form"><label for="m-enfoque">Cómo trabajo (enfoque, opcional)</label><textarea id="m-enfoque" maxlength="800" rows="3" placeholder="Ej: terapia cognitivo-conductual, sistémica…">${esc(p.enfoque)}</textarea></div>
-        <h2 class="rotulo">Especialidades</h2>
+        <h2 class="sec-t" id="s-esp">Especialidades</h2>
         <div class="esp-opc" id="esp">${chipsEsp()}</div>
         <div class="fila-btn"><label class="sr" for="m-otra">Otra especialidad</label><input id="m-otra" class="entrada" maxlength="40" placeholder="Agregar otra especialidad"><button class="btn ghost" type="button" id="agregar-esp">Agregar</button></div>
-        <h2 class="rotulo">Estudios, diplomados y cursos</h2>
+        <h2 class="sec-t" id="s-est">Estudios, diplomados y cursos</h2>
         <div class="filas" id="estudios">${(p.estudios.length ? p.estudios : [{ tipo: 'titulo' }]).map(filaEst).join('')}</div>
         <button class="btn plain" type="button" id="mas-est">+ Agregar estudio</button>
-        <h2 class="rotulo">Diplomas y certificados</h2>
+        <h2 class="sec-t" id="s-docs">Diplomas y certificados</h2>
         <p class="nota-suave">Sube tu título, diplomas o certificados (PDF o foto, hasta 4 MB). Nos sirven para verificar tu perfil; tú decides cuáles se muestran a los pacientes.</p>
         <div class="docs-ed" id="docs">${docsHtml(p.documentos)}</div>
         <div class="subir-doc">
@@ -81,15 +105,16 @@
           <div class="fila-btn"><label class="btn ghost" for="d-archivo">Elegir archivo y subir</label><input id="d-archivo" type="file" accept="application/pdf,image/jpeg,image/png" class="sr"></div>
           <label class="casilla"><input type="checkbox" id="d-publico" checked><i></i>Mostrar en mi perfil</label>
         </div>
-        <h2 class="rotulo">Experiencia</h2>
+        <h2 class="sec-t" id="s-exp">Experiencia</h2>
         <div class="filas" id="experiencia">${(p.experiencia.length ? p.experiencia : [{}]).map(filaExp).join('')}</div>
         <button class="btn plain" type="button" id="mas-exp">+ Agregar experiencia</button>
-        <h2 class="rotulo">LinkedIn (opcional)</h2>
+        <h2 class="sec-t" id="s-link">LinkedIn (opcional)</h2>
         <div class="campo-form"><label for="m-linkedin">Enlace a tu perfil</label><input id="m-linkedin" maxlength="200" value="${esc(p.linkedin)}" placeholder="https://www.linkedin.com/in/…"></div>
         <div class="barra-guardar"><button class="btn" type="submit">Guardar cambios</button><span class="nota-suave" id="guardado"></span></div>
       </form></div>
       <div id="tab-agenda" hidden></div>`;
     cargarSolicitudes();
+    pintarPasos();
     pestana();
   }
 
@@ -101,7 +126,8 @@
   });
   async function guardar(silencioso) {
     const d = await api('PUT', '/api/directorio/mio', datos());
-    p = d.perfil;
+    p = { ...d.perfil, documentos: p.documentos };
+    pintarPasos();
     if (!silencioso) aviso(d.volvioARevision ? 'Guardado. Como cambiaste tu nombre o registro, el perfil vuelve a revisión.' : 'Cambios guardados.');
     $('#guardado').textContent = 'Guardado ' + fecha(new Date());
     if (d.volvioARevision) iniciar();
@@ -126,7 +152,7 @@
       img.src = src;
     });
   }
-  async function recargarDocs() { const d = await api('GET', '/api/directorio/mio'); p.documentos = d.perfil.documentos; $('#docs').innerHTML = docsHtml(p.documentos); }
+  async function recargarDocs() { const d = await api('GET', '/api/directorio/mio'); p.documentos = d.perfil.documentos; $('#docs').innerHTML = docsHtml(p.documentos); pintarPasos(); }
 
   $('#mp').addEventListener('click', async e => {
     const t = e.target;
@@ -167,7 +193,7 @@
         const imagen = await window.Recorte(await leer(f), foto ? { ancho: 600, alto: 600, redondo: true, titulo: 'Ajusta tu foto' } : { ancho: 1500, alto: 500, titulo: 'Ajusta tu fondo' });
         if (!imagen) return;
         await api('POST', '/api/directorio/mio/' + (foto ? 'foto' : 'fondo'), { imagen });
-        if (foto) $('#foto-prev').innerHTML = `<img src="${imagen}" alt="">`; else { $('#portada-img').src = imagen; p.fondoPropio = true; }
+        if (foto) { $('#foto-prev').innerHTML = `<img src="${imagen}" alt="">`; p.foto = imagen; pintarPasos(); } else { $('#portada-img').src = imagen; p.fondoPropio = true; }
         return aviso(foto ? 'Foto guardada.' : 'Fondo guardado.');
       }
       if (t.id === 'd-archivo') {
@@ -201,9 +227,15 @@
     if (ag) window.MiAgenda.cargar($('#tab-agenda'), aviso);
   }
   window.addEventListener('hashchange', pestana);
+  // el avance se actualiza mientras escribe
+  let espera = null;
+  const refrescarPasos = () => { clearTimeout(espera); espera = setTimeout(() => { if (p && $('#pasos') && $('#f-perfil')) pintarPasos(); }, 250); };
+  $('#mp').addEventListener('input', e => { if (e.target.closest('#f-perfil')) refrescarPasos(); });
+  $('#mp').addEventListener('click', e => { if (e.target.closest('#f-perfil')) refrescarPasos(); });
+  window.addEventListener('horario', e => { tieneHorario = e.detail; if (p && $('#pasos')) pintarPasos(); });
 
   async function iniciar() {
-    try { const d = await api('GET', '/api/directorio/mio'); p = d.perfil; pintar(d.rol, d.solicitudesNuevas); }
+    try { const d = await api('GET', '/api/directorio/mio'); p = d.perfil; tieneHorario = d.tieneHorario; pintar(d.rol, d.solicitudesNuevas); }
     catch (e) {
       if (e.estado === 401) return location.replace('/registro');
       if (e.datos && e.datos.cambiarClave) return location.replace('/ingresar#perfil');
