@@ -22,7 +22,8 @@ r.post('/ingresar', limitador(8, 15 * 60e3, req => req.ip + '|' + String((req.bo
 
 r.get('/estado', async (req, res) => {
   const s = await ses.usuarioDeSesion(req);
-  res.json({ sesion: !!s, debeCambiarClave: !!(s && s.r.debe_cambiar_clave), correo: s ? s.r.correo : null, rol: s ? s.r.rol : null });
+  const pf = s ? (await q('select slug from perfiles where usuario_id = $1', [s.r.id])).rows[0] : null;
+  res.json({ sesion: !!s, debeCambiarClave: !!(s && s.r.debe_cambiar_clave), correo: s ? s.r.correo : null, rol: s ? s.r.rol : null, slug: pf ? pf.slug : null });
 });
 
 /* «¿Olvidaste tu clave?»: avisa a administración; la respuesta es siempre igual para no revelar qué correos existen */

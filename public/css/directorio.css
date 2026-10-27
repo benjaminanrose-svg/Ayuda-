@@ -385,3 +385,14 @@ body.publica{--fondo-p:#F6F4FB;--tinta-2:#3B8478;--borde-p:#E6E2F0;--sombra-p:0 
 .colores button{display:inline-flex;align-items:center;gap:8px;padding:7px 12px 7px 8px;border-radius:999px;border:1.5px solid #DDD8EA;background:#fff;font:600 .88rem/1 var(--body);color:var(--texto);cursor:pointer}
 .colores i{width:20px;height:20px;border-radius:50%;background:var(--ac)}
 .colores button[aria-pressed="true"]{border-color:var(--tinta);box-shadow:0 0 0 2px rgba(48,72,108,.15)}
+/* ── menú de cuenta en la cabecera (public/js/cuenta.js) ── */
+.cuenta{position:relative}
+.cuenta>summary{list-style:none;display:inline-flex;align-items:center;gap:8px;cursor:pointer}
+.cuenta>summary::-webkit-details-marker{display:none}
+.cuenta>summary::after{content:"";width:6px;height:6px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:translateY(-2px) rotate(45deg)}
+.cuenta[open]>summary::after{transform:translateY(1px) rotate(225deg)}
+.cuenta-lista{position:absolute;right:0;top:calc(100% + 8px);z-index:40;min-width:240px;display:grid;padding:6px;background:#fff;border:1px solid #E4E0EE;border-radius:16px;box-shadow:0 12px 32px rgba(48,72,108,.16)}
+.cuenta-lista a,.cuenta-lista button{display:block;width:100%;text-align:left;padding:12px;border:0;border-radius:10px;background:none;font:600 .95rem/1.2 var(--body);color:var(--texto);text-decoration:none;cursor:pointer}
+.cuenta-lista a:hover,.cuenta-lista button:hover,.cuenta-lista a:focus-visible,.cuenta-lista button:focus-visible{background:#F3F1F8}
+.cuenta-lista button{color:var(--suave);border-top:1px solid #EEEBF4;border-radius:0 0 10px 10px}
+

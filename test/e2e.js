@@ -111,6 +111,8 @@ const espera = ms => new Promise(r => setTimeout(r, ms));
     await psi.screenshot({ path: path.join(OUT, 'mi-agenda.png'), fullPage: true });
     await psi.click('#p-perfil');
     await psi.screenshot({ path: path.join(OUT, 'mi-perfil.png'), fullPage: true });
+    await psi.goto(BASE + '/'); await psi.click('details.cuenta summary'); await espera(300); await psi.screenshot({ path: path.join(OUT, 'menu-cuenta.png') });
+    await psi.goto(BASE + '/mi-perfil'); await psi.waitForSelector('#f-perfil');
     await adm.reload(); await adm.waitForSelector('[data-acc="perfil-aprobar"]'); await adm.click('[data-acc="perfil-aprobar"]'); await espera(800);
     const pub = await b.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }); vigilar(pub, 'publico');
     await pub.goto(BASE + '/'); await pub.waitForSelector('.tarjeta'); await espera(300);
