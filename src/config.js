@@ -15,6 +15,8 @@ module.exports = {
   // segundos sin que nadie tome el caso antes de avisar a guardia (0 = no escalar)
   escalar: { high: num(env.ESCALAR_ALTO_SEG, 30), mid: num(env.ESCALAR_MEDIO_SEG, 180), low: num(env.ESCALAR_BAJO_SEG, 0) },
   sinRespuestaSeg: num(env.SIN_RESPUESTA_SEG, 120),
+  // segundos sin respuesta del especialista antes de decirle a la persona que sus mensajes llegan
+  esperaNotaSeg: num(env.ESPERA_NOTA_SEG, 180),
   retencionDias: num(env.RETENCION_DIAS, 0),
   orgPorDefecto: env.ORG_POR_DEFECTO || 'general',
   // salas de videollamada (Jitsi). Se puede cambiar por un servidor Jitsi propio.

@@ -34,11 +34,14 @@ function runConv(msgs, print){
   const b = E.create(); if (process.env.PROS) b.setPros(+process.env.PROS); const st = b.start();
   let prevFacts = null, prevQs = [st.replies[1]], prevBubbles = [], lines = [], viol = [];
   if (print) lines.push('   🤖 ' + st.replies.join(' | '));
+  let pausa = 0;
   msgs.forEach((m, i) => {
     let r;
+    if (/^@pausa:\d+$/.test(m)) { pausa = +m.split(':')[1]; if (print) lines.push(`   ⏸ pasan ${pausa} min`); return; }
     if (m[0] === '@') { const ev = { '@planB':'planB', '@accept':'accepted', '@tomorrow':'tomorrow' }[m]; r = b.event(ev, process.env.PROS ? { planB:{ guardia:+process.env.PROS }, accepted:{}, tomorrow:{ cuando:'mañana a las 10:00', con:'Ps. Camila Fuentes', aviso:false } }[ev] : undefined); if (print) lines.push(`   ⚙ ${ev}` + (r.replies.length ? ' → ' + r.replies.join(' | ') : '')); return; }
-    r = b.reply(m);
-    const v = check(i, m, r, prevFacts, prevQs, prevBubbles);
+    r = b.reply(m, pausa ? { pausaMin: pausa } : undefined);
+    const v = check(i, m, r, pausa >= 240 ? null : prevFacts, prevQs, prevBubbles); // tras una pausa larga se vuelve a preguntar lo que ya se sabía
+    pausa = 0;
     if (print) {
       lines.push(`👤 ${m}   [${r.primary}·${r.risk}${r.urgent?'·URG':''}]`);
       if (r.forward) lines.push('   → (se envía al especialista)');

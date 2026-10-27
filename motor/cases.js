@@ -1,6 +1,8 @@
 /* Batería de pruebas: [mensaje, intención esperada, (tema o señal esperada)] */
 (function (root) {
 const CASES = [
+  // Quinta ronda: quejas, coqueteo y preguntas al bot
+  ['no sirves','QUEJA'], ['quiero ser tu novio','VINCULO'], ['eres linda?','PERSONAL_BOT'],
   // Ideación directa, con faltas, jerga y ofuscación
   ['me quiero matar','IDEACION'], ['me kiero matar','IDEACION'], ['me qiero mtar','IDEACION'], ['m3 qui3r0 m4t4r','IDEACION'],
   ['me quiero moriiiiir','IDEACION'], ['ya no quiero vivir','IDEACION'], ['ya no kiero bibir','IDEACION'], ['no quiero seguir viviendo','IDEACION'],

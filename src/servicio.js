@@ -164,7 +164,8 @@ async function mensajePersona(convId, texto) {
   const s = await tx(async c => {
     const { cv, bot } = await botDe(c, convId);
     bot.setPros(await contar(c));
-    const res = bot.reply(texto);
+    const pausaMin = cv.ultima_actividad ? (Date.now() - new Date(cv.ultima_actividad)) / 60000 : 0;
+    const res = bot.reply(texto, { pausaMin });
     const riesgoMsg = (res.analysis && res.analysis.risk) || 'low';
     const mp = await guardarMensaje(c, cv.id, 'persona', texto, { riesgo: riesgoMsg });
     const bots = res.forward ? [] : await guardarRespuestas(c, cv.id, res.replies);
@@ -198,6 +199,17 @@ async function mensajePersona(convId, texto) {
         [k.id, res.risk, !!res.urgent, res.flags, res.themes, res.safe, !!res.minor, clave, volvio, cfg.escalar[res.risk] || 0])).rows[0];
       }
     }
+    // con especialista a cargo: si la persona escribe varias veces sin respuesta, se le dice que sus mensajes llegan
+    if (res.forward && k && k.estado === 'en_atencion') {
+      const ultEsp = (await c.query("select max(creado_en) f from mensajes where conversacion_id = $1 and autor = 'especialista'", [cv.id])).rows[0].f;
+      const desde = ultEsp || k.tomado_en;
+      const e = (await c.query("select count(*) filter (where autor = 'persona')::int seguidos, count(*) filter (where autor = 'bot')::int notas from mensajes where conversacion_id = $1 and creado_en > $2", [cv.id, desde])).rows[0];
+      if (e.seguidos >= 2 && !e.notas && Date.now() - new Date(desde) > cfg.esperaNotaSeg * 1000) { // una sola nota por espera
+        bots.push(await guardarMensaje(c, cv.id, 'bot', riesgoMsg === 'high'
+          ? 'Tu especialista ya tiene tus mensajes y te va a responder apenas pueda. Si estás en peligro ahora, llama al *4141 o al 131.'
+          : 'Tu especialista ya tiene tus mensajes y te va a responder apenas pueda. Puedes seguir escribiendo: todo le llega.'));
+      }
+    }
     await guardarBot(c, cv.id, bot, res.forward ? [] : res.chips);
     return { res, mp, bots, k, nuevo, volvio, resumen: k ? await resumenCaso(c, k.id) : null };
   });
@@ -207,6 +219,7 @@ async function mensajePersona(convId, texto) {
   if (k && res.forward && k.tomado_por) {
     const urgente = (res.analysis && res.analysis.risk) === 'high';
     tr.aUsuario(k.tomado_por, 'mensaje', { casoId: k.id, mensaje: publico(s.mp), urgente });
+    s.bots.forEach(b => tr.aUsuario(k.tomado_por, 'mensaje', { casoId: k.id, mensaje: publico(b) })); // la nota de espera también se ve en el panel
     if (urgente || !tr.usuarioConectado(k.tomado_por)) {
       avisos.aUsuarios([k.tomado_por], { titulo: `Caso N.º ${resumen.folio}`, cuerpo: urgente ? 'Mensaje urgente de la persona.' : 'La persona te escribió.', url: '/equipo#caso-' + k.id, etiqueta: 'caso-' + k.id, urgente }).catch(log);
     }

@@ -184,7 +184,11 @@
   }
 
   $('#compose').addEventListener('submit', e => { e.preventDefault(); enviar($('#input').value); });
-  $('#quick').addEventListener('click', e => { if (e.target.tagName === 'BUTTON') enviar(e.target.textContent); });
+  $('#quick').addEventListener('click', e => {
+    if (e.target.tagName !== 'BUTTON') return;
+    if (e.target.textContent === 'Ver psicólogos') { location.href = '/#psicologos'; return; } // abre el directorio
+    enviar(e.target.textContent);
+  });
   $('#salir').addEventListener('click', () => { try { sessionStorage.clear(); } catch { /* nada */ } location.replace('https://www.google.cl/'); });
   $('#activar').addEventListener('click', async () => {
     $('#oferta').hidden = true;
